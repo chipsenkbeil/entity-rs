@@ -1,9 +1,7 @@
 [package]
 name = "entity_macros"
-version = "0.1.0"
+description = "Macro library that provides macros to generate entities, queries, and more at compile time."
+categories = ["data-structures"]
+version = "0.0.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
