@@ -5,3 +5,7 @@ categories = ["data-structures"]
 version = "0.0.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
+homepage = "https://github.com/chipsenkbeil/entity-rs"
+repository = "https://github.com/chipsenkbeil/entity-rs"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
