@@ -173,10 +173,12 @@ impl std::str::FromStr for ValueType {
     ///
     /// ```
     /// use entity::{ValueType as VT, PrimitiveValueType as PVT};
+    /// use strum::ParseError;
     /// use std::str::FromStr;
     ///
     /// assert_eq!(VT::from_str("u32").unwrap(), VT::Primitive(PVT::U32));
     /// assert_eq!(VT::from_str("list:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::U32))));
+    /// assert_eq!(VT::from_str("unknown").unwrap_err(), ParseError::VariantNotFound);
     /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         fn opt_to_err(maybe_type: Option<ValueType>) -> Result<ValueType, ParseError> {
