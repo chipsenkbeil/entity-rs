@@ -385,12 +385,10 @@ impl Condition for EntFieldValue {
     /// ```
     /// use entity::{MapEnt, Field, Value, query::{Condition, EntFieldValue}};
     ///
-    /// let ent = MapEnt::new(0, vec![
+    /// let ent = MapEnt::from_iter(0, vec![
     ///     Field::new("name1", 99u8),
     ///     Field::new("name2", "some string"),
-    /// ].into_iter().map(|f| (f.name().to_string(), f)).collect());
-    ///
-    /// println!("{:?}", ent);
+    /// ].into_iter());
     ///
     /// // Check if ent's field is less than the specified value
     /// assert_eq!(EntFieldValue::Less(Field::new("name1", 100u8)).check(&ent), Ok(true));

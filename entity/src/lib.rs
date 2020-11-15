@@ -48,6 +48,11 @@ impl MapEnt {
     pub fn empty(id: usize) -> Self {
         Self::new(id, HashMap::new())
     }
+
+    /// Creates a map ent with the provided id and fields from the given iter
+    pub fn from_iter(id: usize, iter: impl Iterator<Item = Field>) -> Self {
+        Self::new(id, iter.map(|f| (f.name().to_string(), f)).collect())
+    }
 }
 
 impl Default for MapEnt {
@@ -98,7 +103,7 @@ impl Ent for MapEnt {
     ///     Field::new("field1", 123u8),
     ///     Field::new("field2", "some text"),
     /// ];
-    /// let ent = MapEnt::new(0, fields.iter().map(|f| (f.name().to_string(), f.clone())).collect());
+    /// let ent = MapEnt::from_iter(0, fields.iter().cloned());
     ///
     /// let ent_fields = ent.fields();
     /// assert_eq!(ent_fields.len(), 2);
@@ -120,7 +125,7 @@ impl Ent for MapEnt {
     ///     Field::new("field1", 123u8),
     ///     Field::new("field2", "some text"),
     /// ];
-    /// let ent = MapEnt::new(0, fields.iter().map(|f| (f.name().to_string(), f.clone())).collect());
+    /// let ent = MapEnt::from_iter(0, fields.into_iter());
     ///
     /// assert_eq!(ent.field("field1").unwrap().value(), &Value::from(123u8));
     /// assert_eq!(ent.field("field???"), None);
