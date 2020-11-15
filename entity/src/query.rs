@@ -158,9 +158,9 @@ impl Condition for Always {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{MapEnt, query::{Condition, Always}};
+    /// use entity::{SchemalessEnt, query::{Condition, Always}};
     ///
-    /// let ent = MapEnt::default();
+    /// let ent = SchemalessEnt::default();
     /// let cond = Always::new();
     /// assert_eq!(cond.check(&ent), Ok(true));
     /// ```
@@ -180,9 +180,9 @@ impl Condition for Never {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{MapEnt, query::{Condition, Never}};
+    /// use entity::{SchemalessEnt, query::{Condition, Never}};
     ///
-    /// let ent = MapEnt::default();
+    /// let ent = SchemalessEnt::default();
     /// let cond = Never::new();
     /// assert_eq!(cond.check(&ent), Ok(false));
     /// ```
@@ -202,9 +202,9 @@ impl Condition for HasId {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{MapEnt, query::{Condition, HasId}};
+    /// use entity::{SchemalessEnt, query::{Condition, HasId}};
     ///
-    /// let ent = MapEnt::empty(999);
+    /// let ent = SchemalessEnt::empty(999);
     /// assert_eq!(HasId::new(999).check(&ent), Ok(true));
     /// assert_eq!(HasId::new(1000).check(&ent), Ok(false));
     /// ```
@@ -230,9 +230,9 @@ impl Condition for HasType {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, MapEnt, query::{Condition, HasType}};
+    /// use entity::{Ent, SchemalessEnt, query::{Condition, HasType}};
     ///
-    /// let ent = MapEnt::default();
+    /// let ent = SchemalessEnt::default();
     /// assert_eq!(HasType::from(ent.r#type()).check(&ent), Ok(true));
     /// assert_eq!(HasType::from("Other").check(&ent), Ok(false));
     /// ```
@@ -252,9 +252,9 @@ impl<A: Condition, B: Condition> Condition for And<A, B> {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{MapEnt, query::{Condition, And, Always, Never}};
+    /// use entity::{SchemalessEnt, query::{Condition, And, Always, Never}};
     ///
-    /// let ent = MapEnt::default();
+    /// let ent = SchemalessEnt::default();
     /// assert_eq!(And::new(Always, Always).check(&ent), Ok(true));
     /// assert_eq!(And::new(Never, Always).check(&ent), Ok(false));
     /// assert_eq!(And::new(Always, Never).check(&ent), Ok(false));
@@ -276,9 +276,9 @@ impl<A: Condition, B: Condition> Condition for Or<A, B> {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{MapEnt, query::{Condition, Or, Always, Never}};
+    /// use entity::{SchemalessEnt, query::{Condition, Or, Always, Never}};
     ///
-    /// let ent = MapEnt::default();
+    /// let ent = SchemalessEnt::default();
     /// assert_eq!(Or::new(Always, Always).check(&ent), Ok(true));
     /// assert_eq!(Or::new(Never, Always).check(&ent), Ok(true));
     /// assert_eq!(Or::new(Always, Never).check(&ent), Ok(true));
@@ -300,9 +300,9 @@ impl<A: Condition> Condition for Not<A> {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{MapEnt, query::{Condition, Not, Always, Never}};
+    /// use entity::{SchemalessEnt, query::{Condition, Not, Always, Never}};
     ///
-    /// let ent = MapEnt::default();
+    /// let ent = SchemalessEnt::default();
     /// assert_eq!(Not::new(Always).check(&ent), Ok(false));
     /// assert_eq!(Not::new(Never).check(&ent), Ok(true));
     /// ```
@@ -383,9 +383,9 @@ impl Condition for EntFieldValue {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{MapEnt, Field, Value, query::{Condition, EntFieldValue}};
+    /// use entity::{SchemalessEnt, Field, Value, query::{Condition, EntFieldValue}};
     ///
-    /// let ent = MapEnt::from_collections(0, vec![
+    /// let ent = SchemalessEnt::from_collections(0, vec![
     ///     Field::new("name1", 99u8),
     ///     Field::new("name2", "some string"),
     /// ], vec![]);

@@ -57,10 +57,11 @@ pub trait Ent: AsAny {
     fn edge(&self, name: &str) -> Option<&Edge>;
 }
 
-/// Represents an ent that uses an internal map to contain fields and edges dynamically
+/// Represents an ent that has no pre-assigned schema and maintains
+/// fields and edges using internal maps
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct MapEnt {
+pub struct SchemalessEnt {
     id: usize,
     fields: HashMap<String, Field>,
     edges: HashMap<String, Edge>,
@@ -68,9 +69,9 @@ pub struct MapEnt {
     last_updated: u64,
 }
 
-impl_as_any!(MapEnt);
+impl_as_any!(SchemalessEnt);
 
-impl MapEnt {
+impl SchemalessEnt {
     /// Creates a new ent using the given id, field map, and edge map
     pub fn new(id: usize, fields: HashMap<String, Field>, edges: HashMap<String, Edge>) -> Self {
         Self {
@@ -114,22 +115,22 @@ impl MapEnt {
     }
 }
 
-impl Default for MapEnt {
+impl Default for SchemalessEnt {
     /// Creates an empty map ent using 0 as the id
     fn default() -> Self {
         Self::empty(0)
     }
 }
 
-impl Ent for MapEnt {
+impl Ent for SchemalessEnt {
     /// Represents the unique id associated with each entity instance
     ///
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, MapEnt};
+    /// use entity::{Ent, SchemalessEnt};
     ///
-    /// let ent = MapEnt::empty(999);
+    /// let ent = SchemalessEnt::empty(999);
     /// assert_eq!(ent.id(), 999);
     /// ```
     fn id(&self) -> usize {
@@ -142,13 +143,13 @@ impl Ent for MapEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, MapEnt};
+    /// use entity::{Ent, SchemalessEnt};
     ///
-    /// let ent = MapEnt::default();
-    /// assert_eq!(ent.r#type(), "MapEnt");
+    /// let ent = SchemalessEnt::default();
+    /// assert_eq!(ent.r#type(), "SchemalessEnt");
     /// ```
     fn r#type(&self) -> &'static str {
-        "MapEnt"
+        "SchemalessEnt"
     }
 
     /// Represents the time when the instance of the ent was created
@@ -168,13 +169,13 @@ impl Ent for MapEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, MapEnt, Field};
+    /// use entity::{Ent, SchemalessEnt, Field};
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
     ///     Field::new("field2", "some text"),
     /// ];
-    /// let ent = MapEnt::from_collections(0, fields.iter().cloned(), vec![]);
+    /// let ent = SchemalessEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///
     /// let ent_fields = ent.fields();
     /// assert_eq!(ent_fields.len(), 2);
@@ -190,13 +191,13 @@ impl Ent for MapEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, MapEnt, Field, Value};
+    /// use entity::{Ent, SchemalessEnt, Field, Value};
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
     ///     Field::new("field2", "some text"),
     /// ];
-    /// let ent = MapEnt::from_collections(0, fields, vec![]);
+    /// let ent = SchemalessEnt::from_collections(0, fields, vec![]);
     ///
     /// assert_eq!(ent.field("field1").unwrap().value(), &Value::from(123u8));
     /// assert_eq!(ent.field("field???"), None);
@@ -210,13 +211,13 @@ impl Ent for MapEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, MapEnt, Edge, EdgeValue as EV};
+    /// use entity::{Ent, SchemalessEnt, Edge, EdgeValue as EV};
     ///
     /// let edges = vec![
     ///     Edge::new("edge1", EV::OneToOne(99)),
     ///     Edge::new("edge2", EV::OneToMany(vec![1, 2, 3])),
     /// ];
-    /// let ent = MapEnt::from_collections(0, vec![], edges);
+    /// let ent = SchemalessEnt::from_collections(0, vec![], edges);
     ///
     /// let ent_edges = ent.edges();
     /// assert_eq!(ent_edges.len(), 2);
@@ -232,13 +233,13 @@ impl Ent for MapEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, MapEnt, Edge, EdgeValue as EV};
+    /// use entity::{Ent, SchemalessEnt, Edge, EdgeValue as EV};
     ///
     /// let edges = vec![
     ///     Edge::new("edge1", EV::OneToOne(99)),
     ///     Edge::new("edge2", EV::OneToMany(vec![1, 2, 3])),
     /// ];
-    /// let ent = MapEnt::from_collections(0, vec![], edges);
+    /// let ent = SchemalessEnt::from_collections(0, vec![], edges);
     ///
     /// assert_eq!(ent.edge("edge1").unwrap().value(), &EV::OneToOne(99));
     /// assert_eq!(ent.edge("edge???"), None);
