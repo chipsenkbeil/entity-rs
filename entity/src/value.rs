@@ -4,17 +4,11 @@ use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
 };
-use strum::{Display, EnumDiscriminants, EnumString};
+use strum::{Display, EnumDiscriminants, EnumString, ParseError};
 
 /// Represents either a primitive or complex value
-#[derive(Clone, Debug, PartialEq, Eq, From, EnumDiscriminants)]
+#[derive(Clone, Debug, PartialEq, Eq, From)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[strum_discriminants(derive(Display, EnumString))]
-#[strum_discriminants(name(ValueType))]
-#[cfg_attr(
-    feature = "serde",
-    strum_discriminants(derive(serde::Serialize, serde::Deserialize))
-)]
 pub enum Value {
     List(Vec<Value>),
     Map(HashMap<String, Value>),
@@ -137,11 +131,162 @@ impl<'a> From<&'a str> for Value {
     }
 }
 
+/// Represents value types (primitive or complex). Assumes that complex
+/// types will contain the same inner type and does not vary
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ValueType {
+    List(Box<ValueType>),
+    Map(Box<ValueType>),
+    Optional(Box<ValueType>),
+    Primitive(PrimitiveValueType),
+    Set(PrimitiveValueType),
+    Text,
+}
+
+impl ValueType {
+    pub fn is_primitive_type(&self) -> bool {
+        matches!(self, Self::Primitive(_))
+    }
+
+    pub fn to_primitive_type(&self) -> Option<PrimitiveValueType> {
+        match self {
+            Self::Primitive(x) => Some(*x),
+            _ => None,
+        }
+    }
+}
+
+impl Default for ValueType {
+    /// Returns default value type of primitive unit
+    fn default() -> Self {
+        Self::Primitive(Default::default())
+    }
+}
+
+impl std::str::FromStr for ValueType {
+    type Err = ParseError;
+
+    /// Parses a string delimited by colons into a nested value type
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{ValueType as VT, PrimitiveValueType as PVT};
+    /// use std::str::FromStr;
+    ///
+    /// assert_eq!(VT::from_str("u32").unwrap(), VT::Primitive(PVT::U32));
+    /// assert_eq!(VT::from_str("list:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::U32))));
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        fn opt_to_err(maybe_type: Option<ValueType>) -> Result<ValueType, ParseError> {
+            match maybe_type {
+                Some(t) => Ok(t),
+                None => Err(ParseError::VariantNotFound),
+            }
+        }
+
+        fn from_tokens<'a>(
+            mut it: impl Iterator<Item = &'a str>,
+        ) -> Result<Option<ValueType>, ParseError> {
+            match it.next() {
+                Some(token) => {
+                    let maybe_inner = from_tokens(it)?;
+                    match token {
+                        "list" => Ok(Some(ValueType::List(Box::from(opt_to_err(maybe_inner)?)))),
+                        "map" => Ok(Some(ValueType::Map(Box::from(opt_to_err(maybe_inner)?)))),
+                        "optional" => Ok(Some(ValueType::Optional(Box::from(opt_to_err(
+                            maybe_inner,
+                        )?)))),
+                        "primitive" => Ok(Some(ValueType::Primitive(
+                            opt_to_err(maybe_inner)?
+                                .to_primitive_type()
+                                .ok_or(ParseError::VariantNotFound)?,
+                        ))),
+                        "set" => Ok(Some(ValueType::Set(
+                            opt_to_err(maybe_inner)?
+                                .to_primitive_type()
+                                .ok_or(ParseError::VariantNotFound)?,
+                        ))),
+                        "text" => Ok(Some(ValueType::Text)),
+                        x => Ok(Some(ValueType::Primitive(PrimitiveValueType::from_str(x)?))),
+                    }
+                }
+                None => Ok(None),
+            }
+        }
+
+        match from_tokens(s.split(':')) {
+            Ok(Some(value_type)) => Ok(value_type),
+            Ok(None) => Err(ParseError::VariantNotFound),
+            Err(x) => Err(x),
+        }
+    }
+}
+
+impl std::fmt::Display for ValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::List(t) => write!(f, "list:{}", t),
+            Self::Map(t) => write!(f, "map:{}", t),
+            Self::Optional(t) => write!(f, "optional:{}", t),
+            Self::Primitive(t) => write!(f, "{}", t),
+            Self::Set(t) => write!(f, "set:{}", t),
+            Self::Text => write!(f, "text"),
+        }
+    }
+}
+
+impl<'a> From<&'a Value> for ValueType {
+    /// Produces the type of the referenced value by recursively iterating
+    /// through complex types, assuming that the first value in types like
+    /// list represent the entire set, defaulting to a primitive unit if
+    /// a complex value does not have any items
+    fn from(v: &'a Value) -> Self {
+        match v {
+            Value::List(x) => Self::List(Box::from(
+                x.iter().next().map(ValueType::from).unwrap_or_default(),
+            )),
+            Value::Map(x) => Self::Map(Box::from(
+                x.values().next().map(ValueType::from).unwrap_or_default(),
+            )),
+            Value::Optional(x) => Self::Optional(Box::from(
+                x.as_ref()
+                    .map(Box::as_ref)
+                    .map(ValueType::from)
+                    .unwrap_or_default(),
+            )),
+            Value::Primitive(x) => Self::Primitive(PrimitiveValueType::from(x)),
+            Value::Set(x) => Self::Set(
+                x.iter()
+                    .next()
+                    .map(PrimitiveValueType::from)
+                    .unwrap_or_default(),
+            ),
+            Value::Text(_) => Self::Text,
+        }
+    }
+}
+
+impl From<PrimitiveValueType> for ValueType {
+    /// Converts primitive value type to a value type
+    fn from(t: PrimitiveValueType) -> Self {
+        Self::Primitive(t)
+    }
+}
+
+impl Default for PrimitiveValueType {
+    /// Returns default primitive value type of unit
+    fn default() -> Self {
+        Self::Unit
+    }
+}
+
 /// Represents a primitive value
 #[derive(Copy, Clone, Debug, From, EnumDiscriminants)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[strum_discriminants(derive(Display, EnumString))]
-#[strum_discriminants(name(PrimitiveValueType))]
+#[strum_discriminants(name(PrimitiveValueType), strum(serialize_all = "snake_case"))]
 #[cfg_attr(
     feature = "serde",
     strum_discriminants(derive(serde::Serialize, serde::Deserialize))
@@ -162,6 +307,7 @@ pub enum PrimitiveValue {
     U32(u32),
     U64(u64),
     U8(u8),
+    Unit,
     Usize(usize),
 }
 
@@ -206,6 +352,7 @@ impl PartialEq for PrimitiveValue {
             (Self::U32(a), Self::U32(b)) => a == b,
             (Self::U64(a), Self::U64(b)) => a == b,
             (Self::U8(a), Self::U8(b)) => a == b,
+            (Self::Unit, Self::Unit) => true,
             (Self::Usize(a), Self::Usize(b)) => a == b,
             _ => false,
         }
@@ -231,6 +378,7 @@ impl Hash for PrimitiveValue {
             Self::U32(x) => x.hash(state),
             Self::U64(x) => x.hash(state),
             Self::U8(x) => x.hash(state),
+            Self::Unit => Self::Unit.hash(state),
             Self::Usize(x) => x.hash(state),
         }
     }

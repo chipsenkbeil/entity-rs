@@ -54,12 +54,13 @@ impl FieldDefinition {
     /// use entity::{
     ///     FieldDefinition as FD,
     ///     FieldDefinitionAttribute as FDA,
+    ///     ValueType as VT,
     ///     PrimitiveValueType as PVT
     /// };
     ///
     /// let fd = FD::new("my field", PVT::U32, vec![FDA::Indexed]);
     /// assert_eq!(fd.name(), "my field");
-    /// assert_eq!(fd.r#type(), PVT::U32);
+    /// assert_eq!(fd.r#type(), &VT::Primitive(PVT::U32));
     /// assert_eq!(fd.attributes(), vec![FDA::Indexed].into_iter().collect());
     /// ```
     pub fn new(
@@ -80,8 +81,8 @@ impl FieldDefinition {
     }
 
     /// The type associated with the field
-    pub fn r#type(&self) -> ValueType {
-        self.r#type
+    pub fn r#type(&self) -> &ValueType {
+        &self.r#type
     }
 
     /// Attributes associated with the definition

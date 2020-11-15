@@ -6,7 +6,7 @@ mod value;
 
 pub use any::AsAny;
 pub use database::{Database, DatabaseError, DatabaseResult};
-pub use field::{Field, FieldDefinition, FieldDefinitionAttribute, FieldValueType};
+pub use field::{Field, FieldDefinition, FieldDefinitionAttribute};
 pub use query::{Condition, Query, QueryExt};
 pub use value::{PrimitiveValue, PrimitiveValueType, Value, ValueType};
 
