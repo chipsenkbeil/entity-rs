@@ -17,6 +17,31 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+/// Represents the schema associated with some concrete ent type. It is
+/// expected that each concrete schema type is defined at compile-time and
+/// is consistent when accessing its field and edge definitions
+pub trait EntSchema {
+    /// Static method that returns the fields expected for the concrete ent
+    fn fields() -> Vec<FieldDefinition>;
+
+    /// Static method that returns the edges expected for the concrete ent
+    fn edges() -> Vec<EdgeDefinition>;
+}
+
+/// Represents an empty ent schema, meaning that it has no fields or edges
+/// according to the schema itself
+pub struct EmptyEntSchema;
+
+impl EntSchema for EmptyEntSchema {
+    fn fields() -> Vec<FieldDefinition> {
+        vec![]
+    }
+
+    fn edges() -> Vec<EdgeDefinition> {
+        vec![]
+    }
+}
+
 /// Represents the interface for a generic entity whose fields and edges
 /// can be accessed by str name regardless of compile-time characteristics
 ///
@@ -146,10 +171,10 @@ impl Ent for SchemalessEnt {
     /// use entity::{Ent, SchemalessEnt};
     ///
     /// let ent = SchemalessEnt::default();
-    /// assert_eq!(ent.r#type(), "SchemalessEnt");
+    /// assert_eq!(ent.r#type(), "entity::SchemalessEnt");
     /// ```
     fn r#type(&self) -> &'static str {
-        "SchemalessEnt"
+        concat!(module_path!(), "::", "SchemalessEnt")
     }
 
     /// Represents the time when the instance of the ent was created
