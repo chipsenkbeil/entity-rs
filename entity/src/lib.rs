@@ -1,13 +1,13 @@
 mod any;
-mod context;
+mod database;
 mod field;
 pub mod query;
 mod value;
 
 pub use any::AsAny;
-pub use context::Context;
+pub use database::{Database, DatabaseError, DatabaseResult};
 pub use field::{Field, FieldDefinition};
-pub use query::{Query, QueryExt};
+pub use query::{Condition, Query, QueryExt};
 pub use value::{PrimitiveValue, PrimitiveValueType, Value, ValueType};
 
 use derive_more::Constructor;
