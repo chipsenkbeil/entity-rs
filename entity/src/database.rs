@@ -4,7 +4,7 @@ pub use sync::*;
 #[cfg(feature = "async")]
 pub use r#async::*;
 
-use super::{Condition, Ent, Query};
+use super::{Ent, Query};
 use derive_more::{Display, Error};
 
 /// Alias to a result that can contain a database error
@@ -34,7 +34,7 @@ mod sync {
         fn get_all(&self, ids: impl IntoIterator<Item = usize>) -> DatabaseResult<Vec<&dyn Ent>>;
 
         /// Finds all generic ents that match the corresponding query
-        fn find_all<T: Condition>(&self, query: Query<T>) -> DatabaseResult<Vec<&dyn Ent>>;
+        fn find_all(&self, query: Query) -> DatabaseResult<Vec<&dyn Ent>>;
 
         /// Removes the ent with the corresponding id, triggering edge
         /// processing for all disconnected ents. If indicated, this will
@@ -69,7 +69,7 @@ mod sync {
 
         /// Performs a search for all ents that match the given query and
         /// attempts to cast them to the specified concrete type
-        fn find_all_typed<T: Condition, E: Ent>(&self, query: Query<T>) -> DatabaseResult<Vec<&E>> {
+        fn find_all_typed<E: Ent>(&self, query: Query) -> DatabaseResult<Vec<&E>> {
             self.find_all(query).map(|ents| {
                 ents.into_iter()
                     .filter_map(|ent| ent.as_any().downcast_ref::<E>())
