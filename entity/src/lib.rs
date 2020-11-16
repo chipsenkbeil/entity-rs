@@ -9,7 +9,7 @@ pub use any::AsAny;
 pub use database::{Database, DatabaseError, DatabaseResult};
 pub use edge::{Edge, EdgeDefinition, EdgeDefinitionAttribute, EdgeValue, EdgeValueType};
 pub use field::{Field, FieldDefinition, FieldDefinitionAttribute};
-pub use query::{Condition, Query, QueryExt};
+pub use query::{Condition, ConditionError, FieldCondition, FieldConditionError, Query, QueryExt};
 pub use value::{PrimitiveValue, PrimitiveValueType, Value, ValueType};
 
 use std::{

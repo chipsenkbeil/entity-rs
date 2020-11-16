@@ -1,129 +1,15 @@
-use super::{Ent, Field, Value, ValueType};
-use derive_more::{Constructor, Display, Error};
+use crate::Ent;
+use derive_more::{Display, Error, From};
 use std::fmt::Debug;
 
-/// Represents a generic query to find ents within some database
-#[derive(Constructor, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Query(Condition);
+mod edge;
+mod field;
 
-impl Query {
-    /// Consumes query, producing a new query with the additional condition
-    /// added to the end of the conditions to be applied, essentially
-    /// performing the same as `query.condition() & condition`
-    pub fn chain(self, condition: Condition) -> Self {
-        Query::new(self.0 & condition)
-    }
+pub use field::{FieldCondition, FieldConditionError};
 
-    /// Returns the top-level condition of the query
-    pub fn condition(&self) -> &Condition {
-        &self.0
-    }
-}
-
-impl Default for Query {
-    /// Creates a new query that will accept all conditions
-    fn default() -> Self {
-        Self::new(Condition::Always)
-    }
-}
-
-/// Provides helper methods on top of the Query for easier composition
-pub trait QueryExt {
-    /// Convenience method to add a new condition where the id of the ent
-    /// matches the given id
-    fn has_id(self, id: usize) -> Query;
-
-    /// Convenience method to add a new condition where the type of the ent
-    /// matches the given type
-    fn has_type(self, r#type: impl Into<String>) -> Query;
-
-    /// Convenience method to add a new condition where the ent matches
-    /// both of the provided conditions
-    fn and(self, a: Condition, b: Condition) -> Query;
-
-    /// Convenience method to add a new condition where the ent matches
-    /// either of the provided conditions
-    fn or(self, a: Condition, b: Condition) -> Query;
-
-    /// Convenience method to add a new condition where the ent does not match
-    /// the provided condition
-    fn not(self, a: Condition) -> Query;
-
-    /// Convenience method to add a new condition where the specified ent
-    /// field's value equals the given value
-    fn ent_field_equal_to(self, field: impl Into<Field>) -> Query;
-
-    /// Convenience method to add a new condition where the specified ent
-    /// field's value is greater than the given value
-    fn ent_field_greater_than(self, field: impl Into<Field>) -> Query;
-
-    /// Convenience method to add a new condition where the specified ent
-    /// field's value is less than the given value
-    fn ent_field_less_than(self, field: impl Into<Field>) -> Query;
-}
-
-impl QueryExt for Query {
-    /// Convenience method to add a new condition where the id of the ent
-    /// matches the given id
-    fn has_id(self, id: usize) -> Query {
-        self.chain(Condition::HasId(id))
-    }
-
-    /// Convenience method to add a new condition where the type of the ent
-    /// matches the given type
-    fn has_type(self, r#type: impl Into<String>) -> Query {
-        self.chain(Condition::HasType(r#type.into()))
-    }
-
-    /// Convenience method to add a new condition where the ent matches
-    /// both of the provided conditions
-    fn and(self, a: Condition, b: Condition) -> Query {
-        self.chain(a & b)
-    }
-
-    /// Convenience method to add a new condition where the ent matches
-    /// either of the provided conditions
-    fn or(self, a: Condition, b: Condition) -> Query {
-        self.chain(a | b)
-    }
-
-    /// Convenience method to add a new condition where the ent does not match
-    /// the provided condition
-    fn not(self, condition: Condition) -> Query {
-        self.chain(!condition)
-    }
-
-    /// Convenience method to add a new condition where the specified ent
-    /// field's value equals the given value
-    fn ent_field_equal_to(self, field: impl Into<Field>) -> Query {
-        self.chain(Condition::EntFieldEqualTo(field.into()))
-    }
-
-    /// Convenience method to add a new condition where the specified ent
-    /// field's value is greater than the given value
-    fn ent_field_greater_than(self, field: impl Into<Field>) -> Query {
-        self.chain(Condition::EntFieldGreaterThan(field.into()))
-    }
-
-    /// Convenience method to add a new condition where the specified ent
-    /// field's value is less than the given value
-    fn ent_field_less_than(self, field: impl Into<Field>) -> Query {
-        self.chain(Condition::EntFieldLessThan(field.into()))
-    }
-}
-
-/// Represents errors that can occur when applying a condition to an ent
-#[derive(Clone, Debug, Display, Error, PartialEq, Eq)]
+#[derive(Clone, Debug, Display, Error, From, PartialEq, Eq)]
 pub enum ConditionError {
-    #[display(fmt = "Missing Field: {}", name)]
-    MissingField { name: String },
-
-    #[display(fmt = "Expected type {}, but got type {}", expected, actual)]
-    WrongType {
-        expected: ValueType,
-        actual: ValueType,
-    },
+    Field(FieldConditionError),
 }
 
 /// Represents a condition to a query, used to build up the query's logic
@@ -276,62 +162,14 @@ pub enum Condition {
     /// ```
     Not(Box<Condition>),
 
-    /// Query condition that succeeds if the ent's field is less than the
-    /// specified field value
+    /// Query condition that succeeds if the ent's field succeeds with the
+    /// given field condition
     ///
     /// ## Examples
     ///
     /// ```
-    /// use entity::{SchemalessEnt, Field, Value, Condition};
-    ///
-    /// let ent = SchemalessEnt::from_collections(0, vec![
-    ///     Field::new("name1", 99u8),
-    ///     Field::new("name2", "some string"),
-    /// ], vec![]);
-    ///
-    /// // Check if ent's field is less than the specified value
-    /// let cond = Condition::EntFieldLessThan(Field::new("name1", 100u8));
-    /// assert_eq!(cond.check(&ent), Ok(true));
     /// ```
-    EntFieldLessThan(Field),
-
-    /// Query condition that succeeds if the ent's field is equal to the
-    /// specified field value
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{SchemalessEnt, Field, Value, Condition};
-    ///
-    /// let ent = SchemalessEnt::from_collections(0, vec![
-    ///     Field::new("name1", 99u8),
-    ///     Field::new("name2", "some string"),
-    /// ], vec![]);
-    ///
-    /// // Check if ent's field is equal to the specified value
-    /// let cond = Condition::EntFieldEqualTo(Field::new("name1", 99u8));
-    /// assert_eq!(cond.check(&ent), Ok(true));
-    /// ```
-    EntFieldEqualTo(Field),
-
-    /// Query condition that succeeds if the ent's field is greater than the
-    /// specified field value
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{SchemalessEnt, Field, Value, Condition};
-    ///
-    /// let ent = SchemalessEnt::from_collections(0, vec![
-    ///     Field::new("name1", 99u8),
-    ///     Field::new("name2", "some string"),
-    /// ], vec![]);
-    ///
-    /// // Check if ent's field is greater than the specified value
-    /// let cond = Condition::EntFieldGreaterThan(Field::new("name1", 98u8));
-    /// assert_eq!(cond.check(&ent), Ok(true));
-    /// ```
-    EntFieldGreaterThan(Field),
+    Field(String, FieldCondition),
 }
 
 impl Condition {
@@ -350,18 +188,7 @@ impl Condition {
                 (true, false) | (false, true)
             )),
             Self::Not(cond) => Ok(!cond.check(ent)?),
-            Self::EntFieldLessThan(f) => {
-                let v = lookup_ent_field_value(ent, f.name(), f.value().to_type())?;
-                Ok(v < f.value())
-            }
-            Self::EntFieldEqualTo(f) => {
-                let v = lookup_ent_field_value(ent, f.name(), f.value().to_type())?;
-                Ok(v == f.value())
-            }
-            Self::EntFieldGreaterThan(f) => {
-                let v = lookup_ent_field_value(ent, f.name(), f.value().to_type())?;
-                Ok(v > f.value())
-            }
+            Self::Field(name, cond) => Ok(cond.check(ent, name).map_err(ConditionError::from)?),
         }
     }
 }
@@ -435,26 +262,5 @@ impl<'a> From<&'a str> for Condition {
     /// as `Condition::HasType(String)`
     fn from(r#type: &'a str) -> Self {
         Self::from(r#type.to_string())
-    }
-}
-
-fn lookup_ent_field_value<'a>(
-    ent: &'a dyn Ent,
-    name: &str,
-    r#type: ValueType,
-) -> Result<&'a Value, ConditionError> {
-    let value = ent
-        .field_value(name)
-        .ok_or_else(|| ConditionError::MissingField {
-            name: name.to_string(),
-        })?;
-
-    if value.is_type(r#type.clone()) {
-        Ok(value)
-    } else {
-        Err(ConditionError::WrongType {
-            expected: r#type,
-            actual: value.to_type(),
-        })
     }
 }
