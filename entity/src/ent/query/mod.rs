@@ -17,9 +17,14 @@ impl Query {
         Query::new(self.0 & condition)
     }
 
-    /// Returns the top-level condition of the query
-    pub fn condition(&self) -> &Condition {
+    /// Returns a reference to the top-level condition of the query
+    pub fn as_condition(&self) -> &Condition {
         &self.0
+    }
+
+    /// Consumes the query and returns the top-level condition of the query
+    pub fn into_condition(self) -> Condition {
+        self.0
     }
 }
 

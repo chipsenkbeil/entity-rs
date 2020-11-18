@@ -1,8 +1,4 @@
-use crate::{
-    value::{Value, ValueType},
-    Ent,
-};
-use derive_more::{Display, Error};
+use crate::ent::value::Value;
 
 /// Represents a condition on an ent's field
 #[derive(Debug)]
@@ -67,59 +63,11 @@ pub enum FieldCondition {
 }
 
 impl FieldCondition {
-    /// Checks a loaded ent to determine if it meets the condition, returning
-    /// true/false if no error is encountered
-    pub fn check(&self, ent: &dyn Ent, name: &str) -> Result<bool, FieldConditionError> {
+    pub fn value(&self) -> &Value {
         match self {
-            Self::LessThan(value) => {
-                let value_type = value.to_type();
-                let v = lookup_ent_field_value(ent, name, value_type)?;
-                Ok(v < value)
-            }
-            Self::EqualTo(value) => {
-                let value_type = value.to_type();
-                let v = lookup_ent_field_value(ent, name, value_type)?;
-                Ok(v == value)
-            }
-            Self::GreaterThan(value) => {
-                let value_type = value.to_type();
-                let v = lookup_ent_field_value(ent, name, value_type)?;
-                Ok(v > value)
-            }
+            Self::LessThan(v) => v,
+            Self::EqualTo(v) => v,
+            Self::GreaterThan(v) => v,
         }
-    }
-}
-
-/// Represents errors that can occur when applying a condition to an ent
-#[derive(Clone, Debug, Display, Error, PartialEq, Eq)]
-pub enum FieldConditionError {
-    #[display(fmt = "Missing Field: {}", name)]
-    MissingField { name: String },
-
-    #[display(fmt = "Expected type {}, but got type {}", expected, actual)]
-    WrongType {
-        expected: ValueType,
-        actual: ValueType,
-    },
-}
-
-fn lookup_ent_field_value<'a>(
-    ent: &'a dyn Ent,
-    name: &str,
-    r#type: ValueType,
-) -> Result<&'a Value, FieldConditionError> {
-    let value = ent
-        .field_value(name)
-        .ok_or_else(|| FieldConditionError::MissingField {
-            name: name.to_string(),
-        })?;
-
-    if value.is_type(r#type.clone()) {
-        Ok(value)
-    } else {
-        Err(FieldConditionError::WrongType {
-            expected: r#type,
-            actual: value.to_type(),
-        })
     }
 }

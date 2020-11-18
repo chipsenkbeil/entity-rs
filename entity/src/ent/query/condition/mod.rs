@@ -1,16 +1,10 @@
-use crate::Ent;
-use derive_more::{Display, Error, From};
 use std::fmt::Debug;
 
 mod edge;
 mod field;
 
-pub use field::{FieldCondition, FieldConditionError};
-
-#[derive(Clone, Debug, Display, Error, From, PartialEq, Eq)]
-pub enum ConditionError {
-    Field(FieldConditionError),
-}
+pub use edge::EdgeCondition;
+pub use field::FieldCondition;
 
 /// Represents a condition to a query, used to build up the query's logic
 #[derive(Debug)]
@@ -170,27 +164,14 @@ pub enum Condition {
     /// ```
     /// ```
     Field(String, FieldCondition),
-}
 
-impl Condition {
-    /// Checks a loaded ent to determine if it meets the condition, returning
-    /// true/false if no error is encountered
-    pub fn check(&self, ent: &dyn Ent) -> Result<bool, ConditionError> {
-        match self {
-            Self::Always => Ok(true),
-            Self::Never => Ok(false),
-            Self::HasId(id) => Ok(ent.id() == *id),
-            Self::HasType(r#type) => Ok(ent.r#type() == r#type),
-            Self::And(a, b) => Ok(a.check(ent)? && b.check(ent)?),
-            Self::Or(a, b) => Ok(a.check(ent)? || b.check(ent)?),
-            Self::Xor(a, b) => Ok(matches!(
-                (a.check(ent)?, b.check(ent)?),
-                (true, false) | (false, true)
-            )),
-            Self::Not(cond) => Ok(!cond.check(ent)?),
-            Self::Field(name, cond) => Ok(cond.check(ent, name).map_err(ConditionError::from)?),
-        }
-    }
+    /// Apply a condition on an ent's edge
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// ```
+    Edge(String, EdgeCondition),
 }
 
 impl std::ops::BitXor for Condition {

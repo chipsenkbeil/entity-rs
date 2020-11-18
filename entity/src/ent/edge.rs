@@ -43,24 +43,21 @@ impl Edge {
     strum_discriminants(derive(serde::Serialize, serde::Deserialize))
 )]
 pub enum EdgeValue {
-    /// Many instances of current ent refer to many instances of the referred ent
-    ManyToMany(Vec<usize>),
-    /// Many instances of current ent refer to one instance of the referred ent
-    ManyToOne(usize),
-    /// One instance of current ent refers to many instances of the referred ent
-    OneToMany(Vec<usize>),
-    /// One instance of current ent refers to one instance of the referred ent
-    OneToOne(usize),
+    /// Edge can potentially have one outward connection
+    MaybeOne(Option<usize>),
+    /// Edge can have exactly one outward connection
+    One(usize),
+    /// Edge can have many outward connections
+    Many(Vec<usize>),
 }
 
 impl EdgeValue {
     /// Produces all ids of ents referenced by this edge's value
     pub fn to_ids(&self) -> Vec<usize> {
         match self {
-            Self::ManyToMany(x) => x.clone(),
-            Self::ManyToOne(x) => vec![*x],
-            Self::OneToMany(x) => x.clone(),
-            Self::OneToOne(x) => vec![*x],
+            Self::MaybeOne(x) => x.into_iter().copied().collect(),
+            Self::One(x) => vec![*x],
+            Self::Many(x) => x.clone(),
         }
     }
 }
