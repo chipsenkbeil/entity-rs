@@ -16,7 +16,7 @@ pub trait IEnt: AsAny {
 
     /// Represents a unique type associated with the entity, used for
     /// lookups, indexing by type, and conversions
-    fn r#type<'a>(&'a self) -> &'a str;
+    fn r#type(&self) -> &str;
 
     /// Represents the time when the instance of the ent was created
     /// as the milliseconds since epoch (1970-01-01 00:00:00 UTC)

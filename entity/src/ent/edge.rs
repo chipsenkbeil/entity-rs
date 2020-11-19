@@ -27,9 +27,19 @@ impl Edge {
         &self.value
     }
 
+    /// The mutable value of the edge
+    pub fn value_mut(&mut self) -> &mut EdgeValue {
+        &mut self.value
+    }
+
     /// Converts to the ids of the ents referenced by this edge
     pub fn to_ids(&self) -> Vec<usize> {
         self.value.to_ids()
+    }
+
+    /// Converts to the edge's value type
+    pub fn to_type(&self) -> EdgeValueType {
+        self.value().into()
     }
 }
 
@@ -51,6 +61,19 @@ pub enum EdgeValue {
     Many(Vec<usize>),
 }
 
+/// Represents some error the can occur when mutating an edge's value
+#[derive(Debug, derive_more::Display, derive_more::Error)]
+pub enum EdgeValueMutationError {
+    #[display(fmt = "Too many ids for edge of type {}: {}", r#type, cnt)]
+    TooManyIds { r#type: EdgeValueType, cnt: usize },
+
+    #[display(fmt = "Too ids ents for edge of type {}: {}", r#type, cnt)]
+    TooFewIds { r#type: EdgeValueType, cnt: usize },
+
+    #[display(fmt = "Change invalidates edge of type {}", r#type)]
+    InvalidatesEdge { r#type: EdgeValueType },
+}
+
 impl EdgeValue {
     /// Produces all ids of ents referenced by this edge's value
     pub fn to_ids(&self) -> Vec<usize> {
@@ -58,6 +81,97 @@ impl EdgeValue {
             Self::MaybeOne(x) => x.into_iter().copied().collect(),
             Self::One(x) => vec![*x],
             Self::Many(x) => x.clone(),
+        }
+    }
+
+    pub fn to_type(&self) -> EdgeValueType {
+        self.into()
+    }
+
+    /// Adds the provided ids to the edge value, failing if the ids would
+    /// exceed the maximum allowed by the edge with current ids included
+    pub fn add_ids(
+        &mut self,
+        into_ids: impl IntoIterator<Item = usize>,
+    ) -> Result<(), EdgeValueMutationError> {
+        let ids = into_ids.into_iter().collect::<HashSet<usize>>();
+        let cnt = self.id_count();
+
+        // Fails if adding these ids would exceed the maximum allowed ids
+        if cnt + ids.len() > self.max_ids_allowed() {
+            return Err(EdgeValueMutationError::TooManyIds {
+                r#type: self.to_type(),
+                cnt: ids.len(),
+            });
+        }
+
+        // Update our optional id as we know it should be None and that we
+        // only were given a single id
+        if let Self::MaybeOne(maybe_id) = self {
+            maybe_id.replace(ids.into_iter().next().unwrap());
+
+        // Otherwise, add our ids to our many
+        } else if let Self::Many(existing_ids) = self {
+            existing_ids.extend(ids);
+        }
+
+        Ok(())
+    }
+
+    /// Removes the provided ids from the edge value, failing if the ids would
+    /// exceed the minimum allowed by the edge with current ids possibly
+    /// removed
+    pub fn remove_ids(
+        &mut self,
+        into_ids: impl IntoIterator<Item = usize>,
+    ) -> Result<(), EdgeValueMutationError> {
+        let ids = into_ids.into_iter().collect::<HashSet<usize>>();
+
+        // Fails if we are not allowed to remove our id and we're given
+        // some selection that would cause that issue
+        if let Self::One(id) = self {
+            if ids.contains(&id) {
+                return Err(EdgeValueMutationError::InvalidatesEdge {
+                    r#type: self.to_type(),
+                });
+            }
+        }
+
+        // Remove the id from our optional id if it is in our selection
+        if let Self::MaybeOne(maybe_id) = self {
+            if ids.contains(&maybe_id.unwrap()) {
+                maybe_id.take();
+            }
+        // Remove all ids provided from our many
+        } else if let Self::Many(existing_ids) = self {
+            existing_ids.retain(|id| !ids.contains(id));
+        }
+
+        Ok(())
+    }
+
+    #[inline]
+    fn id_count(&self) -> usize {
+        match self {
+            Self::MaybeOne(None) => 0,
+            Self::MaybeOne(Some(_)) | Self::One(_) => 1,
+            Self::Many(ids) => ids.len(),
+        }
+    }
+
+    #[inline]
+    fn max_ids_allowed(&self) -> usize {
+        match self {
+            Self::MaybeOne(_) | Self::One(_) => 1,
+            Self::Many(_) => usize::MAX,
+        }
+    }
+
+    #[inline]
+    fn min_ids_allowed(&self) -> usize {
+        match self {
+            Self::MaybeOne(_) | Self::Many(_) => 0,
+            Self::One(_) => 1,
         }
     }
 }
@@ -126,5 +240,19 @@ impl EdgeDefinition {
     /// Attributes associated with the definition
     pub fn attributes(&self) -> HashSet<EdgeDefinitionAttribute> {
         self.attributes.iter().copied().collect()
+    }
+
+    /// Returns true if this definition indicates that the edge should be
+    /// involved in a shallow deletion if the ent is deleted
+    pub fn should_shallow_delete(&self) -> bool {
+        self.attributes
+            .contains(&EdgeDefinitionAttribute::ShallowDelete)
+    }
+
+    /// Returns true if this definition indicates that the edge should be
+    /// involved in a deep deletion if the ent is deleted
+    pub fn should_deep_delete(&self) -> bool {
+        self.attributes
+            .contains(&EdgeDefinitionAttribute::DeepDelete)
     }
 }

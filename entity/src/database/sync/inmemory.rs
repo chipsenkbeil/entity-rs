@@ -2,7 +2,7 @@ use crate::{
     database::{Database, DatabaseError, DatabaseExt, DatabaseResult},
     ent::{
         query::{Condition, EdgeCondition, FieldCondition, Query},
-        Ent, Value, ValueType,
+        Edge, Ent, EntSchema, IEntSchema, Value, ValueType,
     },
     IEnt,
 };
@@ -27,8 +27,11 @@ type EntIdSet = HashSet<usize>;
 /// launching an application!
 #[derive(Clone)]
 pub struct InmemoryDatabase {
-    /// Primary database, using a simple, locked hashmap
-    database: Arc<Mutex<HashMap<usize, Ent>>>,
+    /// Primary ent storage
+    ents: Arc<Mutex<HashMap<usize, Ent>>>,
+
+    /// Ent schema storage (type str -> schema)
+    ent_schemas: Arc<Mutex<HashMap<String, EntSchema>>>,
 
     /// Type matching from specific ents to all ids of those ents
     ents_of_type: Arc<Mutex<HashMap<String, EntIdSet>>>,
@@ -38,7 +41,8 @@ impl Default for InmemoryDatabase {
     /// Creates a new, empty database entry
     fn default() -> Self {
         Self {
-            database: Arc::new(Mutex::new(HashMap::new())),
+            ents: Arc::new(Mutex::new(HashMap::new())),
+            ent_schemas: Arc::new(Mutex::new(HashMap::new())),
             ents_of_type: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -46,13 +50,48 @@ impl Default for InmemoryDatabase {
 
 impl Database for InmemoryDatabase {
     fn get(&self, id: usize) -> DatabaseResult<Option<Ent>> {
-        Ok(self.database.lock().unwrap().get(&id).map(Clone::clone))
+        Ok(self.ents.lock().unwrap().get(&id).map(Clone::clone))
     }
 
-    fn remove(&self, id: usize, adjust_edges: bool) -> DatabaseResult<()> {
-        if let Some(ent) = self.database.lock().unwrap().remove(&id) {
-            todo!("Process adjusting edges of ents pointing to this one");
+    fn remove(&self, id: usize) -> DatabaseResult<()> {
+        // Remove the ent and, if it has an associated schema, we process
+        // each of the edges identified in the schema based on deletion attributes
+        if let Some(ent) = self.ents.lock().unwrap().remove(&id) {
+            if let Some(ent_schema) = self.ent_schemas.lock().unwrap().get(ent.r#type()) {
+                for def in ent_schema.edges() {
+                    if let Some(edge_ids) = ent.edge(def.name()).map(Edge::to_ids) {
+                        // If shallow deletion, we only want to remove the connections
+                        // back to this ent from the corresponding ents
+                        if def.should_shallow_delete() {
+                            for edge_id in edge_ids {
+                                if let Some(ent) = self.ents.lock().unwrap().get_mut(&edge_id) {
+                                    // TODO: Bubble up errors
+                                    ent.remove_ents_from_all_edges(Some(id));
+                                }
+                            }
+
+                        // If deep deletion, we want to remove the ents connected
+                        // by the edge
+                        } else if def.should_deep_delete() {
+                            for id in edge_ids {
+                                // TODO: Bubble up errors
+                                self.remove(id);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Remove the id from our type mapping if it is there
+            self.ents_of_type
+                .lock()
+                .unwrap()
+                .entry(ent.r#type().to_string())
+                .and_modify(|e| {
+                    e.remove(&id);
+                });
         }
+
         Ok(())
     }
 
@@ -68,7 +107,7 @@ impl Database for InmemoryDatabase {
             .insert(ent.id());
 
         // Add our ent to the primary database
-        self.database.lock().unwrap().insert(ent.id(), ent);
+        self.ents.lock().unwrap().insert(ent.id(), ent);
 
         Ok(())
     }
@@ -119,7 +158,7 @@ fn process_condition(
 fn process_always_condition(this: &InmemoryDatabase, pipeline: Option<EntIdSet>) -> EntIdSet {
     match pipeline {
         Some(ids) => ids,
-        None => this.database.lock().unwrap().keys().copied().collect(),
+        None => this.ents.lock().unwrap().keys().copied().collect(),
     }
 }
 
@@ -193,7 +232,7 @@ fn process_not_condition(
         all_ids.difference(&ids_to_remove).copied().collect()
     } else {
         let all_ids = this
-            .database
+            .ents
             .lock()
             .unwrap()
             .keys()
@@ -215,7 +254,7 @@ fn process_has_id_condition(
     id: usize,
     pipeline: Option<EntIdSet>,
 ) -> EntIdSet {
-    if (pipeline.is_none() && this.database.lock().unwrap().contains_key(&id))
+    if (pipeline.is_none() && this.ents.lock().unwrap().contains_key(&id))
         || pipeline.unwrap().contains(&id)
     {
         vec![id].into_iter().collect()
@@ -238,7 +277,7 @@ fn process_has_type_condition(
     if let Some(ids) = pipeline {
         ids.into_iter()
             .filter_map(|id| {
-                this.database
+                this.ents
                     .lock()
                     .unwrap()
                     .get(&id)
@@ -301,8 +340,23 @@ fn process_edge_condition(
         .unwrap_or_default()
         .into_iter()
         .filter_map(|id| this.get(id).ok().flatten())
-        .filter_map(|ent| {
-            todo!("Need to handle three types of edges and three types of edge values")
+        .flat_map(|ent| {
+            if let Some(edge) = ent.edge(name) {
+                let ids = edge.to_ids().into_iter().collect::<EntIdSet>();
+                let id_cnt = ids.len();
+                let valid_edge_ids = process_condition(this, condition.condition(), Some(ids));
+
+                match (condition, valid_edge_ids.len()) {
+                    (EdgeCondition::Any(_), _) => valid_edge_ids,
+                    (EdgeCondition::Exactly(_, cnt), valid_cnt) if valid_cnt == *cnt => {
+                        valid_edge_ids
+                    }
+                    (EdgeCondition::All(_), valid_cnt) if valid_cnt == id_cnt => valid_edge_ids,
+                    _ => HashSet::new(),
+                }
+            } else {
+                HashSet::new()
+            }
         })
         .collect()
 }

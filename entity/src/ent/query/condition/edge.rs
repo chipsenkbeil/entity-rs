@@ -13,3 +13,14 @@ pub enum EdgeCondition {
     /// For all ents on a connected edge, check ll pass the condition
     All(Box<Condition>),
 }
+
+impl EdgeCondition {
+    /// Returns the underlying condition
+    pub fn condition(&self) -> &Condition {
+        match self {
+            Self::Any(cond) => cond.as_ref(),
+            Self::Exactly(cond, _) => cond.as_ref(),
+            Self::All(cond) => cond.as_ref(),
+        }
+    }
+}

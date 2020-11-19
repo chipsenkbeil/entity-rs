@@ -4,17 +4,33 @@ pub mod query;
 mod schema;
 mod value;
 
-pub use edge::{Edge, EdgeDefinition, EdgeDefinitionAttribute, EdgeValue, EdgeValueType};
+pub use edge::{
+    Edge, EdgeDefinition, EdgeDefinitionAttribute, EdgeValue, EdgeValueMutationError, EdgeValueType,
+};
 pub use field::{Field, FieldDefinition, FieldDefinitionAttribute};
 pub use query::{Condition, FieldCondition, Query, QueryExt};
-pub use schema::{EmptyEntSchema, EntSchema};
+pub use schema::{EntSchema, IEntSchema};
 pub use value::{PrimitiveValue, PrimitiveValueType, Value, ValueType};
 
 use super::IEnt;
+use derive_more::{Display, Error};
 use std::{
-    collections::HashMap,
+    collections::{hash_map::Entry, HashMap, HashSet},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+/// Represents some error the can occur when mutating an ent
+#[derive(Debug, Display, Error)]
+pub enum EntMutationError {
+    #[display(fmt = "{}", source)]
+    BadEdgeValueMutation { source: EdgeValueMutationError },
+
+    #[display(fmt = "No edge with name: {}", name)]
+    NoEdge { name: String },
+
+    #[display(fmt = "No field with name: {}", name)]
+    NoField { name: String },
+}
 
 /// Represents a general-purpose ent that has no pre-assigned schema and
 /// maintains fields and edges using internal maps
@@ -79,6 +95,91 @@ impl Ent {
                 .collect(),
         )
     }
+
+    /// Replaces the ent's local field's value with the given value, returning
+    /// the old previous value if the field exists
+    ///
+    /// If the field does not exist, does NOT insert the value as a new field
+    pub fn update_field(
+        &mut self,
+        into_name: impl Into<String>,
+        into_value: impl Into<Value>,
+    ) -> Result<Value, EntMutationError> {
+        self.mark_updated();
+
+        let name = into_name.into();
+        let field = Field::new(name.to_string(), into_value);
+        match self.fields.entry(name.to_string()) {
+            Entry::Occupied(mut x) => Ok(x.insert(field).into_value()),
+            Entry::Vacant(_) => Err(EntMutationError::NoField { name }),
+        }
+    }
+
+    /// Updates the ent's local edge's list to contain the provided ids
+    ///
+    /// If there are too many ids (in the case of >1 for MaybeOne/One), this
+    /// method will fail.
+    pub fn add_ents_to_edge(
+        &mut self,
+        into_edge_name: impl Into<String>,
+        into_edge_ids: impl IntoIterator<Item = usize>,
+    ) -> Result<(), EntMutationError> {
+        let edge_name = into_edge_name.into();
+        match self.edges.entry(edge_name.to_string()) {
+            Entry::Occupied(mut x) => x
+                .get_mut()
+                .value_mut()
+                .add_ids(into_edge_ids)
+                .map_err(|err| EntMutationError::BadEdgeValueMutation { source: err }),
+            Entry::Vacant(_) => Err(EntMutationError::NoEdge { name: edge_name }),
+        }
+    }
+
+    /// Updates the ent's local edge's list to remove the provided ids
+    ///
+    /// If this would result in an invalid edge (One being empty), this
+    /// method will fail.
+    pub fn remove_ents_from_edge(
+        &mut self,
+        into_edge_name: impl Into<String>,
+        into_edge_ids: impl IntoIterator<Item = usize>,
+    ) -> Result<(), EntMutationError> {
+        let edge_name = into_edge_name.into();
+        match self.edges.entry(edge_name.to_string()) {
+            Entry::Occupied(mut x) => x
+                .get_mut()
+                .value_mut()
+                .remove_ids(into_edge_ids)
+                .map_err(|err| EntMutationError::BadEdgeValueMutation { source: err }),
+            Entry::Vacant(_) => Err(EntMutationError::NoEdge { name: edge_name }),
+        }
+    }
+
+    /// Updates all of the ent's local edges to remove the provided ids
+    ///
+    /// If this would result in an invalid edge (One being empty), this
+    /// method will fail.
+    pub fn remove_ents_from_all_edges(
+        &mut self,
+        into_edge_ids: impl IntoIterator<Item = usize>,
+    ) -> Result<(), EntMutationError> {
+        let edge_ids = into_edge_ids.into_iter().collect::<HashSet<usize>>();
+        let edge_names = self.edges.keys().cloned().collect::<HashSet<String>>();
+
+        for name in edge_names {
+            self.remove_ents_from_edge(name, edge_ids.clone())?;
+        }
+
+        Ok(())
+    }
+
+    /// Updates the local, internal timestamp of this ent instance
+    fn mark_updated(&mut self) {
+        self.last_updated = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Invalid system time")
+            .as_millis() as u64;
+    }
 }
 
 impl Default for Ent {
@@ -115,7 +216,7 @@ impl IEnt for Ent {
     /// let ent = Ent::default();
     /// assert_eq!(ent.r#type(), "entity::ent::Ent");
     /// ```
-    fn r#type<'a>(&'a self) -> &'a str {
+    fn r#type(&self) -> &str {
         &self.r#type
     }
 

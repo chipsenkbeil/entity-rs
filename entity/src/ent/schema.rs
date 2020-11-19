@@ -3,24 +3,39 @@ use super::{edge::EdgeDefinition, field::FieldDefinition};
 /// Represents the schema associated with some concrete ent type. It is
 /// expected that each concrete schema type is defined at compile-time and
 /// is consistent when accessing its field and edge definitions
-pub trait EntSchema {
-    /// Static method that returns the fields expected for the concrete ent
-    fn fields() -> Vec<FieldDefinition>;
+pub trait IEntSchema {
+    /// Returns the fields expected for the concrete ent
+    fn fields(&self) -> &[FieldDefinition];
 
-    /// Static method that returns the edges expected for the concrete ent
-    fn edges() -> Vec<EdgeDefinition>;
+    /// Returns the edges expected for the concrete ent
+    fn edges(&self) -> &[EdgeDefinition];
 }
 
-/// Represents an empty ent schema, meaning that it has no fields or edges
-/// according to the schema itself
-pub struct EmptyEntSchema;
+/// Represents a schema that can be defined once with arbitrary definitions
+#[derive(Clone, Debug)]
+pub struct EntSchema {
+    field_defs: Vec<FieldDefinition>,
+    edge_defs: Vec<EdgeDefinition>,
+}
 
-impl EntSchema for EmptyEntSchema {
-    fn fields() -> Vec<FieldDefinition> {
-        vec![]
+impl EntSchema {
+    pub fn new(
+        into_field_defs: impl IntoIterator<Item = FieldDefinition>,
+        into_edge_defs: impl IntoIterator<Item = EdgeDefinition>,
+    ) -> Self {
+        Self {
+            field_defs: into_field_defs.into_iter().collect(),
+            edge_defs: into_edge_defs.into_iter().collect(),
+        }
+    }
+}
+
+impl IEntSchema for EntSchema {
+    fn fields(&self) -> &[FieldDefinition] {
+        &self.field_defs
     }
 
-    fn edges() -> Vec<EdgeDefinition> {
-        vec![]
+    fn edges(&self) -> &[EdgeDefinition] {
+        &self.edge_defs
     }
 }

@@ -13,10 +13,8 @@ pub trait Database {
     fn get(&self, id: usize) -> DatabaseResult<Option<Ent>>;
 
     /// Removes the ent with the corresponding id, triggering edge
-    /// processing for all disconnected ents. If indicated, this will
-    /// adjust ents connected with this ent via edges, removing any if
-    /// indicated.
-    fn remove(&self, id: usize, adjust_edges: bool) -> DatabaseResult<()>;
+    /// processing for all disconnected ents.
+    fn remove(&self, id: usize) -> DatabaseResult<()>;
 
     /// Inserts a new ent using its id as the primary index, overwriting
     /// any ent with a matching id.

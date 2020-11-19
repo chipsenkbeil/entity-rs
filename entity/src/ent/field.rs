@@ -26,6 +26,11 @@ impl Field {
     pub fn value(&self) -> &Value {
         &self.value
     }
+
+    /// Converts field into its value
+    pub fn into_value(self) -> Value {
+        self.value
+    }
 }
 
 /// Represents a field definition for an ent
