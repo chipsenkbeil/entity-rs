@@ -49,6 +49,18 @@ impl Default for InmemoryDatabase {
 }
 
 impl Database for InmemoryDatabase {
+    fn register(
+        &self,
+        r#type: impl Into<String>,
+        schema: impl Into<EntSchema>,
+    ) -> DatabaseResult<()> {
+        self.ent_schemas
+            .lock()
+            .unwrap()
+            .insert(r#type.into(), schema.into());
+        Ok(())
+    }
+
     fn get(&self, id: usize) -> DatabaseResult<Option<Ent>> {
         Ok(self.ents.lock().unwrap().get(&id).map(Clone::clone))
     }

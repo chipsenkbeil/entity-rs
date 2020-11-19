@@ -1,7 +1,7 @@
 mod inmemory;
 
 use super::DatabaseResult;
-use crate::ent::{Ent, Query};
+use crate::ent::{Ent, EntSchema, Query};
 
 /// Represents a synchronous database, which performs blocking CRUD
 /// operations using ents. All operations only require a reference to the
@@ -9,6 +9,13 @@ use crate::ent::{Ent, Query};
 /// locking and safeguards to ensure that multi-threaded access does
 /// not cause problems.
 pub trait Database {
+    /// Registers a schema for ents being inserted into the database
+    fn register(
+        &self,
+        r#type: impl Into<String>,
+        schema: impl Into<EntSchema>,
+    ) -> DatabaseResult<()>;
+
     /// Retrieves a copy of a single, generic ent with the corresponding id
     fn get(&self, id: usize) -> DatabaseResult<Option<Ent>>;
 
