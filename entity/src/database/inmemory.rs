@@ -2,7 +2,7 @@ use crate::{
     database::{Database, DatabaseError, DatabaseExt, DatabaseResult},
     ent::{
         query::{Condition, EdgeCondition, FieldCondition, Query},
-        Edge, Ent, EntSchema, IEntSchema, Value, ValueType,
+        EdgeDeletionPolicy, Ent, Value,
     },
     IEnt,
 };
@@ -30,9 +30,6 @@ pub struct InmemoryDatabase {
     /// Primary ent storage
     ents: Arc<Mutex<HashMap<usize, Ent>>>,
 
-    /// Ent schema storage (type str -> schema)
-    ent_schemas: Arc<Mutex<HashMap<String, EntSchema>>>,
-
     /// Type matching from specific ents to all ids of those ents
     ents_of_type: Arc<Mutex<HashMap<String, EntIdSet>>>,
 }
@@ -42,25 +39,12 @@ impl Default for InmemoryDatabase {
     fn default() -> Self {
         Self {
             ents: Arc::new(Mutex::new(HashMap::new())),
-            ent_schemas: Arc::new(Mutex::new(HashMap::new())),
             ents_of_type: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
 
 impl Database for InmemoryDatabase {
-    fn register(
-        &self,
-        r#type: impl Into<String>,
-        schema: impl Into<EntSchema>,
-    ) -> DatabaseResult<()> {
-        self.ent_schemas
-            .lock()
-            .unwrap()
-            .insert(r#type.into(), schema.into());
-        Ok(())
-    }
-
     fn get(&self, id: usize) -> DatabaseResult<Option<Ent>> {
         Ok(self.ents.lock().unwrap().get(&id).map(Clone::clone))
     }
@@ -69,28 +53,26 @@ impl Database for InmemoryDatabase {
         // Remove the ent and, if it has an associated schema, we process
         // each of the edges identified in the schema based on deletion attributes
         if let Some(ent) = self.ents.lock().unwrap().remove(&id) {
-            if let Some(ent_schema) = self.ent_schemas.lock().unwrap().get(ent.r#type()) {
-                for def in ent_schema.edges() {
-                    if let Some(edge_ids) = ent.edge(def.name()).map(Edge::to_ids) {
-                        // If shallow deletion, we only want to remove the connections
-                        // back to this ent from the corresponding ents
-                        if def.should_shallow_delete() {
-                            for edge_id in edge_ids {
-                                if let Some(ent) = self.ents.lock().unwrap().get_mut(&edge_id) {
-                                    // TODO: Bubble up errors
-                                    ent.remove_ents_from_all_edges(Some(id));
-                                }
-                            }
-
-                        // If deep deletion, we want to remove the ents connected
-                        // by the edge
-                        } else if def.should_deep_delete() {
-                            for id in edge_ids {
-                                // TODO: Bubble up errors
-                                self.remove(id);
+            for edge in ent.edges() {
+                match edge.deletion_policy() {
+                    // If shallow deletion, we only want to remove the connections
+                    // back to this ent from the corresponding ents
+                    EdgeDeletionPolicy::ShallowDelete => {
+                        for edge_id in edge.to_ids() {
+                            if let Some(ent) = self.ents.lock().unwrap().get_mut(&edge_id) {
+                                let _ = ent.remove_ents_from_all_edges(Some(id));
                             }
                         }
                     }
+                    // If deep deletion, we want to remove the ents connected
+                    // by the edge
+                    EdgeDeletionPolicy::DeepDelete => {
+                        for id in edge.to_ids() {
+                            let _ = self.remove(id);
+                        }
+                    }
+                    // If deletion policy is nothing, then do nothing
+                    EdgeDeletionPolicy::Nothing => {}
                 }
             }
 
@@ -158,7 +140,7 @@ fn process_condition(
         Condition::Not(cond) => process_not_condition(this, cond, pipeline),
         Condition::HasId(id) => process_has_id_condition(this, *id, pipeline),
         Condition::HasType(r#type) => process_has_type_condition(this, r#type, pipeline),
-        Condition::Field(name, cond) => process_field_condition(this, name, cond, pipeline),
+        Condition::Field(name, cond) => process_named_field_condition(this, name, cond, pipeline),
         Condition::Edge(name, cond) => process_edge_condition(this, name, cond, pipeline),
     }
 }
@@ -308,35 +290,6 @@ fn process_has_type_condition(
 }
 
 /// If this is part of a pipeline of ids, we check each corresponding
-/// ent for a field with the given name and then compare that field's
-/// value to our field condition. If the field exists and satisfies the
-/// field condition, the id of the ent passes. If this is the start
-/// of a pipeline, nothing passes.
-#[inline]
-fn process_field_condition(
-    this: &InmemoryDatabase,
-    name: &str,
-    condition: &FieldCondition,
-    pipeline: Option<EntIdSet>,
-) -> EntIdSet {
-    // TODO: Bubble up errors rather than filtering them out
-    pipeline
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|id| this.get(id).ok().flatten())
-        .filter_map(|ent| {
-            let maybe_v = lookup_ent_field_value(&ent, &name, condition.value().to_type()).ok();
-            match (condition, maybe_v) {
-                (FieldCondition::EqualTo(v), Some(ent_v)) if ent_v == v => Some(ent.id()),
-                (FieldCondition::GreaterThan(v), Some(ent_v)) if ent_v > v => Some(ent.id()),
-                (FieldCondition::LessThan(v), Some(ent_v)) if ent_v < v => Some(ent.id()),
-                _ => None,
-            }
-        })
-        .collect()
-}
-
-/// If this is part of a pipeline of ids, we check each corresponding
 /// ent for an edge with the given name and then perform the given
 /// condition on all ents of that edge. If all en If this is the start
 /// of a pipeline, nothing passes.
@@ -347,7 +300,6 @@ fn process_edge_condition(
     condition: &EdgeCondition,
     pipeline: Option<EntIdSet>,
 ) -> EntIdSet {
-    // TODO: Bubble up errors rather than filtering them out
     pipeline
         .unwrap_or_default()
         .into_iter()
@@ -373,25 +325,171 @@ fn process_edge_condition(
         .collect()
 }
 
+/// If this is part of a pipeline of ids, we check each corresponding
+/// ent for a field with the given name and then compare that field's
+/// value to our field condition. If the field exists and satisfies the
+/// field condition, the id of the ent passes. If this is the start
+/// of a pipeline, nothing passes.
+#[inline]
+fn process_named_field_condition(
+    this: &InmemoryDatabase,
+    name: &str,
+    condition: &FieldCondition,
+    pipeline: Option<EntIdSet>,
+) -> EntIdSet {
+    pipeline
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|id| this.get(id).ok().flatten())
+        .filter_map(|ent| match lookup_ent_field_value(&ent, &name).ok() {
+            Some(value) if condition.check(value) => Some(ent.id()),
+            _ => None,
+        })
+        .collect()
+}
+
 /// Looks up the value of a field on an ent
 #[inline]
-fn lookup_ent_field_value<'a>(
-    ent: &'a Ent,
-    name: &str,
-    r#type: ValueType,
-) -> Result<&'a Value, DatabaseError> {
+fn lookup_ent_field_value<'a>(ent: &'a Ent, name: &str) -> Result<&'a Value, DatabaseError> {
     let value = ent
         .field_value(name)
         .ok_or_else(|| DatabaseError::MissingField {
             name: name.to_string(),
         })?;
 
-    if value.is_type(r#type.clone()) {
-        Ok(value)
-    } else {
-        Err(DatabaseError::WrongType {
-            expected: r#type,
-            actual: value.to_type(),
-        })
+    Ok(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ent::Field;
+
+    #[test]
+    fn insert_should_add_a_new_ent_using_its_id() {
+        let db = InmemoryDatabase::default();
+
+        let ent = Ent::new_untyped(999);
+        let _ = db.insert(ent).expect("Failed to insert ent");
+
+        let ent = db
+            .get(999)
+            .expect("Failed to get ent")
+            .expect("Ent missing");
+        assert_eq!(ent.id(), 999);
+    }
+
+    #[test]
+    fn insert_should_overwrite_an_existing_ent_with_the_same_id() {
+        let db = InmemoryDatabase::default();
+
+        let ent = Ent::from_collections(
+            999,
+            Ent::default_type(),
+            vec![Field::new("field1", 3)],
+            vec![],
+        );
+        let _ = db.insert(ent).expect("Failed to insert ent");
+
+        let ent = db
+            .get(999)
+            .expect("Failed to get ent")
+            .expect("Ent missing");
+        assert_eq!(
+            ent.field("field1").expect("Field missing").value(),
+            &Value::from(3)
+        );
+    }
+
+    #[test]
+    fn get_should_return_an_ent_by_id() {
+        let db = InmemoryDatabase::default();
+
+        let result = db.get(999).expect("Failed to get ent");
+        assert!(result.is_none(), "Unexpectedly acquired ent");
+
+        let _ = db.insert(Ent::new_untyped(999)).unwrap();
+
+        let result = db.get(999).expect("Failed to get ent");
+        assert!(result.is_some(), "Unexpectedly missing ent");
+    }
+
+    #[test]
+    fn remove_should_remove_an_ent_by_id() {
+        let db = InmemoryDatabase::default();
+
+        let _ = db.remove(999).expect("Failed to remove ent");
+
+        let _ = db.insert(Ent::new_untyped(999)).unwrap();
+        assert!(db.get(999).unwrap().is_some(), "Failed to set up ent");
+
+        let _ = db.remove(999).expect("Failed to remove ent");
+        assert!(db.get(999).unwrap().is_none(), "Did not remove ent");
+    }
+
+    #[test]
+    fn get_all_should_return_all_ents_with_associated_ids() {
+        let db = InmemoryDatabase::default();
+
+        let _ = db.insert(Ent::new_untyped(1)).unwrap();
+        let _ = db.insert(Ent::new_untyped(2)).unwrap();
+        let _ = db.insert(Ent::new_untyped(3)).unwrap();
+
+        let results = db
+            .get_all(vec![1, 2, 3])
+            .expect("Failed to retrieve ents")
+            .iter()
+            .map(Ent::id)
+            .collect::<HashSet<usize>>();
+        assert_eq!(results, [1, 2, 3].iter().copied().collect());
+
+        let results = db
+            .get_all(vec![1, 3])
+            .expect("Failed to retrieve ents")
+            .iter()
+            .map(Ent::id)
+            .collect::<HashSet<usize>>();
+        assert_eq!(results, [1, 3].iter().copied().collect());
+
+        let results = db
+            .get_all(vec![2, 3, 4, 5, 6, 7, 8])
+            .expect("Failed to retrieve ents")
+            .iter()
+            .map(Ent::id)
+            .collect::<HashSet<usize>>();
+        assert_eq!(results, [2, 3].iter().copied().collect());
+    }
+
+    #[test]
+    fn find_all_should_support_various_combinations_of_queries() {
+        let db = InmemoryDatabase::default();
+
+        let _ = db.insert(Ent::new_empty(1, "type1")).unwrap();
+        let _ = db.insert(Ent::new_untyped(2)).unwrap();
+        let _ = db.insert(Ent::new_untyped(3)).unwrap();
+
+        let results = db
+            .get_all(vec![1, 2, 3])
+            .expect("Failed to retrieve ents")
+            .iter()
+            .map(Ent::id)
+            .collect::<HashSet<usize>>();
+        assert_eq!(results, [1, 2, 3].iter().copied().collect());
+
+        let results = db
+            .get_all(vec![1, 3])
+            .expect("Failed to retrieve ents")
+            .iter()
+            .map(Ent::id)
+            .collect::<HashSet<usize>>();
+        assert_eq!(results, [1, 3].iter().copied().collect());
+
+        let results = db
+            .get_all(vec![2, 3, 4, 5, 6, 7, 8])
+            .expect("Failed to retrieve ents")
+            .iter()
+            .map(Ent::id)
+            .collect::<HashSet<usize>>();
+        assert_eq!(results, [2, 3].iter().copied().collect());
     }
 }

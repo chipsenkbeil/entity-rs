@@ -7,13 +7,34 @@ use std::collections::HashSet;
 pub struct Field {
     name: String,
     value: Value,
+    attributes: Vec<FieldAttribute>,
 }
 
 impl Field {
-    pub fn new(name: impl Into<String>, value: impl Into<Value>) -> Self {
+    /// Creates a new field with the given name and value and no attributes
+    pub fn new<N: Into<String>, V: Into<Value>>(name: N, value: V) -> Self {
+        Self::new_with_attributes(name, value, HashSet::new())
+    }
+
+    /// Creates a new field with the given name, value, and attributes
+    pub fn new_with_attributes<
+        N: Into<String>,
+        V: Into<Value>,
+        A: IntoIterator<Item = FieldAttribute>,
+    >(
+        name: N,
+        value: V,
+        attributes: A,
+    ) -> Self {
+        // Filter out duplicates of field attributes
+        let mut attributes: Vec<FieldAttribute> = attributes.into_iter().collect();
+        attributes.sort();
+        attributes.dedup();
+
         Self {
             name: name.into(),
             value: value.into(),
+            attributes,
         }
     }
 
@@ -31,77 +52,21 @@ impl Field {
     pub fn into_value(self) -> Value {
         self.value
     }
+
+    /// The type of the value associated with the field
+    pub fn to_value_type(&self) -> ValueType {
+        self.value.to_type()
+    }
+
+    pub fn attributes(&self) -> &[FieldAttribute] {
+        &self.attributes
+    }
 }
 
-/// Represents a field definition for an ent
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// Represents an attribute associated with a field for an ent
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct FieldDefinition {
-    name: String,
-    r#type: ValueType,
-    default_value: Option<Value>,
-    attributes: HashSet<FieldDefinitionAttribute>,
-}
-
-/// Represents an attribute associated with a field definition for an ent
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum FieldDefinitionAttribute {
+pub enum FieldAttribute {
+    /// Indicates that this field is indexed for faster lookup
     Indexed,
-}
-
-impl FieldDefinition {
-    /// Creates a new field definition for use by a database
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{
-    ///     FieldDefinition as FD,
-    ///     FieldDefinitionAttribute as FDA,
-    ///     Value as V,
-    ///     ValueType as VT,
-    ///     PrimitiveValue as PV,
-    ///     PrimitiveValueType as PVT
-    /// };
-    ///
-    /// let fd = FD::new("my field", PVT::U32, Some(5u32), vec![FDA::Indexed]);
-    /// assert_eq!(fd.name(), "my field");
-    /// assert_eq!(fd.r#type(), &VT::Primitive(PVT::U32));
-    /// assert_eq!(fd.default_value(), Some(&V::Primitive(PV::U32(5))));
-    /// assert_eq!(fd.attributes(), vec![FDA::Indexed].into_iter().collect());
-    /// ```
-    pub fn new(
-        name: impl Into<String>,
-        r#type: impl Into<ValueType>,
-        default_value: Option<impl Into<Value>>,
-        attributes: impl IntoIterator<Item = FieldDefinitionAttribute>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            r#type: r#type.into(),
-            default_value: default_value.map(Into::into),
-            attributes: attributes.into_iter().collect(),
-        }
-    }
-
-    /// The name of the field
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// The type associated with the field
-    pub fn r#type(&self) -> &ValueType {
-        &self.r#type
-    }
-
-    /// The default value to apply when creating new ents with this field
-    pub fn default_value(&self) -> Option<&Value> {
-        self.default_value.as_ref()
-    }
-
-    /// Attributes associated with the definition
-    pub fn attributes(&self) -> HashSet<FieldDefinitionAttribute> {
-        self.attributes.iter().copied().collect()
-    }
 }

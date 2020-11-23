@@ -1,16 +1,16 @@
 mod edge;
 mod field;
 pub mod query;
-mod schema;
 mod value;
 
-pub use edge::{
-    Edge, EdgeDefinition, EdgeDefinitionAttribute, EdgeValue, EdgeValueMutationError, EdgeValueType,
+pub use edge::{Edge, EdgeDeletionPolicy, EdgeValue, EdgeValueMutationError, EdgeValueType};
+pub use field::{Field, FieldAttribute};
+pub use query::{
+    CollectionCondition, Condition, EdgeCondition, FieldCondition, Query, QueryExt, ValueCondition,
 };
-pub use field::{Field, FieldDefinition, FieldDefinitionAttribute};
-pub use query::{Condition, FieldCondition, Query, QueryExt};
-pub use schema::{EntSchema, IEntSchema};
-pub use value::{PrimitiveValue, PrimitiveValueType, Value, ValueType};
+pub use value::{
+    Number, NumberSign, NumberType, PrimitiveValue, PrimitiveValueType, Value, ValueType,
+};
 
 use super::IEnt;
 use derive_more::{Display, Error};
@@ -32,7 +32,7 @@ pub enum EntMutationError {
     NoField { name: String },
 }
 
-/// Represents a general-purpose ent that has no pre-assigned schema and
+/// Represents a general-purpose ent that has no pre-assigned type and
 /// maintains fields and edges using internal maps
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -46,16 +46,22 @@ pub struct Ent {
 }
 
 impl Ent {
+    /// Returns the Ent struct's default type as a str, which should only
+    /// be set for Ent instances that are untyped
+    pub const fn default_type() -> &'static str {
+        concat!(module_path!(), "::", "Ent")
+    }
+
     /// Creates a new ent using the given id, type, field map, and edge map
     pub fn new(
         id: usize,
-        r#type: impl Into<String>,
+        r#type: String,
         fields: HashMap<String, Field>,
         edges: HashMap<String, Edge>,
     ) -> Self {
         Self {
             id,
-            r#type: r#type.into(),
+            r#type,
             fields,
             edges,
             created: SystemTime::now()
@@ -69,22 +75,31 @@ impl Ent {
         }
     }
 
-    /// Creates an empty map ent with the provided id and type
-    pub fn empty(id: usize, r#type: impl Into<String>) -> Self {
-        Self::new(id, r#type, HashMap::new(), HashMap::new())
+    /// Creates an empty ent with the provided id and type
+    pub fn new_empty<T: Into<String>>(id: usize, r#type: T) -> Self {
+        Self::new(id, r#type.into(), HashMap::new(), HashMap::new())
+    }
+
+    /// Creates an emtpy, untyped ent with the provided id
+    pub fn new_untyped(id: usize) -> Self {
+        Self::new_empty(id, Self::default_type())
     }
 
     /// Creates a map ent with the provided id, type, fields from the given
     /// collection, and edges from the other given collection
-    pub fn from_collections(
+    pub fn from_collections<
+        T: Into<String>,
+        FI: IntoIterator<Item = Field>,
+        EI: IntoIterator<Item = Edge>,
+    >(
         id: usize,
-        r#type: impl Into<String>,
-        field_collection: impl IntoIterator<Item = Field>,
-        edge_collection: impl IntoIterator<Item = Edge>,
+        r#type: T,
+        field_collection: FI,
+        edge_collection: EI,
     ) -> Self {
         Self::new(
             id,
-            r#type,
+            r#type.into(),
             field_collection
                 .into_iter()
                 .map(|f| (f.name().to_string(), f))
@@ -100,10 +115,10 @@ impl Ent {
     /// the old previous value if the field exists
     ///
     /// If the field does not exist, does NOT insert the value as a new field
-    pub fn update_field(
+    pub fn update_field<N: Into<String>, V: Into<Value>>(
         &mut self,
-        into_name: impl Into<String>,
-        into_value: impl Into<Value>,
+        into_name: N,
+        into_value: V,
     ) -> Result<Value, EntMutationError> {
         self.mark_updated();
 
@@ -119,17 +134,17 @@ impl Ent {
     ///
     /// If there are too many ids (in the case of >1 for MaybeOne/One), this
     /// method will fail.
-    pub fn add_ents_to_edge(
+    pub fn add_ents_to_edge<N: Into<String>, I: IntoIterator<Item = usize>>(
         &mut self,
-        into_edge_name: impl Into<String>,
-        into_edge_ids: impl IntoIterator<Item = usize>,
+        name: N,
+        ids: I,
     ) -> Result<(), EntMutationError> {
-        let edge_name = into_edge_name.into();
+        let edge_name = name.into();
         match self.edges.entry(edge_name.to_string()) {
             Entry::Occupied(mut x) => x
                 .get_mut()
                 .value_mut()
-                .add_ids(into_edge_ids)
+                .add_ids(ids)
                 .map_err(|err| EntMutationError::BadEdgeValueMutation { source: err }),
             Entry::Vacant(_) => Err(EntMutationError::NoEdge { name: edge_name }),
         }
@@ -139,17 +154,17 @@ impl Ent {
     ///
     /// If this would result in an invalid edge (One being empty), this
     /// method will fail.
-    pub fn remove_ents_from_edge(
+    pub fn remove_ents_from_edge<N: Into<String>, I: IntoIterator<Item = usize>>(
         &mut self,
-        into_edge_name: impl Into<String>,
-        into_edge_ids: impl IntoIterator<Item = usize>,
+        name: N,
+        ids: I,
     ) -> Result<(), EntMutationError> {
-        let edge_name = into_edge_name.into();
+        let edge_name = name.into();
         match self.edges.entry(edge_name.to_string()) {
             Entry::Occupied(mut x) => x
                 .get_mut()
                 .value_mut()
-                .remove_ids(into_edge_ids)
+                .remove_ids(ids)
                 .map_err(|err| EntMutationError::BadEdgeValueMutation { source: err }),
             Entry::Vacant(_) => Err(EntMutationError::NoEdge { name: edge_name }),
         }
@@ -159,11 +174,11 @@ impl Ent {
     ///
     /// If this would result in an invalid edge (One being empty), this
     /// method will fail.
-    pub fn remove_ents_from_all_edges(
+    pub fn remove_ents_from_all_edges<I: IntoIterator<Item = usize>>(
         &mut self,
-        into_edge_ids: impl IntoIterator<Item = usize>,
+        ids: I,
     ) -> Result<(), EntMutationError> {
-        let edge_ids = into_edge_ids.into_iter().collect::<HashSet<usize>>();
+        let edge_ids = ids.into_iter().collect::<HashSet<usize>>();
         let edge_names = self.edges.keys().cloned().collect::<HashSet<String>>();
 
         for name in edge_names {
@@ -183,10 +198,10 @@ impl Ent {
 }
 
 impl Default for Ent {
-    /// Creates an empty map ent using 0 as the id and providing a default
-    /// type string
+    /// Creates an untyped ent using 0 as the id and using the default type
+    /// for an Ent instance
     fn default() -> Self {
-        Self::empty(0, concat!(module_path!(), "::", "Ent"))
+        Self::new_untyped(0)
     }
 }
 
@@ -198,7 +213,7 @@ impl IEnt for Ent {
     /// ```
     /// use entity::{Ent, IEnt};
     ///
-    /// let ent = Ent::empty(999);
+    /// let ent = Ent::new_untyped(999);
     /// assert_eq!(ent.id(), 999);
     /// ```
     fn id(&self) -> usize {
@@ -282,15 +297,15 @@ impl IEnt for Ent {
     /// use entity::{Ent, IEnt, Edge, EdgeValue as EV};
     ///
     /// let edges = vec![
-    ///     Edge::new("edge1", EV::OneToOne(99)),
-    ///     Edge::new("edge2", EV::OneToMany(vec![1, 2, 3])),
+    ///     Edge::new("edge1", EV::One(99)),
+    ///     Edge::new("edge2", EV::Many(vec![1, 2, 3])),
     /// ];
     /// let ent = Ent::from_collections(0, "", vec![], edges);
     ///
     /// let ent_edges = ent.edges();
     /// assert_eq!(ent_edges.len(), 2);
-    /// assert!(ent_edges.contains(&&Edge::new("edge1", EV::OneToOne(99))));
-    /// assert!(ent_edges.contains(&&Edge::new("edge2", EV::OneToMany(vec![1, 2, 3]))));
+    /// assert!(ent_edges.contains(&&Edge::new("edge1", EV::One(99))));
+    /// assert!(ent_edges.contains(&&Edge::new("edge2", EV::Many(vec![1, 2, 3]))));
     /// ```
     fn edges(&self) -> Vec<&Edge> {
         self.edges.values().collect()
@@ -304,12 +319,12 @@ impl IEnt for Ent {
     /// use entity::{Ent, IEnt, Edge, EdgeValue as EV};
     ///
     /// let edges = vec![
-    ///     Edge::new("edge1", EV::OneToOne(99)),
-    ///     Edge::new("edge2", EV::OneToMany(vec![1, 2, 3])),
+    ///     Edge::new("edge1", EV::One(99)),
+    ///     Edge::new("edge2", EV::Many(vec![1, 2, 3])),
     /// ];
     /// let ent = Ent::from_collections(0, "", vec![], edges);
     ///
-    /// assert_eq!(ent.edge("edge1").unwrap().value(), &EV::OneToOne(99));
+    /// assert_eq!(ent.edge("edge1").unwrap().value(), &EV::One(99));
     /// assert_eq!(ent.edge("edge???"), None);
     /// ```
     fn edge(&self, name: &str) -> Option<&Edge> {

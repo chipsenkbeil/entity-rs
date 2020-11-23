@@ -1,20 +1,22 @@
+mod number;
+pub use number::{Number, NumberSign, NumberType};
+
 use derive_more::From;
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     hash::{Hash, Hasher},
 };
-use strum::{Display, EnumDiscriminants, EnumString, ParseError};
+use strum::ParseError;
 
 /// Represents either a primitive or complex value
-#[derive(Clone, Debug, PartialEq, Eq, From)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Value {
     List(Vec<Value>),
     Map(HashMap<String, Value>),
     Optional(Option<Box<Value>>),
     Primitive(PrimitiveValue),
-    Set(HashSet<PrimitiveValue>),
     Text(String),
 }
 
@@ -90,6 +92,48 @@ impl PartialOrd for Value {
     }
 }
 
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    /// Converts a vec of some value into a value list
+    fn from(list: Vec<T>) -> Self {
+        Self::List(list.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+impl<T: Into<Value>> From<HashMap<String, T>> for Value {
+    /// Converts a hashmap of string keys and some value into a value map
+    fn from(map: HashMap<String, T>) -> Self {
+        Self::Map(map.into_iter().map(|(k, v)| (k, v.into())).collect())
+    }
+}
+
+impl<T: Into<Value>> From<Option<T>> for Value {
+    /// Converts an option of some value into an optional value
+    fn from(maybe: Option<T>) -> Self {
+        Self::Optional(maybe.map(|x| Box::from(x.into())))
+    }
+}
+
+impl From<PrimitiveValue> for Value {
+    /// Converts a primitive value into a value without any allocation
+    fn from(v: PrimitiveValue) -> Self {
+        Self::Primitive(v)
+    }
+}
+
+impl From<String> for Value {
+    /// Converts a string into a text value without any allocation
+    fn from(s: String) -> Self {
+        Self::Text(s)
+    }
+}
+
+impl<'a> From<&'a str> for Value {
+    /// Converts a str slice into a value by allocating a new string
+    fn from(s: &'a str) -> Self {
+        Self::from(s.to_string())
+    }
+}
+
 macro_rules! impl_from_primitive {
     ($type:ty) => {
         impl From<$type> for Value {
@@ -116,20 +160,6 @@ impl_from_primitive!(u32);
 impl_from_primitive!(u64);
 impl_from_primitive!(u8);
 impl_from_primitive!(usize);
-
-impl From<Option<Value>> for Value {
-    /// Converts optional value into a value by moving value into heap
-    fn from(maybe_value: Option<Value>) -> Self {
-        Self::from(maybe_value.map(Box::from))
-    }
-}
-
-impl<'a> From<&'a str> for Value {
-    /// Converts a str slice into a value by allocating a new string
-    fn from(s: &'a str) -> Self {
-        Self::from(s.to_string())
-    }
-}
 
 /// Represents value types (primitive or complex). Assumes that complex
 /// types will contain the same inner type and does not vary
@@ -172,12 +202,17 @@ impl std::str::FromStr for ValueType {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{ValueType as VT, PrimitiveValueType as PVT};
+    /// use entity::{ValueType as VT, PrimitiveValueType as PVT, NumberType as NT};
     /// use strum::ParseError;
     /// use std::str::FromStr;
     ///
-    /// assert_eq!(VT::from_str("u32").unwrap(), VT::Primitive(PVT::U32));
-    /// assert_eq!(VT::from_str("list:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::U32))));
+    /// assert_eq!(VT::from_str("char").unwrap(), VT::Primitive(PVT::Char));
+    /// assert_eq!(VT::from_str("u32").unwrap(), VT::Primitive(PVT::Number(NT::U32)));
+    /// assert_eq!(VT::from_str("number:u32").unwrap(), VT::Primitive(PVT::Number(NT::U32)));
+    /// assert_eq!(VT::from_str("primitive:number:u32").unwrap(), VT::Primitive(PVT::Number(NT::U32)));
+    /// assert_eq!(VT::from_str("list:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::Number(NT::U32)))));
+    /// assert_eq!(VT::from_str("list:number:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::Number(NT::U32)))));
+    /// assert_eq!(VT::from_str("list:primitive:number:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::Number(NT::U32)))));
     /// assert_eq!(VT::from_str("unknown").unwrap_err(), ParseError::VariantNotFound);
     /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -192,6 +227,10 @@ impl std::str::FromStr for ValueType {
             mut it: impl Iterator<Item = &'a str>,
         ) -> Result<Option<ValueType>, ParseError> {
             match it.next() {
+                // Special case where we cannot feed this directly into the
+                // primitive value type as it is the following type that is
+                // used instead, so we take the next value instead and use it
+                Some("number") => from_tokens(it),
                 Some(token) => {
                     let maybe_inner = from_tokens(it)?;
                     match token {
@@ -259,12 +298,6 @@ impl<'a> From<&'a Value> for ValueType {
                     .unwrap_or_default(),
             )),
             Value::Primitive(x) => Self::Primitive(PrimitiveValueType::from(x)),
-            Value::Set(x) => Self::Set(
-                x.iter()
-                    .next()
-                    .map(PrimitiveValueType::from)
-                    .unwrap_or_default(),
-            ),
             Value::Text(_) => Self::Text,
         }
     }
@@ -285,32 +318,13 @@ impl Default for PrimitiveValueType {
 }
 
 /// Represents a primitive value
-#[derive(Copy, Clone, Debug, From, EnumDiscriminants)]
+#[derive(Copy, Clone, Debug, From)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[strum_discriminants(derive(Display, EnumString))]
-#[strum_discriminants(name(PrimitiveValueType), strum(serialize_all = "snake_case"))]
-#[cfg_attr(
-    feature = "serde",
-    strum_discriminants(derive(serde::Serialize, serde::Deserialize))
-)]
 pub enum PrimitiveValue {
     Bool(bool),
     Char(char),
-    F32(f32),
-    F64(f64),
-    I128(i128),
-    I16(i16),
-    I32(i32),
-    I64(i64),
-    I8(i8),
-    Isize(isize),
-    U128(u128),
-    U16(u16),
-    U32(u32),
-    U64(u64),
-    U8(u8),
+    Number(Number),
     Unit,
-    Usize(usize),
 }
 
 impl PrimitiveValue {
@@ -332,81 +346,172 @@ impl PrimitiveValue {
         self.to_type() == other.to_type()
     }
 }
+impl Hash for PrimitiveValue {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Bool(x) => x.hash(state),
+            Self::Char(x) => x.hash(state),
+            Self::Number(x) => x.hash(state),
+            Self::Unit => Self::Unit.hash(state),
+        }
+    }
+}
 
 /// Value is considered equal, ignoring the fact that NaN != NaN for floats
 impl Eq for PrimitiveValue {}
 
 impl PartialEq for PrimitiveValue {
+    /// Compares two primitive values of same type for equality, otherwise
+    /// returns false
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Bool(a), Self::Bool(b)) => a == b,
             (Self::Char(a), Self::Char(b)) => a == b,
-            (Self::F32(a), Self::F32(b)) => a.to_string() == b.to_string(),
-            (Self::F64(a), Self::F64(b)) => a.to_string() == b.to_string(),
-            (Self::I128(a), Self::I128(b)) => a == b,
-            (Self::I16(a), Self::I16(b)) => a == b,
-            (Self::I32(a), Self::I32(b)) => a == b,
-            (Self::I64(a), Self::I64(b)) => a == b,
-            (Self::I8(a), Self::I8(b)) => a == b,
-            (Self::Isize(a), Self::Isize(b)) => a == b,
-            (Self::U128(a), Self::U128(b)) => a == b,
-            (Self::U16(a), Self::U16(b)) => a == b,
-            (Self::U32(a), Self::U32(b)) => a == b,
-            (Self::U64(a), Self::U64(b)) => a == b,
-            (Self::U8(a), Self::U8(b)) => a == b,
+            (Self::Number(a), Self::Number(b)) => a == b,
             (Self::Unit, Self::Unit) => true,
-            (Self::Usize(a), Self::Usize(b)) => a == b,
             _ => false,
         }
     }
 }
 
-impl Hash for PrimitiveValue {
-    /// Hashes the value, converting f32/f64 into a string before doing so
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            Self::Bool(x) => x.hash(state),
-            Self::Char(x) => x.hash(state),
-            Self::F32(x) => x.to_string().hash(state),
-            Self::F64(x) => x.to_string().hash(state),
-            Self::I128(x) => x.hash(state),
-            Self::I16(x) => x.hash(state),
-            Self::I32(x) => x.hash(state),
-            Self::I64(x) => x.hash(state),
-            Self::I8(x) => x.hash(state),
-            Self::Isize(x) => x.hash(state),
-            Self::U128(x) => x.hash(state),
-            Self::U16(x) => x.hash(state),
-            Self::U32(x) => x.hash(state),
-            Self::U64(x) => x.hash(state),
-            Self::U8(x) => x.hash(state),
-            Self::Unit => Self::Unit.hash(state),
-            Self::Usize(x) => x.hash(state),
-        }
-    }
-}
-
 impl PartialOrd for PrimitiveValue {
-    /// Compares same variants for ordering, otherwise returns none
+    /// Compares same variants of same type for ordering, otherwise returns none
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
             (Self::Bool(a), Self::Bool(b)) => a.partial_cmp(b),
             (Self::Char(a), Self::Char(b)) => a.partial_cmp(b),
-            (Self::F32(a), Self::F32(b)) => a.partial_cmp(b),
-            (Self::F64(a), Self::F64(b)) => a.partial_cmp(b),
-            (Self::I128(a), Self::I128(b)) => a.partial_cmp(b),
-            (Self::I16(a), Self::I16(b)) => a.partial_cmp(b),
-            (Self::I32(a), Self::I32(b)) => a.partial_cmp(b),
-            (Self::I64(a), Self::I64(b)) => a.partial_cmp(b),
-            (Self::I8(a), Self::I8(b)) => a.partial_cmp(b),
-            (Self::Isize(a), Self::Isize(b)) => a.partial_cmp(b),
-            (Self::U128(a), Self::U128(b)) => a.partial_cmp(b),
-            (Self::U16(a), Self::U16(b)) => a.partial_cmp(b),
-            (Self::U32(a), Self::U32(b)) => a.partial_cmp(b),
-            (Self::U64(a), Self::U64(b)) => a.partial_cmp(b),
-            (Self::U8(a), Self::U8(b)) => a.partial_cmp(b),
-            (Self::Usize(a), Self::Usize(b)) => a.partial_cmp(b),
+            (Self::Number(a), Self::Number(b)) => a.partial_cmp(b),
+            (Self::Unit, Self::Unit) => Some(Ordering::Equal),
             _ => None,
+        }
+    }
+}
+
+macro_rules! impl_to_number {
+    ($type:ty) => {
+        impl From<$type> for PrimitiveValue {
+            fn from(v: $type) -> Self {
+                Self::Number(Number::from(v))
+            }
+        }
+    };
+}
+
+impl_to_number!(f32);
+impl_to_number!(f64);
+impl_to_number!(i128);
+impl_to_number!(i16);
+impl_to_number!(i32);
+impl_to_number!(i64);
+impl_to_number!(i8);
+impl_to_number!(isize);
+impl_to_number!(u128);
+impl_to_number!(u16);
+impl_to_number!(u32);
+impl_to_number!(u64);
+impl_to_number!(u8);
+impl_to_number!(usize);
+
+/// Represents primitive value types
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum PrimitiveValueType {
+    Bool,
+    Char,
+    Number(NumberType),
+    Unit,
+}
+
+impl PrimitiveValueType {
+    pub fn is_bool(&self) -> bool {
+        matches!(self, Self::Bool)
+    }
+
+    pub fn is_char(&self) -> bool {
+        matches!(self, Self::Char)
+    }
+
+    pub fn is_number(&self) -> bool {
+        matches!(self, Self::Number(_))
+    }
+
+    pub fn is_unit(&self) -> bool {
+        matches!(self, Self::Unit)
+    }
+
+    pub fn to_number_type(&self) -> Option<NumberType> {
+        match self {
+            Self::Number(x) => Some(*x),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for PrimitiveValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Bool => write!(f, "bool"),
+            Self::Char => write!(f, "char"),
+            Self::Number(t) => write!(f, "number:{}", t),
+            Self::Unit => write!(f, "unit"),
+        }
+    }
+}
+
+impl From<PrimitiveValue> for PrimitiveValueType {
+    fn from(v: PrimitiveValue) -> Self {
+        Self::from(&v)
+    }
+}
+
+impl<'a> From<&'a PrimitiveValue> for PrimitiveValueType {
+    fn from(v: &'a PrimitiveValue) -> Self {
+        match v {
+            PrimitiveValue::Bool(_) => Self::Bool,
+            PrimitiveValue::Char(_) => Self::Char,
+            PrimitiveValue::Number(x) => Self::Number(x.to_type()),
+            PrimitiveValue::Unit => Self::Unit,
+        }
+    }
+}
+
+impl std::str::FromStr for PrimitiveValueType {
+    type Err = ParseError;
+
+    /// Parses a primitive value type
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{PrimitiveValueType as PVT, NumberType as NT};
+    /// use strum::ParseError;
+    /// use std::str::FromStr;
+    ///
+    /// assert_eq!(PVT::from_str("bool").unwrap(), PVT::Bool);
+    /// assert_eq!(PVT::from_str("char").unwrap(), PVT::Char);
+    /// assert_eq!(PVT::from_str("u32").unwrap(), PVT::Number(NT::U32));
+    /// assert_eq!(PVT::from_str("number:u32").unwrap(), PVT::Number(NT::U32));
+    /// assert_eq!(PVT::from_str("unit").unwrap(), PVT::Unit);
+    /// assert_eq!(PVT::from_str("unknown").unwrap_err(), ParseError::VariantNotFound);
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut s_it = s.split(':');
+        let primary = s_it.next();
+        let secondary = s_it.next();
+        let has_more = s_it.next().is_some();
+
+        // If has too many values, we exit
+        if has_more {
+            return Err(ParseError::VariantNotFound);
+        }
+
+        match (primary, secondary) {
+            (Some("bool"), None) => Ok(Self::Bool),
+            (Some("char"), None) => Ok(Self::Char),
+            (Some("number"), Some(x)) => Ok(Self::Number(NumberType::from_str(x)?)),
+            (Some("unit"), None) => Ok(Self::Unit),
+            (Some(x), None) => Ok(Self::Number(NumberType::from_str(x)?)),
+            _ => Err(ParseError::VariantNotFound),
         }
     }
 }

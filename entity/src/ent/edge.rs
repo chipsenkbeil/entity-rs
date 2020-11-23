@@ -1,3 +1,4 @@
+use derive_more::From;
 use std::collections::HashSet;
 use strum::{Display, EnumDiscriminants, EnumString};
 
@@ -7,13 +8,52 @@ use strum::{Display, EnumDiscriminants, EnumString};
 pub struct Edge {
     name: String,
     value: EdgeValue,
+    deletion_policy: EdgeDeletionPolicy,
 }
 
 impl Edge {
-    pub fn new(name: impl Into<String>, value: EdgeValue) -> Self {
+    /// Creates a new edge with the given name, value, and deletion policy
+    /// of nothing
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{Edge, EdgeDeletionPolicy};
+    ///
+    /// let edge = Edge::new("edge1", 999);
+    /// assert_eq!(edge.name(), "edge1");
+    /// assert_eq!(edge.to_ids(), vec![999]);
+    /// assert_eq!(edge.deletion_policy(), EdgeDeletionPolicy::Nothing);
+    /// ```
+    pub fn new<N: Into<String>, V: Into<EdgeValue>>(name: N, value: V) -> Self {
+        Self::new_with_deletion_policy(name, value, EdgeDeletionPolicy::default())
+    }
+
+    /// Creates a new edge with the given name, value, and deletion policy
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{Edge, EdgeDeletionPolicy};
+    ///
+    /// let edge = Edge::new_with_deletion_policy(
+    ///     "edge1",
+    ///     999,
+    ///     EdgeDeletionPolicy::DeepDelete,
+    /// );
+    /// assert_eq!(edge.name(), "edge1");
+    /// assert_eq!(edge.to_ids(), vec![999]);
+    /// assert_eq!(edge.deletion_policy(), EdgeDeletionPolicy::DeepDelete);
+    /// ```
+    pub fn new_with_deletion_policy<N: Into<String>, V: Into<EdgeValue>>(
+        name: N,
+        value: V,
+        deletion_policy: EdgeDeletionPolicy,
+    ) -> Self {
         Self {
             name: name.into(),
-            value,
+            value: value.into(),
+            deletion_policy,
         }
     }
 
@@ -41,10 +81,38 @@ impl Edge {
     pub fn to_type(&self) -> EdgeValueType {
         self.value().into()
     }
+
+    /// Returns the policy to perform for this edge when its ent is deleted
+    pub fn deletion_policy(&self) -> EdgeDeletionPolicy {
+        self.deletion_policy
+    }
+}
+
+/// Represents the policy to apply to an edge when its ent is deleted
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum EdgeDeletionPolicy {
+    /// When this ent instance is deleted, nothing else will be done
+    Nothing,
+
+    /// When this ent instance is deleted, delete the reverse edge connections
+    /// of all ents connected by this edge
+    ShallowDelete,
+
+    /// When this ent instance is deleted, fully delete all ents connected
+    /// by this edge
+    DeepDelete,
+}
+
+impl Default for EdgeDeletionPolicy {
+    /// By default, the deletion policy does nothing
+    fn default() -> Self {
+        Self::Nothing
+    }
 }
 
 /// Represents the value of an edge, which is some collection of ent ids
-#[derive(Clone, Debug, PartialEq, Eq, EnumDiscriminants)]
+#[derive(Clone, Debug, From, PartialEq, Eq, EnumDiscriminants)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[strum_discriminants(derive(Display, EnumString))]
 #[strum_discriminants(name(EdgeValueType), strum(serialize_all = "snake_case"))]
@@ -76,25 +144,138 @@ pub enum EdgeValueMutationError {
 
 impl EdgeValue {
     /// Produces all ids of ents referenced by this edge's value
+    ///
+    /// ## Examples
+    ///
+    /// For an optional edge, this can produce a vec of size 0 or 1:
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let v = EdgeValue::MaybeOne(None);
+    /// assert_eq!(v.to_ids(), vec![]);
+    ///
+    /// let v = EdgeValue::MaybeOne(Some(999));
+    /// assert_eq!(v.to_ids(), vec![999]);
+    /// ```
+    ///
+    /// For a guaranteed edge of 1, this will always produce a vec of size 1:
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let v = EdgeValue::One(999);
+    /// assert_eq!(v.to_ids(), vec![999]);
+    /// ```
+    ///
+    /// For an edge of many ids, this will produce a vec of equal size:
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let v = EdgeValue::Many(vec![1, 2, 3, 4]);
+    /// assert_eq!(v.to_ids(), vec![1, 2, 3, 4]);
+    /// ```
     pub fn to_ids(&self) -> Vec<usize> {
         match self {
-            Self::MaybeOne(x) => x.into_iter().copied().collect(),
+            Self::MaybeOne(x) => x.iter().copied().collect(),
             Self::One(x) => vec![*x],
             Self::Many(x) => x.clone(),
         }
     }
 
+    /// Converts the value to its associated type
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{EdgeValue, EdgeValueType};
+    ///
+    /// let v = EdgeValue::MaybeOne(None);
+    /// assert_eq!(v.to_type(), EdgeValueType::MaybeOne);
+    ///
+    /// let v = EdgeValue::One(999);
+    /// assert_eq!(v.to_type(), EdgeValueType::One);
+    ///
+    /// let v = EdgeValue::Many(vec![1, 2, 3]);
+    /// assert_eq!(v.to_type(), EdgeValueType::Many);
+    /// ```
     pub fn to_type(&self) -> EdgeValueType {
         self.into()
     }
 
     /// Adds the provided ids to the edge value, failing if the ids would
     /// exceed the maximum allowed by the edge with current ids included
+    ///
+    /// ## Examples
+    ///
+    /// If edge is an optional, single value, this will fail if the edge
+    /// already has a value or is provided more than one id. Otherwise,
+    /// it will succeed.
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let mut v = EdgeValue::MaybeOne(Some(1));
+    /// assert!(v.add_ids(vec![2]).is_err());
+    /// assert!(v.add_ids(vec![]).is_ok());
+    /// assert_eq!(v, EdgeValue::MaybeOne(Some(1)));
+    ///
+    /// let mut v = EdgeValue::MaybeOne(None);
+    /// assert!(v.add_ids(vec![2, 3]).is_err());
+    /// assert_eq!(v, EdgeValue::MaybeOne(None));
+    ///
+    /// let mut v = EdgeValue::MaybeOne(None);
+    /// assert!(v.add_ids(vec![]).is_ok());
+    /// assert_eq!(v, EdgeValue::MaybeOne(None));
+    ///
+    /// let mut v = EdgeValue::MaybeOne(None);
+    /// assert!(v.add_ids(vec![1]).is_ok());
+    /// assert_eq!(v, EdgeValue::MaybeOne(Some(1)));
+    /// ```
+    ///
+    /// If an edge is exactly one value, this will fail unless an empty
+    /// list of ids is given as we cannot add any more edge ids.
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let mut v = EdgeValue::One(999);
+    /// assert!(v.add_ids(vec![1]).is_err());
+    /// assert_eq!(v, EdgeValue::One(999));
+    ///
+    /// let mut v = EdgeValue::One(999);
+    /// assert!(v.add_ids(vec![]).is_ok());
+    /// assert_eq!(v, EdgeValue::One(999));
+    /// ```
+    ///
+    /// If an edge can have many ids, this will succeed and append those
+    /// ids to the end of the list.
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let mut v = EdgeValue::Many(vec![]);
+    /// assert!(v.add_ids(vec![1, 2, 3]).is_ok());
+    /// assert_eq!(v, EdgeValue::Many(vec![1, 2, 3]));
+    ///
+    /// let mut v = EdgeValue::Many(vec![1, 2, 3]);
+    /// assert!(v.add_ids(vec![4, 5, 6]).is_ok());
+    /// assert_eq!(v, EdgeValue::Many(vec![1, 2, 3, 4, 5, 6]));
+    /// ```
     pub fn add_ids(
         &mut self,
         into_ids: impl IntoIterator<Item = usize>,
     ) -> Result<(), EdgeValueMutationError> {
-        let ids = into_ids.into_iter().collect::<HashSet<usize>>();
+        let mut ids = into_ids.into_iter().collect::<Vec<usize>>();
+        ids.sort_unstable();
+        ids.dedup();
+
+        // If no ids to add, will always succeed and do nothing
+        if ids.is_empty() {
+            return Ok(());
+        }
+
         let cnt = self.id_count();
 
         // Fails if adding these ids would exceed the maximum allowed ids
@@ -121,11 +302,79 @@ impl EdgeValue {
     /// Removes the provided ids from the edge value, failing if the ids would
     /// exceed the minimum allowed by the edge with current ids possibly
     /// removed
+    ///
+    /// ## Examples
+    ///
+    /// If edge is an optional, single value, this will never fail as this
+    /// can either result in the value retaining its id or becoming none.
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let mut v = EdgeValue::MaybeOne(Some(1));
+    /// assert!(v.remove_ids(vec![2, 3]).is_ok());
+    /// assert_eq!(v, EdgeValue::MaybeOne(Some(1)));
+    ///
+    /// let mut v = EdgeValue::MaybeOne(Some(1));
+    /// assert!(v.remove_ids(vec![1, 2, 3]).is_ok());
+    /// assert_eq!(v, EdgeValue::MaybeOne(None));
+    ///
+    /// let mut v = EdgeValue::MaybeOne(None);
+    /// assert!(v.remove_ids(vec![2, 3]).is_ok());
+    /// assert_eq!(v, EdgeValue::MaybeOne(None));
+    ///
+    /// let mut v = EdgeValue::MaybeOne(None);
+    /// assert!(v.remove_ids(vec![]).is_ok());
+    /// assert_eq!(v, EdgeValue::MaybeOne(None));
+    /// ```
+    ///
+    /// If an edge is exactly one value, this will fail if it would cause
+    /// the value to lose its id.
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let mut v = EdgeValue::One(999);
+    /// assert!(v.remove_ids(vec![999]).is_err());
+    /// assert_eq!(v, EdgeValue::One(999));
+    ///
+    /// let mut v = EdgeValue::One(999);
+    /// assert!(v.remove_ids(vec![1, 2, 3]).is_ok());
+    /// assert_eq!(v, EdgeValue::One(999));
+    ///
+    /// let mut v = EdgeValue::One(999);
+    /// assert!(v.remove_ids(vec![]).is_ok());
+    /// assert_eq!(v, EdgeValue::One(999));
+    /// ```
+    ///
+    /// If an edge can have many ids, this will succeed and remove all ids
+    /// found within the value.
+    ///
+    /// ```
+    /// use entity::EdgeValue;
+    ///
+    /// let mut v = EdgeValue::Many(vec![]);
+    /// assert!(v.remove_ids(vec![1, 2, 3]).is_ok());
+    /// assert_eq!(v, EdgeValue::Many(vec![]));
+    ///
+    /// let mut v = EdgeValue::Many(vec![1, 2, 3]);
+    /// assert!(v.remove_ids(vec![4, 5, 6]).is_ok());
+    /// assert_eq!(v, EdgeValue::Many(vec![1, 2, 3]));
+    ///
+    /// let mut v = EdgeValue::Many(vec![1, 2, 3]);
+    /// assert!(v.remove_ids(vec![1, 3]).is_ok());
+    /// assert_eq!(v, EdgeValue::Many(vec![2]));
+    /// ```
     pub fn remove_ids(
         &mut self,
         into_ids: impl IntoIterator<Item = usize>,
     ) -> Result<(), EdgeValueMutationError> {
         let ids = into_ids.into_iter().collect::<HashSet<usize>>();
+
+        // If no ids to remove, will always succeed and do nothing
+        if ids.is_empty() {
+            return Ok(());
+        }
 
         // Fails if we are not allowed to remove our id and we're given
         // some selection that would cause that issue
@@ -139,7 +388,7 @@ impl EdgeValue {
 
         // Remove the id from our optional id if it is in our selection
         if let Self::MaybeOne(maybe_id) = self {
-            if ids.contains(&maybe_id.unwrap()) {
+            if maybe_id.is_some() && ids.contains(&maybe_id.unwrap()) {
                 maybe_id.take();
             }
         // Remove all ids provided from our many
@@ -150,6 +399,7 @@ impl EdgeValue {
         Ok(())
     }
 
+    /// Returns the total ids contained within this value
     #[inline]
     fn id_count(&self) -> usize {
         match self {
@@ -159,6 +409,7 @@ impl EdgeValue {
         }
     }
 
+    /// Returns the maximum ids possible to contain within this value
     #[inline]
     fn max_ids_allowed(&self) -> usize {
         match self {
@@ -167,92 +418,12 @@ impl EdgeValue {
         }
     }
 
+    /// Returns the minimum ids possible to contain within this value
     #[inline]
     fn min_ids_allowed(&self) -> usize {
         match self {
             Self::MaybeOne(_) | Self::Many(_) => 0,
             Self::One(_) => 1,
         }
-    }
-}
-
-/// Represents an edge definition for an ent
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct EdgeDefinition {
-    name: String,
-    r#type: EdgeValueType,
-    attributes: HashSet<EdgeDefinitionAttribute>,
-}
-
-/// Represents an attribute associated with an edge definition for an ent
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum EdgeDefinitionAttribute {
-    /// When this ent instance is deleted, delete the reverse edge connections
-    /// of all ents connected by this edge
-    ShallowDelete,
-
-    /// When this ent instance is deleted, fully delete all ents connected
-    /// by this edge
-    DeepDelete,
-}
-
-impl EdgeDefinition {
-    /// Creates a new edge definition for use by a database
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{
-    ///     EdgeDefinition as ED,
-    ///     EdgeDefinitionAttribute as EDA,
-    ///     EdgeValueType as EVT,
-    /// };
-    ///
-    /// let ed = ED::new("my edge", EVT::OneToOne, vec![EDA::ShallowDelete]);
-    /// assert_eq!(ed.name(), "my edge");
-    /// assert_eq!(ed.r#type(), EVT::OneToOne);
-    /// assert_eq!(ed.attributes(), vec![EDA::ShallowDelete].into_iter().collect());
-    /// ```
-    pub fn new(
-        name: impl Into<String>,
-        r#type: impl Into<EdgeValueType>,
-        attributes: impl IntoIterator<Item = EdgeDefinitionAttribute>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            r#type: r#type.into(),
-            attributes: attributes.into_iter().collect(),
-        }
-    }
-
-    /// The name of the edge
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// The type associated with the edge
-    pub fn r#type(&self) -> EdgeValueType {
-        self.r#type
-    }
-
-    /// Attributes associated with the definition
-    pub fn attributes(&self) -> HashSet<EdgeDefinitionAttribute> {
-        self.attributes.iter().copied().collect()
-    }
-
-    /// Returns true if this definition indicates that the edge should be
-    /// involved in a shallow deletion if the ent is deleted
-    pub fn should_shallow_delete(&self) -> bool {
-        self.attributes
-            .contains(&EdgeDefinitionAttribute::ShallowDelete)
-    }
-
-    /// Returns true if this definition indicates that the edge should be
-    /// involved in a deep deletion if the ent is deleted
-    pub fn should_deep_delete(&self) -> bool {
-        self.attributes
-            .contains(&EdgeDefinitionAttribute::DeepDelete)
     }
 }
