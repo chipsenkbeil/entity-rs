@@ -14,6 +14,6 @@ license = "MIT OR Apache-2.0"
 default = ["serde"]
 
 [dependencies]
-derive_more = { version = "0.99.11", default-features = false, features = ["as_ref", "as_mut", "constructor", "display", "error", "from", "into"] }
+derive_more = { version = "0.99.11", default-features = false, features = ["as_ref", "as_mut", "constructor", "deref", "deref_mut", "display", "error", "from", "into"] }
 serde = { version = "1.0.117", features = ["derive"], optional = true }
 strum = { version = "0.19", features = ["derive"] }

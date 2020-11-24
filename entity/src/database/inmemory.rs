@@ -461,7 +461,7 @@ mod tests {
     }
 
     #[test]
-    fn find_all_should_support_various_combinations_of_queries() {
+    fn find_all_should_return_all_ids_if_given_always_condition() {
         let db = InmemoryDatabase::default();
 
         let _ = db.insert(Ent::new_empty(1, "type1")).unwrap();
@@ -469,27 +469,28 @@ mod tests {
         let _ = db.insert(Ent::new_untyped(3)).unwrap();
 
         let results = db
-            .get_all(vec![1, 2, 3])
+            .find_all(Query::new(Condition::Always))
             .expect("Failed to retrieve ents")
             .iter()
             .map(Ent::id)
             .collect::<HashSet<usize>>();
         assert_eq!(results, [1, 2, 3].iter().copied().collect());
+    }
+
+    #[test]
+    fn find_all_should_return_no_ids_if_given_never_condition() {
+        let db = InmemoryDatabase::default();
+
+        let _ = db.insert(Ent::new_empty(1, "type1")).unwrap();
+        let _ = db.insert(Ent::new_untyped(2)).unwrap();
+        let _ = db.insert(Ent::new_untyped(3)).unwrap();
 
         let results = db
-            .get_all(vec![1, 3])
+            .find_all(Query::new(Condition::Never))
             .expect("Failed to retrieve ents")
             .iter()
             .map(Ent::id)
             .collect::<HashSet<usize>>();
-        assert_eq!(results, [1, 3].iter().copied().collect());
-
-        let results = db
-            .get_all(vec![2, 3, 4, 5, 6, 7, 8])
-            .expect("Failed to retrieve ents")
-            .iter()
-            .map(Ent::id)
-            .collect::<HashSet<usize>>();
-        assert_eq!(results, [2, 3].iter().copied().collect());
+        assert_eq!(results, [].iter().copied().collect());
     }
 }
