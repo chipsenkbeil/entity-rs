@@ -5,7 +5,7 @@ mod condition;
 pub use condition::*;
 
 /// Represents a generic query to find ents within some database
-#[derive(Constructor, Debug)]
+#[derive(Constructor, Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Query(Condition);
 
@@ -32,6 +32,12 @@ impl Default for Query {
     /// Creates a new query that will accept all conditions
     fn default() -> Self {
         Self::new(Condition::Always)
+    }
+}
+
+impl From<Condition> for Query {
+    fn from(condition: Condition) -> Self {
+        Self::new(condition)
     }
 }
 

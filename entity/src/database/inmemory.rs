@@ -249,7 +249,7 @@ fn process_has_id_condition(
     pipeline: Option<EntIdSet>,
 ) -> EntIdSet {
     if (pipeline.is_none() && this.ents.lock().unwrap().contains_key(&id))
-        || pipeline.unwrap().contains(&id)
+        || pipeline.is_some() && pipeline.unwrap().contains(&id)
     {
         vec![id].into_iter().collect()
     } else {
@@ -291,8 +291,9 @@ fn process_has_type_condition(
 
 /// If this is part of a pipeline of ids, we check each corresponding
 /// ent for an edge with the given name and then perform the given
-/// condition on all ents of that edge. If all en If this is the start
-/// of a pipeline, nothing passes.
+/// condition on all ents of that edge. If this is the start
+/// of a pipeline, we check ALL ents for an edge with the given name and then
+/// perform the given condition.
 #[inline]
 fn process_edge_condition(
     this: &InmemoryDatabase,
@@ -301,25 +302,27 @@ fn process_edge_condition(
     pipeline: Option<EntIdSet>,
 ) -> EntIdSet {
     pipeline
-        .unwrap_or_default()
+        .unwrap_or_else(|| this.ents.lock().unwrap().keys().copied().collect())
         .into_iter()
         .filter_map(|id| this.get(id).ok().flatten())
-        .flat_map(|ent| {
+        .filter_map(|ent| {
             if let Some(edge) = ent.edge(name) {
                 let ids = edge.to_ids().into_iter().collect::<EntIdSet>();
                 let id_cnt = ids.len();
                 let valid_edge_ids = process_condition(this, condition.condition(), Some(ids));
 
                 match (condition, valid_edge_ids.len()) {
-                    (EdgeCondition::Any(_), _) => valid_edge_ids,
+                    (EdgeCondition::Any(_), valid_cnt) if valid_cnt > 0 => Some(ent.id()),
                     (EdgeCondition::Exactly(_, cnt), valid_cnt) if valid_cnt == *cnt => {
-                        valid_edge_ids
+                        Some(ent.id())
                     }
-                    (EdgeCondition::All(_), valid_cnt) if valid_cnt == id_cnt => valid_edge_ids,
-                    _ => HashSet::new(),
+                    (EdgeCondition::All(_), valid_cnt) if valid_cnt == id_cnt && valid_cnt > 0 => {
+                        Some(ent.id())
+                    }
+                    _ => None,
                 }
             } else {
-                HashSet::new()
+                None
             }
         })
         .collect()
@@ -329,7 +332,8 @@ fn process_edge_condition(
 /// ent for a field with the given name and then compare that field's
 /// value to our field condition. If the field exists and satisfies the
 /// field condition, the id of the ent passes. If this is the start
-/// of a pipeline, nothing passes.
+/// of a pipeline, we check ALL ents for an edge with the given name and then
+/// perform the given condition.
 #[inline]
 fn process_named_field_condition(
     this: &InmemoryDatabase,
@@ -338,7 +342,7 @@ fn process_named_field_condition(
     pipeline: Option<EntIdSet>,
 ) -> EntIdSet {
     pipeline
-        .unwrap_or_default()
+        .unwrap_or_else(|| this.ents.lock().unwrap().keys().copied().collect())
         .into_iter()
         .filter_map(|id| this.get(id).ok().flatten())
         .filter_map(|ent| match lookup_ent_field_value(&ent, &name).ok() {
@@ -363,7 +367,151 @@ fn lookup_ent_field_value<'a>(ent: &'a Ent, name: &str) -> Result<&'a Value, Dat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ent::Field;
+    use crate::{CollectionCondition, Edge, Field, ValueCondition};
+
+    /// Creates a new database with some test entries used throughout
+    ///
+    /// IDs: 1-3 ~ are type1 with no fields or edges
+    /// IDs: 4-6 ~ are type2 with value fields and no edges
+    /// IDs: 7-9 ~ are type3 with collection fields and no edges
+    /// IDs: 10-12 ~ are type4 with edges to 1-9 and no fields
+    fn new_test_database() -> InmemoryDatabase {
+        let db = InmemoryDatabase::default();
+
+        // 1-3 have no fields or edges
+        let _ = db
+            .insert(Ent::from_collections(1, "type1", vec![], vec![]))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(2, "type1", vec![], vec![]))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(3, "type1", vec![], vec![]))
+            .unwrap();
+
+        // 4-6 have value fields only
+        let _ = db
+            .insert(Ent::from_collections(
+                4,
+                "type2",
+                vec![Field::new("a", 1), Field::new("b", 2)],
+                vec![],
+            ))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(
+                5,
+                "type2",
+                vec![Field::new("a", 3), Field::new("b", 4)],
+                vec![],
+            ))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(
+                6,
+                "type2",
+                vec![Field::new("a", 5), Field::new("b", 6)],
+                vec![],
+            ))
+            .unwrap();
+
+        // 7-9 have collection fields only
+        let _ = db
+            .insert(Ent::from_collections(
+                7,
+                "type3",
+                vec![Field::new(
+                    "f",
+                    Value::from(
+                        vec![(String::from("a"), 3), (String::from("b"), 5)]
+                            .into_iter()
+                            .collect::<HashMap<String, u8>>(),
+                    ),
+                )],
+                vec![],
+            ))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(
+                8,
+                "type3",
+                vec![Field::new("f", vec![1, 2])],
+                vec![],
+            ))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(
+                9,
+                "type3",
+                vec![Field::new(
+                    "f",
+                    Value::from(
+                        vec![
+                            (String::from("a"), Value::from(vec![1, 2])),
+                            (String::from("b"), Value::from(vec![3, 4])),
+                        ]
+                        .into_iter()
+                        .collect::<HashMap<String, Value>>(),
+                    ),
+                )],
+                vec![],
+            ))
+            .unwrap();
+
+        // 10-12 have edges only
+        let _ = db
+            .insert(Ent::from_collections(
+                10,
+                "type4",
+                vec![],
+                vec![
+                    Edge::new("a", 1),
+                    Edge::new("b", vec![3, 4, 5]),
+                    Edge::new("c", None),
+                ],
+            ))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(
+                11,
+                "type4",
+                vec![],
+                vec![Edge::new("a", 2), Edge::new("b", vec![1, 2, 3, 4, 5, 6])],
+            ))
+            .unwrap();
+        let _ = db
+            .insert(Ent::from_collections(
+                12,
+                "type4",
+                vec![],
+                vec![
+                    Edge::new("a", 3),
+                    Edge::new("b", vec![]),
+                    Edge::new("c", Some(8)),
+                ],
+            ))
+            .unwrap();
+
+        db
+    }
+
+    fn query_and_assert<Q: Into<Query>>(db: &InmemoryDatabase, query: Q, expected: &[usize]) {
+        let query = query.into();
+        let results = db
+            .find_all(query.clone())
+            .expect("Failed to retrieve ents")
+            .iter()
+            .map(Ent::id)
+            .collect::<HashSet<usize>>();
+        assert_eq!(
+            results,
+            expected.into_iter().copied().collect(),
+            "{:?}\nExpected: {:?}, Actual: {:?}",
+            query,
+            expected,
+            results
+        );
+    }
 
     #[test]
     fn insert_should_add_a_new_ent_using_its_id() {
@@ -462,35 +610,464 @@ mod tests {
 
     #[test]
     fn find_all_should_return_all_ids_if_given_always_condition() {
-        let db = InmemoryDatabase::default();
+        let db = new_test_database();
 
-        let _ = db.insert(Ent::new_empty(1, "type1")).unwrap();
-        let _ = db.insert(Ent::new_untyped(2)).unwrap();
-        let _ = db.insert(Ent::new_untyped(3)).unwrap();
+        // If first condition, will get all ids
+        let cond = Condition::Always;
+        query_and_assert(&db, cond, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
-        let results = db
-            .find_all(Query::new(Condition::Always))
-            .expect("Failed to retrieve ents")
-            .iter()
-            .map(Ent::id)
-            .collect::<HashSet<usize>>();
-        assert_eq!(results, [1, 2, 3].iter().copied().collect());
+        // Otherwise, if part of a chain, will keep any ids in pipeline
+        let cond = Condition::HasId(2) & Condition::Always;
+        query_and_assert(&db, cond, &[2]);
     }
 
     #[test]
     fn find_all_should_return_no_ids_if_given_never_condition() {
-        let db = InmemoryDatabase::default();
+        let db = new_test_database();
 
-        let _ = db.insert(Ent::new_empty(1, "type1")).unwrap();
-        let _ = db.insert(Ent::new_untyped(2)).unwrap();
-        let _ = db.insert(Ent::new_untyped(3)).unwrap();
+        // If first condition, refuse all ids
+        let cond = Condition::Never;
+        query_and_assert(&db, cond, &[]);
 
-        let results = db
-            .find_all(Query::new(Condition::Never))
-            .expect("Failed to retrieve ents")
-            .iter()
-            .map(Ent::id)
-            .collect::<HashSet<usize>>();
-        assert_eq!(results, [].iter().copied().collect());
+        // Otherwise, if part of a chain, will block any of its ids
+        let cond = Condition::Always & Condition::Never;
+        query_and_assert(&db, cond, &[]);
+    }
+
+    #[test]
+    fn find_all_should_return_ent_with_id_if_given_has_id_condition() {
+        let db = new_test_database();
+
+        // If ent with id exists, we expect it to be available
+        let cond = Condition::HasId(1);
+        query_and_assert(&db, cond, &[1]);
+
+        // If ent with id does not exist, we expect empty
+        let cond = Condition::HasId(999);
+        query_and_assert(&db, cond, &[]);
+
+        // If we already have ents with ids, this should filter them
+        let cond = (Condition::HasId(1) | Condition::HasId(2)) & Condition::HasId(2);
+        query_and_assert(&db, cond, &[2]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_with_type_if_give_has_type_condition() {
+        let db = new_test_database();
+
+        // If ent with type exists, we expect it to be available
+        let cond = Condition::HasType(String::from("type1"));
+        query_and_assert(&db, cond, &[1, 2, 3]);
+
+        // If ent with type does not exist, we expect empty
+        let cond = Condition::HasType(String::from("unknown"));
+        query_and_assert(&db, cond, &[]);
+
+        // If we already have ents, this should filter them for that type
+        let cond =
+            (Condition::HasId(1) | Condition::HasId(8)) & Condition::HasType(String::from("type1"));
+        query_and_assert(&db, cond, &[1]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_both_conditions_if_given_and_condition() {
+        let db = new_test_database();
+
+        // If ent passes both conditions, it will be included in return
+        let cond = Condition::And(
+            Box::from(Condition::HasType(String::from("type2"))),
+            Box::from(Condition::Field(
+                String::from("a"),
+                FieldCondition::Value(ValueCondition::greater_than(1)),
+            )),
+        );
+        query_and_assert(&db, cond, &[5, 6]);
+
+        // If already have ents in pipeline, they will be filtered by "and"
+        let cond = Condition::Always
+            & Condition::And(
+                Box::from(Condition::HasType(String::from("type2"))),
+                Box::from(Condition::Field(
+                    String::from("a"),
+                    FieldCondition::Value(ValueCondition::greater_than(1)),
+                )),
+            );
+        query_and_assert(&db, cond, &[5, 6]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_either_condition_if_given_or_condition() {
+        let db = new_test_database();
+
+        // If ent passes either condition, it will be included in return
+        let cond = Condition::Or(
+            Box::from(Condition::HasType(String::from("type1"))),
+            Box::from(Condition::HasType(String::from("type2"))),
+        );
+        query_and_assert(&db, cond, &[1, 2, 3, 4, 5, 6]);
+
+        // If already have ents in pipeline, they will be filtered by "or"
+        let cond = Condition::Always
+            & Condition::Or(
+                Box::from(Condition::HasType(String::from("type1"))),
+                Box::from(Condition::HasType(String::from("type2"))),
+            );
+        query_and_assert(&db, cond, &[1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_only_one_of_two_conditions_if_given_xor_condition() {
+        let db = new_test_database();
+
+        // If ent passes one of two conditions, it will be included in return
+        let cond = Condition::Xor(
+            Box::from(Condition::HasType(String::from("type1"))),
+            Box::from(Condition::Field(
+                String::from("a"),
+                FieldCondition::Value(ValueCondition::greater_than(1)),
+            )),
+        );
+        query_and_assert(&db, cond, &[1, 2, 3, 5, 6]);
+
+        // If already have ents in pipeline, they will be filtered by "xor"
+        let cond = Condition::Always
+            & Condition::Xor(
+                Box::from(Condition::HasType(String::from("type1"))),
+                Box::from(Condition::Field(
+                    String::from("a"),
+                    FieldCondition::Value(ValueCondition::greater_than(1)),
+                )),
+            );
+        query_and_assert(&db, cond, &[1, 2, 3, 5, 6]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_failing_a_condition_wrapped_in_not_condition() {
+        let db = new_test_database();
+
+        // If ent passes not condition, it will be included in return
+        let cond = Condition::Not(Box::from(Condition::HasType(String::from("type1"))));
+        query_and_assert(&db, cond, &[4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+        // If already have ents in pipeline, they will be filtered by "not"
+        let cond = Condition::HasType(String::from("type2"))
+            & Condition::Not(Box::from(Condition::Field(
+                String::from("a"),
+                FieldCondition::Value(ValueCondition::greater_than(1)),
+            )));
+        query_and_assert(&db, cond, &[4]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_value_equal_to_condition() {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("a"),
+            FieldCondition::Value(ValueCondition::equal_to(3)),
+        );
+        query_and_assert(&db, cond, &[5]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type2"))
+            & Condition::Field(
+                String::from("a"),
+                FieldCondition::Value(ValueCondition::equal_to(3)),
+            );
+        query_and_assert(&db, cond, &[5]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_value_greater_than_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("a"),
+            FieldCondition::Value(ValueCondition::greater_than(1)),
+        );
+        query_and_assert(&db, cond, &[5, 6]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type2"))
+            & Condition::Field(
+                String::from("a"),
+                FieldCondition::Value(ValueCondition::greater_than(1)),
+            );
+        query_and_assert(&db, cond, &[5, 6]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_value_less_than_condition() {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("a"),
+            FieldCondition::Value(ValueCondition::less_than(5)),
+        );
+        query_and_assert(&db, cond, &[4, 5]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type2"))
+            & Condition::Field(
+                String::from("a"),
+                FieldCondition::Value(ValueCondition::less_than(5)),
+            );
+        query_and_assert(&db, cond, &[4, 5]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_any_collection_value_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionValue(CollectionCondition::any(
+                ValueCondition::greater_than(1),
+            )),
+        );
+        query_and_assert(&db, cond, &[7, 8]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionValue(CollectionCondition::any(
+                    ValueCondition::greater_than(1),
+                )),
+            );
+        query_and_assert(&db, cond, &[7, 8]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_exactly_n_collection_values_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionValue(CollectionCondition::exactly(
+                ValueCondition::greater_than(1),
+                2,
+            )),
+        );
+        query_and_assert(&db, cond, &[7]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionValue(CollectionCondition::exactly(
+                    ValueCondition::greater_than(1),
+                    2,
+                )),
+            );
+        query_and_assert(&db, cond, &[7]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_all_collection_values_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionValue(CollectionCondition::all(
+                ValueCondition::greater_than(1),
+            )),
+        );
+        query_and_assert(&db, cond, &[7]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionValue(CollectionCondition::all(
+                    ValueCondition::greater_than(1),
+                )),
+            );
+        query_and_assert(&db, cond, &[7]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_len_collection_values_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionValue(CollectionCondition::len(ValueCondition::equal_to(2))),
+        );
+        query_and_assert(&db, cond, &[7, 8, 9]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionValue(CollectionCondition::len(
+                    ValueCondition::equal_to(2),
+                )),
+            );
+        query_and_assert(&db, cond, &[7, 8, 9]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_any_collection_key_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionKey(CollectionCondition::any(ValueCondition::greater_than(
+                "a",
+            ))),
+        );
+        query_and_assert(&db, cond, &[7, 9]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionKey(CollectionCondition::any(
+                    ValueCondition::greater_than("a"),
+                )),
+            );
+        query_and_assert(&db, cond, &[7, 9]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_exactly_n_collection_keys_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionKey(CollectionCondition::exactly(
+                ValueCondition::greater_than("a"),
+                1,
+            )),
+        );
+        query_and_assert(&db, cond, &[7, 9]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionKey(CollectionCondition::exactly(
+                    ValueCondition::greater_than("a"),
+                    1,
+                )),
+            );
+        query_and_assert(&db, cond, &[7, 9]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_all_collection_keys_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionKey(CollectionCondition::all(ValueCondition::less_than("c"))),
+        );
+        query_and_assert(&db, cond, &[7, 9]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionKey(CollectionCondition::all(ValueCondition::less_than(
+                    "c",
+                ))),
+            );
+        query_and_assert(&db, cond, &[7, 9]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_match_have_a_field_passing_the_len_collection_keys_condition(
+    ) {
+        let db = new_test_database();
+
+        // If ent's field passes condition, it will be included in return
+        let cond = Condition::Field(
+            String::from("f"),
+            FieldCondition::CollectionKey(CollectionCondition::len(ValueCondition::equal_to(2))),
+        );
+        query_and_assert(&db, cond, &[7, 9]);
+
+        // If already have ents in pipeline, they will be filtered by "field"
+        let cond = Condition::HasType(String::from("type3"))
+            & Condition::Field(
+                String::from("f"),
+                FieldCondition::CollectionKey(CollectionCondition::len(ValueCondition::equal_to(
+                    2,
+                ))),
+            );
+        query_and_assert(&db, cond, &[7, 9]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_pass_the_any_edge_ent_condition() {
+        let db = new_test_database();
+
+        // If ent's edge passes condition, it will be included in return
+        let cond = Condition::Edge(String::from("a"), EdgeCondition::any(Condition::HasId(2)));
+        query_and_assert(&db, cond, &[11]);
+
+        // If already have ents in pipeline, they will be filtered by "edge"
+        let cond = Condition::HasType(String::from("type4"))
+            & Condition::Edge(String::from("a"), EdgeCondition::any(Condition::HasId(2)));
+        query_and_assert(&db, cond, &[11]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_pass_the_exactly_n_edge_ent_condition() {
+        let db = new_test_database();
+
+        // If ent's edge passes condition, it will be included in return
+        let cond = Condition::Edge(
+            String::from("b"),
+            EdgeCondition::exactly(Condition::HasId(2) | Condition::HasId(3), 2),
+        );
+        query_and_assert(&db, cond, &[11]);
+
+        // If already have ents in pipeline, they will be filtered by "edge"
+        let cond = Condition::HasType(String::from("type4"))
+            & Condition::Edge(
+                String::from("b"),
+                EdgeCondition::exactly(Condition::HasId(2) | Condition::HasId(3), 2),
+            );
+        query_and_assert(&db, cond, &[11]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_that_pass_the_all_edge_ent_condition() {
+        let db = new_test_database();
+
+        // If ent's edge passes condition, it will be included in return
+        let cond = Condition::Edge(
+            String::from("b"),
+            EdgeCondition::all(Condition::HasId(3) | Condition::HasId(4) | Condition::HasId(5)),
+        );
+        query_and_assert(&db, cond, &[10]);
+
+        // If already have ents in pipeline, they will be filtered by "edge"
+        let cond = Condition::HasType(String::from("type4"))
+            & Condition::Edge(
+                String::from("b"),
+                EdgeCondition::all(Condition::HasId(3) | Condition::HasId(4) | Condition::HasId(5)),
+            );
+        query_and_assert(&db, cond, &[10]);
     }
 }

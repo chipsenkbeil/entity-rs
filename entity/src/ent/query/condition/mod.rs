@@ -7,7 +7,7 @@ pub use edge::EdgeCondition;
 pub use field::{CollectionCondition, FieldCondition, ValueCondition};
 
 /// Represents a condition to a query, used to build up the query's logic
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Condition {
     /// Query condition that always succeeds

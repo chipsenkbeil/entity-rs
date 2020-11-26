@@ -1,7 +1,7 @@
 mod database;
 mod ent;
 
-pub use database::{Database, DatabaseError, DatabaseResult};
+pub use database::{Database, DatabaseError, DatabaseResult, InmemoryDatabase};
 pub use ent::*;
 
 use derive_more::{AsMut, AsRef, Deref, DerefMut};
@@ -77,6 +77,22 @@ where
     pub fn ent(&self) -> &E {
         &self.ent
     }
+
+    // CHIP CHIP CHIP
+    //
+    // Can we get a generic update field, update edge, add to edge, and remove
+    // edge that are available within ent to be provided here? Or on IEnt?o
+    //
+    // Or do we just want a general update method similar to a database flush
+    // that will move these changes to the database? If so, we'd want to
+    // generate update methods or something for created ents
+    //
+    // --
+    //
+    // Separately, for generated ents, we would want to extend Connected for
+    // any database with that specific ent via an impl so we can provide
+    // explicit methods to load each type of edge and wrap in the associated
+    // ent type
 
     /// Loads the ents associated by a specific edge
     pub fn load_edge(&self, name: &str) -> DatabaseResult<Vec<Ent>> {

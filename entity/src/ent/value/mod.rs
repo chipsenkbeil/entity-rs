@@ -83,8 +83,14 @@ impl PartialOrd for Value {
             // Compare primitives based on primitive value ordering
             (Self::Primitive(a), Self::Primitive(b)) => a.partial_cmp(b),
 
-            // Compare text
+            // Compare text-to-text, text-to-char, and char-to-text
             (Self::Text(a), Self::Text(b)) => a.partial_cmp(b),
+            (Self::Text(a), Self::Primitive(PrimitiveValue::Char(b))) => {
+                a.partial_cmp(&b.to_string())
+            }
+            (Self::Primitive(PrimitiveValue::Char(a)), Self::Text(b)) => {
+                a.to_string().partial_cmp(b)
+            }
 
             // All other types do nothing
             _ => None,

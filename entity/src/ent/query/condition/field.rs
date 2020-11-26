@@ -1,7 +1,7 @@
 use crate::ent::value::Value;
 
 /// Represents a condition on an ent's field
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FieldCondition {
     /// Query condition that succeeds if the ent's field value is not a
@@ -27,6 +27,90 @@ impl FieldCondition {
             Self::CollectionValue(c) => c.check(value),
         }
     }
+
+    /// Shorthand to produce a field value condition that checks if
+    /// the value of a field passes the field condition
+    #[inline]
+    pub fn value<C: Into<ValueCondition>>(c: C) -> Self {
+        Self::Value(c.into())
+    }
+
+    /// Shorthand to produce a field value condition that checks if
+    /// the value of a field is equal to some other value
+    #[inline]
+    pub fn value_equal_to<V: Into<Value>>(v: V) -> Self {
+        Self::Value(ValueCondition::EqualTo(v.into()))
+    }
+
+    /// Shorthand to produce a field value condition that checks if
+    /// the value of a field is greater than some other value
+    #[inline]
+    pub fn value_greater_than<V: Into<Value>>(v: V) -> Self {
+        Self::Value(ValueCondition::GreaterThan(v.into()))
+    }
+
+    /// Shorthand to produce a field value condition that checks if
+    /// the value of a field is less than some other value
+    #[inline]
+    pub fn value_less_than<V: Into<Value>>(v: V) -> Self {
+        Self::Value(ValueCondition::LessThan(v.into()))
+    }
+
+    /// Shorthand to produce a field collection key condition that checks if
+    /// any key in a collection passes the field condition
+    #[inline]
+    pub fn any_collection_key<C: Into<FieldCondition>>(c: C) -> Self {
+        Self::CollectionKey(CollectionCondition::Any(Box::from(c.into())))
+    }
+
+    /// Shorthand to produce a field collection key condition that checks if
+    /// exactly N keys in a collection pass the field condition
+    #[inline]
+    pub fn exactly_n_collection_keys<C: Into<FieldCondition>>(c: C, n: usize) -> Self {
+        Self::CollectionKey(CollectionCondition::Exactly(Box::from(c.into()), n))
+    }
+
+    /// Shorthand to produce a field collection key condition that checks if
+    /// all keys in a collection pass the field condition
+    #[inline]
+    pub fn all_collection_keys<C: Into<FieldCondition>>(c: C) -> Self {
+        Self::CollectionKey(CollectionCondition::All(Box::from(c.into())))
+    }
+
+    /// Shorthand to produce a field collection key condition that checks if
+    /// the total keys in a collection passes the given value condition
+    #[inline]
+    pub fn collection_key_len<C: Into<ValueCondition>>(c: C) -> Self {
+        Self::CollectionKey(CollectionCondition::Len(c.into()))
+    }
+
+    /// Shorthand to produce a field collection value condition that checks if
+    /// any value in a collection passes the field condition
+    #[inline]
+    pub fn any_collection_value<C: Into<FieldCondition>>(c: C) -> Self {
+        Self::CollectionValue(CollectionCondition::Any(Box::from(c.into())))
+    }
+
+    /// Shorthand to produce a field collection value condition that checks if
+    /// exactly N values in a collection pass the field condition
+    #[inline]
+    pub fn exactly_n_collection_values<C: Into<FieldCondition>>(c: C, n: usize) -> Self {
+        Self::CollectionValue(CollectionCondition::Exactly(Box::from(c.into()), n))
+    }
+
+    /// Shorthand to produce a field collection value condition that checks if
+    /// all values in a collection pass the field condition
+    #[inline]
+    pub fn all_collection_values<C: Into<FieldCondition>>(c: C) -> Self {
+        Self::CollectionValue(CollectionCondition::All(Box::from(c.into())))
+    }
+
+    /// Shorthand to produce a field collection value condition that checks if
+    /// the total values in a collection passes the given value condition
+    #[inline]
+    pub fn collection_value_len<C: Into<ValueCondition>>(c: C) -> Self {
+        Self::CollectionValue(CollectionCondition::Len(c.into()))
+    }
 }
 
 impl From<ValueCondition> for FieldCondition {
@@ -46,7 +130,7 @@ impl From<CollectionCondition> for FieldCondition {
 
 /// Represents a condition on an ent's field's value that does not represent
 /// a collection
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ValueCondition {
     /// Query condition that succeeds if the ent's field is less than the
@@ -107,7 +191,7 @@ impl ValueCondition {
 }
 
 /// Represents a condition on an ent's field's value that represents a collection
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CollectionCondition {
     /// For all values within the collection, check if at least one passes the condition
