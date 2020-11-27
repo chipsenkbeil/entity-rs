@@ -1,8 +1,14 @@
 mod database;
 mod ent;
 
-pub use database::{Database, DatabaseError, DatabaseResult, InmemoryDatabase};
+pub use database::*;
 pub use ent::*;
+
+/// Vendor module to re-expose relevant libraries
+pub mod vendor {
+    #[cfg(feature = "sled_db")]
+    pub use sled;
+}
 
 use derive_more::{AsMut, AsRef, Deref, DerefMut};
 use std::cmp::Ordering;

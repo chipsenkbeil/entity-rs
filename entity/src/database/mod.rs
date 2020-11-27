@@ -1,8 +1,8 @@
 use crate::ent::{Ent, Query};
 use derive_more::Display;
 
-mod inmemory;
-pub use inmemory::*;
+mod kvstore;
+pub use kvstore::*;
 
 /// Alias to a result that can contain a database error
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -23,6 +23,12 @@ pub enum DatabaseError {
     WrongType {
         expected: crate::ent::ValueType,
         actual: crate::ent::ValueType,
+    },
+
+    #[display(fmt = "Corrupted Ent {}: {}", id, source)]
+    CorruptedEnt {
+        id: usize,
+        source: Box<dyn std::error::Error>,
     },
 }
 

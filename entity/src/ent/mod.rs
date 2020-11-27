@@ -8,7 +8,8 @@ pub use any::AsAny;
 pub use edge::{Edge, EdgeDeletionPolicy, EdgeValue, EdgeValueMutationError, EdgeValueType};
 pub use field::{Field, FieldAttribute};
 pub use query::{
-    CollectionCondition, Condition, EdgeCondition, FieldCondition, Query, QueryExt, ValueCondition,
+    CollectionCondition, Condition, EdgeCondition, FieldCondition, Query, QueryExt, TimeCondition,
+    ValueCondition,
 };
 pub use value::{
     Number, NumberSign, NumberType, PrimitiveValue, PrimitiveValueType, Value, ValueType,
