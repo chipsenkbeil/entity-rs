@@ -2,9 +2,11 @@ use std::fmt::Debug;
 
 mod edge;
 mod field;
+mod time;
 
 pub use edge::EdgeCondition;
 pub use field::{CollectionCondition, FieldCondition, ValueCondition};
+pub use time::TimeCondition;
 
 /// Represents a condition to a query, used to build up the query's logic
 #[derive(Clone, Debug)]
@@ -21,6 +23,14 @@ pub enum Condition {
 
     /// Query condition that succeeds if the ent has the specified type
     HasType(String),
+
+    /// Query condition that succeeds if the created time of the ent
+    /// passes the time condition
+    Created(TimeCondition),
+
+    /// Query condition that succeeds if the last updated time of the ent
+    /// passes the time condition
+    LastUpdated(TimeCondition),
 
     /// Query condition that succeeds if the ent succeeds with both children args
     And(Box<Condition>, Box<Condition>),

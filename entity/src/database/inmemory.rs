@@ -1,7 +1,7 @@
 use crate::{
     database::{Database, DatabaseError, DatabaseExt, DatabaseResult},
     ent::{
-        query::{Condition, EdgeCondition, FieldCondition, Query},
+        query::{Condition, EdgeCondition, FieldCondition, Query, TimeCondition},
         EdgeDeletionPolicy, Ent, Value,
     },
     IEnt,
@@ -140,6 +140,8 @@ fn process_condition(
         Condition::Not(cond) => process_not_condition(this, cond, pipeline),
         Condition::HasId(id) => process_has_id_condition(this, *id, pipeline),
         Condition::HasType(r#type) => process_has_type_condition(this, r#type, pipeline),
+        Condition::Created(cond) => process_created_condition(this, cond, pipeline),
+        Condition::LastUpdated(cond) => process_last_updated_condition(this, cond, pipeline),
         Condition::Field(name, cond) => process_named_field_condition(this, name, cond, pipeline),
         Condition::Edge(name, cond) => process_edge_condition(this, name, cond, pipeline),
     }
@@ -255,6 +257,44 @@ fn process_has_id_condition(
     } else {
         HashSet::new()
     }
+}
+
+/// If this is part of a pipeline of ids, we filter such that
+/// only the ents whose created property pass the condition remain.
+/// If this is the start of a pipeline, we check all ents for a
+/// created property that passes the condition.
+#[inline]
+fn process_created_condition(
+    this: &InmemoryDatabase,
+    cond: &TimeCondition,
+    pipeline: Option<EntIdSet>,
+) -> EntIdSet {
+    pipeline
+        .unwrap_or_else(|| this.ents.lock().unwrap().keys().copied().collect())
+        .into_iter()
+        .filter_map(|id| this.get(id).ok().flatten())
+        .filter(|ent| cond.check(ent.created()))
+        .map(|ent| ent.id())
+        .collect()
+}
+
+/// If this is part of a pipeline of ids, we filter such that
+/// only the ents whose last updated property pass the condition remain.
+/// If this is the start of a pipeline, we check all ents for a
+/// last updated property that passes the condition.
+#[inline]
+fn process_last_updated_condition(
+    this: &InmemoryDatabase,
+    cond: &TimeCondition,
+    pipeline: Option<EntIdSet>,
+) -> EntIdSet {
+    pipeline
+        .unwrap_or_else(|| this.ents.lock().unwrap().keys().copied().collect())
+        .into_iter()
+        .filter_map(|id| this.get(id).ok().flatten())
+        .filter(|ent| cond.check(ent.last_updated()))
+        .map(|ent| ent.id())
+        .collect()
 }
 
 /// If this is part of a pipeline of ids, we need to check the
@@ -667,6 +707,138 @@ mod tests {
         let cond =
             (Condition::HasId(1) | Condition::HasId(8)) & Condition::HasType(String::from("type1"));
         query_and_assert(&db, cond, &[1]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_whose_created_property_satisfy_the_time_condition() {
+        let db = new_test_database();
+
+        // Re-create all ents with enough time split between them for us to
+        // properly test creation time
+        for i in 1..=12 {
+            let ent = Ent::new_untyped(i);
+            db.insert(ent)
+                .expect(&format!("Failed to replace ent {}", i));
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+
+        // Get all ents created after our third ent
+        let time = db.get(3).unwrap().expect("Missing ent 3").created();
+        let cond = Condition::Created(TimeCondition::After(time));
+        query_and_assert(&db, cond, &[4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+        let cond = Condition::Always & Condition::Created(TimeCondition::After(time));
+        query_and_assert(&db, cond, &[4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+        // Get all ents created on or after our third ent
+        let time = db.get(3).unwrap().expect("Missing ent 3").created();
+        let cond = Condition::Created(TimeCondition::OnOrAfter(time));
+        query_and_assert(&db, cond, &[3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+        let cond = Condition::Always & Condition::Created(TimeCondition::OnOrAfter(time));
+        query_and_assert(&db, cond, &[3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+        // Get all ents created before our fifth ent
+        let time = db.get(5).unwrap().expect("Missing ent 5").created();
+        let cond = Condition::Created(TimeCondition::Before(time));
+        query_and_assert(&db, cond, &[1, 2, 3, 4]);
+
+        let cond = Condition::Always & Condition::Created(TimeCondition::Before(time));
+        query_and_assert(&db, cond, &[1, 2, 3, 4]);
+
+        // Get all ents created on or before our fifth ent
+        let time = db.get(5).unwrap().expect("Missing ent 5").created();
+        let cond = Condition::Created(TimeCondition::OnOrBefore(time));
+        query_and_assert(&db, cond, &[1, 2, 3, 4, 5]);
+
+        let cond = Condition::Always & Condition::Created(TimeCondition::OnOrBefore(time));
+        query_and_assert(&db, cond, &[1, 2, 3, 4, 5]);
+
+        // Get all ents created between our third and eighth ent (not including)
+        let time_a = db.get(3).unwrap().expect("Missing ent 3").created();
+        let time_b = db.get(8).unwrap().expect("Missing ent 8").created();
+        let cond = Condition::Created(TimeCondition::Between(time_a, time_b));
+        query_and_assert(&db, cond, &[4, 5, 6, 7]);
+
+        let cond = Condition::Always & Condition::Created(TimeCondition::Between(time_a, time_b));
+        query_and_assert(&db, cond, &[4, 5, 6, 7]);
+
+        // Get all ents created between our third and eighth ent (including)
+        let time_a = db.get(3).unwrap().expect("Missing ent 3").created();
+        let time_b = db.get(8).unwrap().expect("Missing ent 8").created();
+        let cond = Condition::Created(TimeCondition::OnOrBetween(time_a, time_b));
+        query_and_assert(&db, cond, &[3, 4, 5, 6, 7, 8]);
+
+        let cond =
+            Condition::Always & Condition::Created(TimeCondition::OnOrBetween(time_a, time_b));
+        query_and_assert(&db, cond, &[3, 4, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn find_all_should_return_ents_whose_last_updated_property_satisfy_the_time_condition() {
+        let db = new_test_database();
+
+        // Update all ents with enough time split between them for us to
+        // properly test last updated time
+        for i in (1..=12).rev() {
+            let mut ent = db.get(i).unwrap().expect(&format!("Missing ent {}", i));
+            ent.mark_updated();
+            db.insert(ent)
+                .expect(&format!("Failed to update ent {}", i));
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+
+        // Get all ents updated after our third ent
+        let time = db.get(3).unwrap().expect("Missing ent 3").last_updated();
+        let cond = Condition::LastUpdated(TimeCondition::After(time));
+        query_and_assert(&db, cond, &[1, 2]);
+
+        let cond = Condition::Always & Condition::LastUpdated(TimeCondition::After(time));
+        query_and_assert(&db, cond, &[1, 2]);
+
+        // Get all ents updated on or after our third ent
+        let time = db.get(3).unwrap().expect("Missing ent 3").last_updated();
+        let cond = Condition::LastUpdated(TimeCondition::OnOrAfter(time));
+        query_and_assert(&db, cond, &[1, 2, 3]);
+
+        let cond = Condition::Always & Condition::LastUpdated(TimeCondition::OnOrAfter(time));
+        query_and_assert(&db, cond, &[1, 2, 3]);
+
+        // Get all ents updated before our fifth ent
+        let time = db.get(5).unwrap().expect("Missing ent 5").last_updated();
+        let cond = Condition::LastUpdated(TimeCondition::Before(time));
+        query_and_assert(&db, cond, &[6, 7, 8, 9, 10, 11, 12]);
+
+        let cond = Condition::Always & Condition::LastUpdated(TimeCondition::Before(time));
+        query_and_assert(&db, cond, &[6, 7, 8, 9, 10, 11, 12]);
+
+        // Get all ents updated on or before our fifth ent
+        let time = db.get(5).unwrap().expect("Missing ent 5").last_updated();
+        let cond = Condition::LastUpdated(TimeCondition::OnOrBefore(time));
+        query_and_assert(&db, cond, &[5, 6, 7, 8, 9, 10, 11, 12]);
+
+        let cond = Condition::Always & Condition::LastUpdated(TimeCondition::OnOrBefore(time));
+        query_and_assert(&db, cond, &[5, 6, 7, 8, 9, 10, 11, 12]);
+
+        // Get all ents updated between our third and eighth ent (not including)
+        let time_a = db.get(8).unwrap().expect("Missing ent 8").last_updated();
+        let time_b = db.get(3).unwrap().expect("Missing ent 3").last_updated();
+        let cond = Condition::LastUpdated(TimeCondition::Between(time_a, time_b));
+        query_and_assert(&db, cond, &[4, 5, 6, 7]);
+
+        let cond =
+            Condition::Always & Condition::LastUpdated(TimeCondition::Between(time_a, time_b));
+        query_and_assert(&db, cond, &[4, 5, 6, 7]);
+
+        // Get all ents updated between our third and eighth ent (including)
+        let time_a = db.get(8).unwrap().expect("Missing ent 8").last_updated();
+        let time_b = db.get(3).unwrap().expect("Missing ent 3").last_updated();
+        let cond = Condition::LastUpdated(TimeCondition::OnOrBetween(time_a, time_b));
+        query_and_assert(&db, cond, &[3, 4, 5, 6, 7, 8]);
+
+        let cond =
+            Condition::Always & Condition::LastUpdated(TimeCondition::OnOrBetween(time_a, time_b));
+        query_and_assert(&db, cond, &[3, 4, 5, 6, 7, 8]);
     }
 
     #[test]

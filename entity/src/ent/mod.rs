@@ -242,7 +242,7 @@ impl Ent {
     }
 
     /// Updates the local, internal timestamp of this ent instance
-    fn mark_updated(&mut self) {
+    pub(crate) fn mark_updated(&mut self) {
         self.last_updated = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Invalid system time")

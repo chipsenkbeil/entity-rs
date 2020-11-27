@@ -51,6 +51,14 @@ pub trait QueryExt {
     /// matches the given type
     fn has_type(self, r#type: impl Into<String>) -> Query;
 
+    /// Convenience method to add a new condition related to an ent's
+    /// created time
+    fn created(self, cond: TimeCondition) -> Query;
+
+    /// Convenience method to add a new condition related to an ent's
+    /// last updated time
+    fn last_updated(self, cond: TimeCondition) -> Query;
+
     /// Convenience method to add a new condition where the ent matches
     /// both of the provided conditions
     fn and(self, a: Condition, b: Condition) -> Query;
@@ -65,6 +73,9 @@ pub trait QueryExt {
 
     /// Convenience method to add a new condition for an ent's field
     fn field(self, name: impl Into<String>, cond: FieldCondition) -> Query;
+
+    /// Convenience method to add a new condition for an ent's edge
+    fn edge(self, name: impl Into<String>, cond: EdgeCondition) -> Query;
 }
 
 impl QueryExt for Query {
@@ -78,6 +89,18 @@ impl QueryExt for Query {
     /// matches the given type
     fn has_type(self, r#type: impl Into<String>) -> Query {
         self.chain(Condition::HasType(r#type.into()))
+    }
+
+    /// Convenience method to add a new condition related to an ent's
+    /// created time
+    fn created(self, cond: TimeCondition) -> Query {
+        self.chain(Condition::Created(cond))
+    }
+
+    /// Convenience method to add a new condition related to an ent's
+    /// last updated time
+    fn last_updated(self, cond: TimeCondition) -> Query {
+        self.chain(Condition::LastUpdated(cond))
     }
 
     /// Convenience method to add a new condition where the ent matches
@@ -101,5 +124,10 @@ impl QueryExt for Query {
     /// Convenience method to add a new condition for an ent's field
     fn field(self, name: impl Into<String>, cond: FieldCondition) -> Query {
         self.chain(Condition::Field(name.into(), cond))
+    }
+
+    /// Convenience method to add a new condition for an ent's edge
+    fn edge(self, name: impl Into<String>, cond: EdgeCondition) -> Query {
+        self.chain(Condition::Edge(name.into(), cond))
     }
 }
