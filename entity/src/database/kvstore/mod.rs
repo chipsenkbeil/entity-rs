@@ -1,4 +1,7 @@
+#[cfg(feature = "inmemory_db")]
 mod inmemory;
+
+#[cfg(feature = "inmemory_db")]
 pub use inmemory::InmemoryDatabase;
 
 #[cfg(feature = "sled_db")]
@@ -12,11 +15,11 @@ use crate::{
         query::{Condition, EdgeCondition, FieldCondition, Query, TimeCondition},
         Ent, Value,
     },
-    IEnt,
+    IEnt, Id,
 };
 use std::collections::HashSet;
 
-type EntIdSet = HashSet<usize>;
+type EntIdSet = HashSet<Id>;
 
 /// Represents a key-value store database that performs synchronous insertion,
 /// retrieval, and removal. It provides blanket support for `DatabaseExt` to
@@ -26,14 +29,14 @@ pub trait KeyValueStoreDatabase: Database {
     fn ids(&self) -> EntIdSet;
 
     /// Returns true if database contains the provided id
-    fn has_id(&self, id: usize) -> bool;
+    fn has_id(&self, id: Id) -> bool;
 
     /// Returns ids of all ents for the given type
     fn ids_for_type(&self, r#type: &str) -> EntIdSet;
 }
 
 impl<T: KeyValueStoreDatabase> DatabaseExt for T {
-    fn get_all(&self, ids: impl IntoIterator<Item = usize>) -> DatabaseResult<Vec<Ent>> {
+    fn get_all(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<Ent>> {
         ids.into_iter()
             .filter_map(|id| self.get(id).transpose())
             .collect()
@@ -170,7 +173,7 @@ fn process_not_condition<T: KeyValueStoreDatabase>(
 #[inline]
 fn process_has_id_condition<T: KeyValueStoreDatabase>(
     this: &T,
-    id: usize,
+    id: Id,
     pipeline: Option<EntIdSet>,
 ) -> EntIdSet {
     if (pipeline.is_none() && this.has_id(id))
@@ -455,14 +458,14 @@ mod tests {
                 db
             }
 
-            fn query_and_assert<Q: Into<Query>, T: DatabaseExt>(db: &T, query: Q, expected: &[usize]) {
+            fn query_and_assert<Q: Into<Query>, T: DatabaseExt>(db: &T, query: Q, expected: &[Id]) {
                 let query = query.into();
                 let results = db
                     .find_all(query.clone())
                     .expect("Failed to retrieve ents")
                     .iter()
                     .map(Ent::id)
-                    .collect::<HashSet<usize>>();
+                    .collect::<HashSet<Id>>();
                 assert_eq!(
                     results,
                     expected.into_iter().copied().collect(),
@@ -486,7 +489,7 @@ mod tests {
                     .expect("Failed to retrieve ents")
                     .iter()
                     .map(Ent::id)
-                    .collect::<HashSet<usize>>();
+                    .collect::<HashSet<Id>>();
                 assert_eq!(results, [1, 2, 3].iter().copied().collect());
 
                 let results = db
@@ -494,7 +497,7 @@ mod tests {
                     .expect("Failed to retrieve ents")
                     .iter()
                     .map(Ent::id)
-                    .collect::<HashSet<usize>>();
+                    .collect::<HashSet<Id>>();
                 assert_eq!(results, [1, 3].iter().copied().collect());
 
                 let results = db
@@ -502,7 +505,7 @@ mod tests {
                     .expect("Failed to retrieve ents")
                     .iter()
                     .map(Ent::id)
-                    .collect::<HashSet<usize>>();
+                    .collect::<HashSet<Id>>();
                 assert_eq!(results, [2, 3].iter().copied().collect());
             }
 
@@ -1103,6 +1106,7 @@ mod tests {
         };
     }
 
+    #[cfg(feature = "inmemory_db")]
     mod inmemory {
         use super::*;
 

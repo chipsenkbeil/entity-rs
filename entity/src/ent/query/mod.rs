@@ -1,3 +1,4 @@
+use crate::Id;
 use derive_more::Constructor;
 use std::fmt::Debug;
 
@@ -45,7 +46,7 @@ impl From<Condition> for Query {
 pub trait QueryExt {
     /// Convenience method to add a new condition where the id of the ent
     /// matches the given id
-    fn has_id(self, id: usize) -> Query;
+    fn has_id(self, id: Id) -> Query;
 
     /// Convenience method to add a new condition where the type of the ent
     /// matches the given type
@@ -81,7 +82,7 @@ pub trait QueryExt {
 impl QueryExt for Query {
     /// Convenience method to add a new condition where the id of the ent
     /// matches the given id
-    fn has_id(self, id: usize) -> Query {
+    fn has_id(self, id: Id) -> Query {
         self.chain(Condition::HasId(id))
     }
 

@@ -11,8 +11,9 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 
 [features]
-default = ["serde", "sled_db"]
-sled_db = ["bincode", "sled"]
+default = ["inmemory_db", "sled_db"]
+inmemory_db = ["serde", "serde/rc"]
+sled_db = ["bincode", "serde", "sled"]
 
 [dependencies]
 bincode = { version = "1.3.1", optional = true }

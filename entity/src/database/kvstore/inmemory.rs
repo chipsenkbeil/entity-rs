@@ -1,8 +1,9 @@
 use super::{EntIdSet, KeyValueStoreDatabase};
 use crate::{
-    database::{Database, DatabaseResult},
+    alloc::{IdAllocator, EPHEMERAL_ID},
+    database::{Database, DatabaseError, DatabaseResult},
     ent::{EdgeDeletionPolicy, Ent},
-    IEnt,
+    IEnt, Id,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -22,12 +23,16 @@ use std::{
 /// of the database. Best practice is to load the database only when first
 /// launching an application!
 #[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InmemoryDatabase {
     /// Primary ent storage
-    ents: Arc<Mutex<HashMap<usize, Ent>>>,
+    ents: Arc<Mutex<HashMap<Id, Ent>>>,
 
     /// Type matching from specific ents to all ids of those ents
     ents_of_type: Arc<Mutex<HashMap<String, EntIdSet>>>,
+
+    /// Id allocator for ents
+    alloc: Arc<Mutex<IdAllocator>>,
 }
 
 impl Default for InmemoryDatabase {
@@ -36,16 +41,17 @@ impl Default for InmemoryDatabase {
         Self {
             ents: Arc::new(Mutex::new(HashMap::new())),
             ents_of_type: Arc::new(Mutex::new(HashMap::new())),
+            alloc: Arc::new(Mutex::new(IdAllocator::new())),
         }
     }
 }
 
 impl Database for InmemoryDatabase {
-    fn get(&self, id: usize) -> DatabaseResult<Option<Ent>> {
+    fn get(&self, id: Id) -> DatabaseResult<Option<Ent>> {
         Ok(self.ents.lock().unwrap().get(&id).map(Clone::clone))
     }
 
-    fn remove(&self, id: usize) -> DatabaseResult<()> {
+    fn remove(&self, id: Id) -> DatabaseResult<()> {
         // Remove the ent and, if it has an associated schema, we process
         // each of the edges identified in the schema based on deletion attributes
         if let Some(ent) = self.ents.lock().unwrap().remove(&id) {
@@ -80,13 +86,32 @@ impl Database for InmemoryDatabase {
                 .and_modify(|e| {
                     e.remove(&id);
                 });
+
+            // Add the id to the freed ids available in the allocator
+            self.alloc.lock().unwrap().extend(vec![id]);
         }
 
         Ok(())
     }
 
-    fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<()> {
-        let ent = into_ent.into();
+    fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<Id> {
+        let mut ent = into_ent.into();
+
+        // Get the id of the ent, swapping out the ephemeral id
+        let id = ent.id();
+        let id = if id == EPHEMERAL_ID {
+            if let Some(id) = self.alloc.lock().unwrap().next() {
+                id
+            } else {
+                return Err(DatabaseError::EntCapacityReached);
+            }
+        } else {
+            self.alloc.lock().unwrap().mark_external_id(id);
+            id
+        };
+
+        // Update the ent's id to match what is actually to be used
+        ent.set_id(id);
 
         // Add our ent's id to the set of ids associated with the ent's type
         self.ents_of_type
@@ -94,12 +119,12 @@ impl Database for InmemoryDatabase {
             .unwrap()
             .entry(ent.r#type().to_string())
             .or_insert_with(HashSet::new)
-            .insert(ent.id());
+            .insert(id);
 
         // Add our ent to the primary database
-        self.ents.lock().unwrap().insert(ent.id(), ent);
+        self.ents.lock().unwrap().insert(id, ent);
 
-        Ok(())
+        Ok(id)
     }
 }
 
@@ -110,7 +135,7 @@ impl KeyValueStoreDatabase for InmemoryDatabase {
     }
 
     /// Returns true if database contains the provided id
-    fn has_id(&self, id: usize) -> bool {
+    fn has_id(&self, id: Id) -> bool {
         self.ents.lock().unwrap().contains_key(&id)
     }
 
@@ -131,17 +156,31 @@ mod tests {
     use crate::{Field, Value};
 
     #[test]
+    fn insert_should_replace_ephemeral_id_with_allocator_id() {
+        let db = InmemoryDatabase::default();
+
+        let ent = Ent::new_untyped(EPHEMERAL_ID);
+        let id = db.insert(ent).expect("Failed to insert ent");
+        assert_ne!(id, EPHEMERAL_ID);
+
+        let ent = db.get(id).expect("Failed to get ent").expect("Ent missing");
+        assert_eq!(ent.id(), id);
+    }
+
+    #[test]
     fn insert_should_add_a_new_ent_using_its_id() {
         let db = InmemoryDatabase::default();
 
         let ent = Ent::new_untyped(999);
-        let _ = db.insert(ent).expect("Failed to insert ent");
+        let id = db.insert(ent).expect("Failed to insert ent");
+        assert_eq!(id, 999);
 
         let ent = db
             .get(999)
             .expect("Failed to get ent")
             .expect("Ent missing");
         assert_eq!(ent.id(), 999);
+        assert_eq!(db.alloc.lock().unwrap().next(), Some(1000));
     }
 
     #[test]
@@ -190,5 +229,8 @@ mod tests {
 
         let _ = db.remove(999).expect("Failed to remove ent");
         assert!(db.get(999).unwrap().is_none(), "Did not remove ent");
+
+        // Id allocator should indicate that id has been freed
+        assert_eq!(db.alloc.lock().unwrap().freed(), &[999]);
     }
 }

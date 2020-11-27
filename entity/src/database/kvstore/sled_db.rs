@@ -1,8 +1,9 @@
 use super::{EntIdSet, KeyValueStoreDatabase};
 use crate::{
+    alloc::{IdAllocator, EPHEMERAL_ID},
     database::{Database, DatabaseError, DatabaseResult},
     ent::{EdgeDeletionPolicy, Ent},
-    IEnt,
+    IEnt, Id,
 };
 use derive_more::Constructor;
 use std::collections::HashSet;
@@ -16,19 +17,68 @@ use std::collections::HashSet;
 #[derive(Constructor, Clone)]
 pub struct SledDatabase(sled::Db);
 
-fn id_to_ivec(id: usize) -> sled::IVec {
+fn id_to_ivec(id: Id) -> sled::IVec {
     id.to_be_bytes().as_ref().into()
 }
 
-fn ivec_to_id(ivec: sled::IVec) -> Option<usize> {
+fn ivec_to_id(ivec: sled::IVec) -> Option<Id> {
     use std::convert::TryInto;
-    let (bytes, _) = ivec.as_ref().split_at(std::mem::size_of::<usize>());
-    bytes.try_into().map(usize::from_be_bytes).ok()
+    let (bytes, _) = ivec.as_ref().split_at(std::mem::size_of::<Id>());
+    bytes.try_into().map(Id::from_be_bytes).ok()
 }
 
 const ENTS_OF_TYPE: &str = "ents_of_type";
+const ID_ALLOCATOR: &str = "id_allocator";
 
 impl SledDatabase {
+    /// Returns sled tree for id allocator
+    fn id_allocator_tree(&self) -> DatabaseResult<sled::Tree> {
+        self.0
+            .open_tree(ID_ALLOCATOR)
+            .map_err(|e| DatabaseError::Connection {
+                source: Box::from(e),
+            })
+    }
+
+    /// Provides a mutable reference to the id allocator, returning an optional
+    /// id in the case that we want to return the next id from the allocator.
+    ///
+    /// Any changes made to the allocator are persisted back to disk.
+    fn with_id_allocator<F: Fn(&mut IdAllocator) -> Option<Id>>(
+        &self,
+        f: F,
+    ) -> DatabaseResult<Option<Id>> {
+        self.id_allocator_tree()?
+            .transaction(move |tx_db| {
+                let mut id_alloc = match tx_db.get([0])? {
+                    Some(ivec) => match bincode::deserialize::<IdAllocator>(&ivec) {
+                        Ok(x) => x,
+                        Err(x) => {
+                            sled::transaction::abort(x)?;
+                            return Ok(None);
+                        }
+                    },
+                    None => IdAllocator::new(),
+                };
+
+                let maybe_id = f(&mut id_alloc);
+
+                let id_alloc_bytes = match bincode::serialize(&id_alloc) {
+                    Ok(x) => x,
+                    Err(x) => {
+                        sled::transaction::abort(x)?;
+                        return Ok(maybe_id);
+                    }
+                };
+
+                tx_db.insert(&[0], id_alloc_bytes)?;
+                Ok(maybe_id)
+            })
+            .map_err(|e| DatabaseError::Connection {
+                source: Box::from(e),
+            })
+    }
+
     /// Returns sled tree for ent types
     fn ent_type_tree(&self) -> DatabaseResult<sled::Tree> {
         self.0
@@ -38,15 +88,12 @@ impl SledDatabase {
             })
     }
 
-    /// Performs an update on the ent type set of the specified type
-    fn update_ent_type_set<F: Fn(EntIdSet) -> EntIdSet>(
-        &self,
-        r#type: &str,
-        f: F,
-    ) -> DatabaseResult<()> {
+    /// Provides a mutable reference to the id set associated with an ent type.
+    /// Any changes made to the set are persisted back to disk.
+    fn with_ent_type_set<F: Fn(&mut EntIdSet)>(&self, r#type: &str, f: F) -> DatabaseResult<()> {
         self.ent_type_tree()?
             .transaction(move |tx_db| {
-                let set = match tx_db.get(r#type)? {
+                let mut set = match tx_db.get(r#type)? {
                     Some(ivec) => match bincode::deserialize::<EntIdSet>(&ivec) {
                         Ok(x) => x,
                         Err(x) => {
@@ -57,7 +104,7 @@ impl SledDatabase {
                     None => HashSet::new(),
                 };
 
-                let set = f(set);
+                f(&mut set);
 
                 let set_bytes = match bincode::serialize(&set) {
                     Ok(x) => x,
@@ -77,7 +124,7 @@ impl SledDatabase {
 }
 
 impl Database for SledDatabase {
-    fn get(&self, id: usize) -> DatabaseResult<Option<Ent>> {
+    fn get(&self, id: Id) -> DatabaseResult<Option<Ent>> {
         let maybe_ivec = self
             .0
             .get(id_to_ivec(id))
@@ -94,9 +141,7 @@ impl Database for SledDatabase {
             })
     }
 
-    fn remove(&self, id: usize) -> DatabaseResult<()> {
-        // Remove the ent and, if it has an associated schema, we process
-        // each of the edges identified in the schema based on deletion attributes
+    fn remove(&self, id: Id) -> DatabaseResult<()> {
         if let Some(ent) = self
             .0
             .remove(id_to_ivec(id))
@@ -164,36 +209,56 @@ impl Database for SledDatabase {
             }
 
             // Remove the id from our type mapping if it is there
-            self.update_ent_type_set(ent.r#type(), |mut set| {
+            self.with_ent_type_set(ent.r#type(), |set| {
                 set.remove(&id);
-                set
+            })?;
+
+            // Add the id to the freed ids available in the allocator
+            self.with_id_allocator(|alloc| {
+                alloc.extend(vec![id]);
+                None
             })?;
         }
 
         Ok(())
     }
 
-    fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<()> {
-        let ent = into_ent.into();
+    fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<Id> {
+        let mut ent = into_ent.into();
+
+        // Get the id of the ent, swapping out the ephemeral id
+        let id = ent.id();
+        let id = self
+            .with_id_allocator(move |alloc| {
+                if id == EPHEMERAL_ID {
+                    alloc.next()
+                } else {
+                    alloc.mark_external_id(id);
+                    Some(id)
+                }
+            })?
+            .ok_or(DatabaseError::EntCapacityReached)?;
+
+        // Update the ent's id to match what is actually to be used
+        ent.set_id(id);
 
         // Add our ent's id to the set of ids associated with the ent's type
-        self.update_ent_type_set(ent.r#type(), |mut set| {
-            set.insert(ent.id());
-            set
+        self.with_ent_type_set(ent.r#type(), |set| {
+            set.insert(id);
         })?;
 
         // Add our ent to the primary database
         let ent_bytes = bincode::serialize(&ent).map_err(|e| DatabaseError::CorruptedEnt {
-            id: ent.id(),
+            id,
             source: Box::from(e),
         })?;
         self.0
-            .insert(id_to_ivec(ent.id()), ent_bytes)
+            .insert(id_to_ivec(id), ent_bytes)
             .map_err(|e| DatabaseError::Connection {
                 source: Box::from(e),
             })?;
 
-        Ok(())
+        Ok(id)
     }
 }
 
@@ -209,7 +274,7 @@ impl KeyValueStoreDatabase for SledDatabase {
     }
 
     /// Returns true if database contains the provided id
-    fn has_id(&self, id: usize) -> bool {
+    fn has_id(&self, id: Id) -> bool {
         self.0.contains_key(id_to_ivec(id)).ok().unwrap_or_default()
     }
 
@@ -252,17 +317,31 @@ mod tests {
     }
 
     #[test]
+    fn insert_should_replace_ephemeral_id_with_allocator_id() {
+        let db = new_db();
+
+        let ent = Ent::new_untyped(EPHEMERAL_ID);
+        let id = db.insert(ent).expect("Failed to insert ent");
+        assert_ne!(id, EPHEMERAL_ID);
+
+        let ent = db.get(id).expect("Failed to get ent").expect("Ent missing");
+        assert_eq!(ent.id(), id);
+    }
+
+    #[test]
     fn insert_should_add_a_new_ent_using_its_id() {
         let db = new_db();
 
         let ent = Ent::new_untyped(999);
-        let _ = db.insert(ent).expect("Failed to insert ent");
+        let id = db.insert(ent).expect("Failed to insert ent");
+        assert_eq!(id, 999);
 
         let ent = db
             .get(999)
             .expect("Failed to get ent")
             .expect("Ent missing");
         assert_eq!(ent.id(), 999);
+        assert_eq!(db.with_id_allocator(Iterator::next).unwrap().unwrap(), 1000);
     }
 
     #[test]
@@ -311,5 +390,12 @@ mod tests {
 
         let _ = db.remove(999).expect("Failed to remove ent");
         assert!(db.get(999).unwrap().is_none(), "Did not remove ent");
+
+        // Id allocator should indicate that id has been freed
+        assert_eq!(
+            db.with_id_allocator(|alloc| alloc.freed().first().copied())
+                .unwrap(),
+            Some(999),
+        );
     }
 }

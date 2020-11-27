@@ -1,3 +1,4 @@
+use crate::Id;
 use derive_more::From;
 use std::collections::HashSet;
 use strum::{Display, EnumDiscriminants, EnumString};
@@ -73,7 +74,7 @@ impl Edge {
     }
 
     /// Converts to the ids of the ents referenced by this edge
-    pub fn to_ids(&self) -> Vec<usize> {
+    pub fn to_ids(&self) -> Vec<Id> {
         self.value.to_ids()
     }
 
@@ -122,11 +123,11 @@ impl Default for EdgeDeletionPolicy {
 )]
 pub enum EdgeValue {
     /// Edge can potentially have one outward connection
-    MaybeOne(Option<usize>),
+    MaybeOne(Option<Id>),
     /// Edge can have exactly one outward connection
-    One(usize),
+    One(Id),
     /// Edge can have many outward connections
-    Many(Vec<usize>),
+    Many(Vec<Id>),
 }
 
 /// Represents some error the can occur when mutating an edge's value
@@ -176,7 +177,7 @@ impl EdgeValue {
     /// let v = EdgeValue::Many(vec![1, 2, 3, 4]);
     /// assert_eq!(v.to_ids(), vec![1, 2, 3, 4]);
     /// ```
-    pub fn to_ids(&self) -> Vec<usize> {
+    pub fn to_ids(&self) -> Vec<Id> {
         match self {
             Self::MaybeOne(x) => x.iter().copied().collect(),
             Self::One(x) => vec![*x],
@@ -265,9 +266,9 @@ impl EdgeValue {
     /// ```
     pub fn add_ids(
         &mut self,
-        into_ids: impl IntoIterator<Item = usize>,
+        into_ids: impl IntoIterator<Item = Id>,
     ) -> Result<(), EdgeValueMutationError> {
-        let mut ids = into_ids.into_iter().collect::<Vec<usize>>();
+        let mut ids = into_ids.into_iter().collect::<Vec<Id>>();
         ids.sort_unstable();
         ids.dedup();
 
@@ -367,9 +368,9 @@ impl EdgeValue {
     /// ```
     pub fn remove_ids(
         &mut self,
-        into_ids: impl IntoIterator<Item = usize>,
+        into_ids: impl IntoIterator<Item = Id>,
     ) -> Result<(), EdgeValueMutationError> {
-        let ids = into_ids.into_iter().collect::<HashSet<usize>>();
+        let ids = into_ids.into_iter().collect::<HashSet<Id>>();
 
         // If no ids to remove, will always succeed and do nothing
         if ids.is_empty() {
@@ -415,15 +416,6 @@ impl EdgeValue {
         match self {
             Self::MaybeOne(_) | Self::One(_) => 1,
             Self::Many(_) => usize::MAX,
-        }
-    }
-
-    /// Returns the minimum ids possible to contain within this value
-    #[inline]
-    fn min_ids_allowed(&self) -> usize {
-        match self {
-            Self::MaybeOne(_) | Self::Many(_) => 0,
-            Self::One(_) => 1,
         }
     }
 }

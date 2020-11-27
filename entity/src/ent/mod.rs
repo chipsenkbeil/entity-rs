@@ -15,6 +15,7 @@ pub use value::{
     Number, NumberSign, NumberType, PrimitiveValue, PrimitiveValueType, Value, ValueType,
 };
 
+use crate::Id;
 use derive_more::{Display, Error};
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
@@ -40,7 +41,7 @@ pub enum EntMutationError {
 /// Based on https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf
 pub trait IEnt: AsAny {
     /// Represents the unique id associated with each entity instance
-    fn id(&self) -> usize;
+    fn id(&self) -> Id;
 
     /// Represents a unique type associated with the entity, used for
     /// lookups, indexing by type, and conversions
@@ -91,7 +92,7 @@ impl<T: IEnt> AsAny for T {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ent {
-    id: usize,
+    id: Id,
     r#type: String,
     fields: HashMap<String, Field>,
     edges: HashMap<String, Edge>,
@@ -108,7 +109,7 @@ impl Ent {
 
     /// Creates a new ent using the given id, type, field map, and edge map
     pub fn new(
-        id: usize,
+        id: Id,
         r#type: String,
         fields: HashMap<String, Field>,
         edges: HashMap<String, Edge>,
@@ -130,12 +131,12 @@ impl Ent {
     }
 
     /// Creates an empty ent with the provided id and type
-    pub fn new_empty<T: Into<String>>(id: usize, r#type: T) -> Self {
+    pub fn new_empty<T: Into<String>>(id: Id, r#type: T) -> Self {
         Self::new(id, r#type.into(), HashMap::new(), HashMap::new())
     }
 
     /// Creates an emtpy, untyped ent with the provided id
-    pub fn new_untyped(id: usize) -> Self {
+    pub fn new_untyped(id: Id) -> Self {
         Self::new_empty(id, Self::default_type())
     }
 
@@ -146,7 +147,7 @@ impl Ent {
         FI: IntoIterator<Item = Field>,
         EI: IntoIterator<Item = Edge>,
     >(
-        id: usize,
+        id: Id,
         r#type: T,
         field_collection: FI,
         edge_collection: EI,
@@ -163,6 +164,31 @@ impl Ent {
                 .map(|e| (e.name().to_string(), e))
                 .collect(),
         )
+    }
+
+    /// Updates the id of this ent, useful for databases that want to adjust
+    /// the id or when you want to produce a clone of the ent in a database
+    /// by resetting its id to ephemeral prior to storing it
+    pub fn set_id(&mut self, id: Id) {
+        self.id = id;
+    }
+
+    /// Loads the ents associated by a specific edge from the given database
+    pub fn load_edge<D: crate::Database>(
+        &self,
+        database: &D,
+        name: &str,
+    ) -> crate::DatabaseResult<Vec<Ent>> {
+        match self.edge(name) {
+            Some(e) => e
+                .to_ids()
+                .into_iter()
+                .filter_map(|id| database.get(id).transpose())
+                .collect(),
+            None => Err(crate::DatabaseError::MissingEdge {
+                name: name.to_string(),
+            }),
+        }
     }
 
     /// Replaces the ent's local field's value with the given value, returning
@@ -188,7 +214,7 @@ impl Ent {
     ///
     /// If there are too many ids (in the case of >1 for MaybeOne/One), this
     /// method will fail.
-    pub fn add_ents_to_edge<N: Into<String>, I: IntoIterator<Item = usize>>(
+    pub fn add_ents_to_edge<N: Into<String>, I: IntoIterator<Item = Id>>(
         &mut self,
         name: N,
         ids: I,
@@ -208,7 +234,7 @@ impl Ent {
     ///
     /// If this would result in an invalid edge (One being empty), this
     /// method will fail.
-    pub fn remove_ents_from_edge<N: Into<String>, I: IntoIterator<Item = usize>>(
+    pub fn remove_ents_from_edge<N: Into<String>, I: IntoIterator<Item = Id>>(
         &mut self,
         name: N,
         ids: I,
@@ -228,11 +254,11 @@ impl Ent {
     ///
     /// If this would result in an invalid edge (One being empty), this
     /// method will fail.
-    pub fn remove_ents_from_all_edges<I: IntoIterator<Item = usize>>(
+    pub fn remove_ents_from_all_edges<I: IntoIterator<Item = Id>>(
         &mut self,
         ids: I,
     ) -> Result<(), EntMutationError> {
-        let edge_ids = ids.into_iter().collect::<HashSet<usize>>();
+        let edge_ids = ids.into_iter().collect::<HashSet<Id>>();
         let edge_names = self.edges.keys().cloned().collect::<HashSet<String>>();
 
         for name in edge_names {
@@ -270,7 +296,7 @@ impl IEnt for Ent {
     /// let ent = Ent::new_untyped(999);
     /// assert_eq!(ent.id(), 999);
     /// ```
-    fn id(&self) -> usize {
+    fn id(&self) -> Id {
         self.id
     }
 

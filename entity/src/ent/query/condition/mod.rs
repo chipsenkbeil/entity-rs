@@ -1,3 +1,4 @@
+use crate::Id;
 use std::fmt::Debug;
 
 mod edge;
@@ -19,7 +20,7 @@ pub enum Condition {
     Never,
 
     /// Query condition that succeeds if the ent has the specified id
-    HasId(usize),
+    HasId(Id),
 
     /// Query condition that succeeds if the ent has the specified type
     HasType(String),
@@ -100,10 +101,10 @@ impl From<bool> for Condition {
     }
 }
 
-impl From<usize> for Condition {
-    /// Converts from usize to condition by treating usize as
-    /// `Condition::HasId(usize)`
-    fn from(id: usize) -> Self {
+impl From<Id> for Condition {
+    /// Converts from Id to condition by treating Id as
+    /// `Condition::HasId(Id)`
+    fn from(id: Id) -> Self {
         Self::HasId(id)
     }
 }
