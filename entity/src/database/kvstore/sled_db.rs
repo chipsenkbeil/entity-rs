@@ -141,7 +141,7 @@ impl Database for SledDatabase {
             })
     }
 
-    fn remove(&self, id: Id) -> DatabaseResult<()> {
+    fn remove(&self, id: Id) -> DatabaseResult<bool> {
         if let Some(ent) = self
             .0
             .remove(id_to_ivec(id))
@@ -218,9 +218,11 @@ impl Database for SledDatabase {
                 alloc.extend(vec![id]);
                 None
             })?;
-        }
 
-        Ok(())
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<Id> {

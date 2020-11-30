@@ -176,7 +176,6 @@ pub enum ValueType {
     Map(Box<ValueType>),
     Optional(Box<ValueType>),
     Primitive(PrimitiveValueType),
-    Set(PrimitiveValueType),
     Text,
 }
 
@@ -189,6 +188,87 @@ impl ValueType {
         match self {
             Self::Primitive(x) => Some(*x),
             _ => None,
+        }
+    }
+
+    /// Constructs a value type from a Rust-based type string similar to what
+    /// you would find from `std::any::type_name`
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{ValueType as VT, PrimitiveValueType as PVT, NumberType as NT};
+    ///
+    /// assert_eq!(
+    ///     VT::from_type_name("u8").unwrap(),
+    ///     VT::Primitive(PVT::U8),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     VT::from_type_name("std::vec::Vec<std::string::String>").unwrap(),
+    ///     VT::List(Box::from(VT::Text)),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     VT::from_type_name("Vec<Option<u8>>").unwrap(),
+    ///     VT::List(Box::from(VT::Optional(Box::from(VT::Primitive(PVT::Number(NT::U8)))))),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     VT::from_type_name("HashMap<String, u8>").unwrap(),
+    ///     VT::Map(Box::from(VT::Primitive(PVT::Number(NT::U8)))),
+    /// );
+    /// ```
+    pub fn from_type_name(name: &str) -> Result<Self, ParseError> {
+        if name.is_empty() {
+            return Err(ParseError::VariantNotFound);
+        }
+
+        // Split based on the start of a generic in the form of Outer<Inner>
+        let mut tokens = name.split(|c| c == '<');
+        let maybe_outer_str = tokens.next();
+        let inner_str = {
+            let mut x = tokens.collect::<String>();
+            if x.ends_with(">") {
+                x.pop();
+            }
+            x
+        };
+
+        // Get the outer type based on an equivalent rust type
+        //
+        // * HashMap -> Map
+        // * Vec -> List
+        // * Option -> Optional
+        // * String -> Text
+        // * (anything else) -> Primitive
+        match maybe_outer_str
+            .unwrap()
+            .split(|c| c == ':')
+            .last()
+            .unwrap()
+            .to_lowercase()
+            .as_str()
+        {
+            // If a map, we expect the form to be ...<String, ...> and will
+            // verify that the first type paraemter is String
+            "hashmap" => {
+                let mut items = inner_str.split(|c| c == ',');
+                let first = items.next();
+                if first.map(|s| s.trim().to_lowercase().as_str()) != Some("string") {
+                    return Err(ParseError::VariantNotFound);
+                }
+
+                let rest = items.collect::<String>();
+                Ok(ValueType::Map(Box::from(Self::from_type_name(&rest)?)))
+            }
+            "vec" => Ok(ValueType::List(Box::from(Self::from_type_name(
+                &inner_str,
+            )?))),
+            "option" => Ok(ValueType::Optional(Box::from(Self::from_type_name(
+                &inner_str,
+            )?))),
+            "string" => Ok(ValueType::Text),
         }
     }
 }
@@ -250,11 +330,6 @@ impl std::str::FromStr for ValueType {
                                 .to_primitive_type()
                                 .ok_or(ParseError::VariantNotFound)?,
                         ))),
-                        "set" => Ok(Some(ValueType::Set(
-                            opt_to_err(maybe_inner)?
-                                .to_primitive_type()
-                                .ok_or(ParseError::VariantNotFound)?,
-                        ))),
                         "text" => Ok(Some(ValueType::Text)),
                         x => Ok(Some(ValueType::Primitive(PrimitiveValueType::from_str(x)?))),
                     }
@@ -278,7 +353,6 @@ impl std::fmt::Display for ValueType {
             Self::Map(t) => write!(f, "map:{}", t),
             Self::Optional(t) => write!(f, "optional:{}", t),
             Self::Primitive(t) => write!(f, "{}", t),
-            Self::Set(t) => write!(f, "set:{}", t),
             Self::Text => write!(f, "text"),
         }
     }
@@ -449,6 +523,45 @@ impl PrimitiveValueType {
         match self {
             Self::Number(x) => Some(*x),
             _ => None,
+        }
+    }
+
+    /// Constructs a primitive value type from a Rust-based type string similar
+    /// to what you would find from `std::any::type_name`
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{PrimitiveValueType as PVT, NumberType as NT};
+    ///
+    /// assert_eq!(
+    ///     PVT::from_type_name("bool").unwrap(),
+    ///     PVT::Bool,
+    /// );
+    ///
+    /// assert_eq!(
+    ///     PVT::from_type_name("char").unwrap(),
+    ///     PVT::Char,
+    /// );
+    ///
+    /// assert_eq!(
+    ///     PVT::from_type_name("u8").unwrap(),
+    ///     PVT::Number(NT::U8),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     PVT::from_type_name("()").unwrap(),
+    ///     PVT::Unit,
+    /// );
+    /// ```
+    pub fn from_type_name(tname: &str) -> Result<Self, ParseError> {
+        use std::str::FromStr;
+
+        // Translate any Rust-specific types to our custom format, passing
+        // anything that is the same to our FromStr implementation
+        match tname {
+            "()" => Self::from_str("unit"),
+            x => Self::from_str(x),
         }
     }
 }

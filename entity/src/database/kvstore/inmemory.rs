@@ -51,7 +51,7 @@ impl Database for InmemoryDatabase {
         Ok(self.ents.lock().unwrap().get(&id).map(Clone::clone))
     }
 
-    fn remove(&self, id: Id) -> DatabaseResult<()> {
+    fn remove(&self, id: Id) -> DatabaseResult<bool> {
         // Remove the ent and, if it has an associated schema, we process
         // each of the edges identified in the schema based on deletion attributes
         if let Some(ent) = self.ents.lock().unwrap().remove(&id) {
@@ -89,9 +89,11 @@ impl Database for InmemoryDatabase {
 
             // Add the id to the freed ids available in the allocator
             self.alloc.lock().unwrap().extend(vec![id]);
-        }
 
-        Ok(())
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<Id> {

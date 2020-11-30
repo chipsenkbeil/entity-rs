@@ -22,6 +22,9 @@ pub enum DatabaseError {
     #[display(fmt = "Missing Edge: {}", name)]
     MissingEdge { name: String },
 
+    #[display(fmt = "Missing Ent: {}", id)]
+    MissingEnt { id: Id },
+
     #[display(fmt = "Expected type {}, but got type {}", expected, actual)]
     WrongType {
         expected: crate::ent::ValueType,
@@ -45,13 +48,18 @@ impl std::error::Error for DatabaseError {}
 /// database and it is up to each implementation to provide proper
 /// locking and safeguards to ensure that multi-threaded access does
 /// not cause problems.
-pub trait Database {
+///
+/// The database is required to be cloneable, which should not be an expensive
+/// operation as cloning should only duplicate the underlying connection to
+/// the database, not clone the database itself.
+pub trait Database: Clone {
     /// Retrieves a copy of a single, generic ent with the corresponding id
     fn get(&self, id: Id) -> DatabaseResult<Option<Ent>>;
 
     /// Removes the ent with the corresponding id, triggering edge
-    /// processing for all disconnected ents.
-    fn remove(&self, id: Id) -> DatabaseResult<()>;
+    /// processing for all disconnected ents. Returns a boolean indicating
+    /// if an ent was removed.
+    fn remove(&self, id: Id) -> DatabaseResult<bool>;
 
     /// Inserts a new ent using its id as the primary index, overwriting
     /// any ent with a matching id. If the ent's id is set to the ephemeral
