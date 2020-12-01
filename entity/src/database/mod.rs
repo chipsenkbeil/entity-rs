@@ -41,6 +41,9 @@ pub enum DatabaseError {
         source: Box<dyn std::error::Error>,
     },
 
+    #[display(fmt = "Broken Edge {}", name)]
+    BrokenEdge { name: String },
+
     #[display(fmt = "Ent Capacity Reached")]
     EntCapacityReached,
 }

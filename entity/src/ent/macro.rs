@@ -224,31 +224,55 @@ mod tests {
 
     impl PageEnt {
         pub fn load_header(&self) -> crate::DatabaseResult<::std::option::Option<ContentEnt>> {
-            use crate::IEnt;
-            let edge = self
-                .0
-                .edge(stringify!(header))
-                .expect("Missing edge: header");
-            match edge.value() {
-                crate::EdgeValue::MaybeOne(::std::option::Option::Some(id)) => todo!(
-                    r#"""
-                    Need to provide two options for macro:
-                    1. Defaults to assuming there is a TryFrom<()>
-                    """#
-                ),
-                crate::EdgeValue::MaybeOne(::std::option::Option::None) => {
-                    ::std::result::Result::Ok(None)
-                }
-                _ => unreachable!(),
-            }
+            use ::std::convert::TryFrom;
+            self.0
+                .load_edge(stringify!(header))?
+                .into_iter()
+                .nth(0)
+                .map(|ent| {
+                    use crate::IEnt;
+                    let id = ent.id();
+                    ContentEnt::try_from(ent).map_err(|e| crate::DatabaseError::CorruptedEnt {
+                        id,
+                        source: ::std::boxed::Box::from(e),
+                    })
+                })
+                .transpose()
         }
 
         pub fn load_subheader(&self) -> crate::DatabaseResult<ContentEnt> {
-            todo!("Need a Value -> specific type try_from conversion")
+            use ::std::convert::TryFrom;
+            let ent = self
+                .0
+                .load_edge(stringify!(subheader))?
+                .into_iter()
+                .nth(0)
+                .ok_or(crate::DatabaseError::BrokenEdge {
+                    name: stringify!(subheader).to_string(),
+                })?;
+
+            use crate::IEnt;
+            let id = ent.id();
+            ContentEnt::try_from(ent).map_err(|e| crate::DatabaseError::CorruptedEnt {
+                id,
+                source: ::std::boxed::Box::from(e),
+            })
         }
 
         pub fn load_paragraphs(&self) -> crate::DatabaseResult<::std::vec::Vec<ContentEnt>> {
-            todo!("Need a Value -> specific type try_from conversion")
+            use ::std::convert::TryFrom;
+            self.0
+                .load_edge(stringify!(header))?
+                .into_iter()
+                .map(|ent| {
+                    use crate::IEnt;
+                    let id = ent.id();
+                    ContentEnt::try_from(ent).map_err(|e| crate::DatabaseError::CorruptedEnt {
+                        id,
+                        source: ::std::boxed::Box::from(e),
+                    })
+                })
+                .collect()
         }
     }
 
@@ -598,4 +622,46 @@ mod tests {
     //////////////////////////////////////////////////////////////////////////
 
     pub struct ContentEnt(crate::Ent);
+
+    #[derive(Debug)]
+    pub enum EntToContentEntError {
+        EntWrongType {
+            expected: ::std::string::String,
+            actual: ::std::string::String,
+        },
+        FieldMissing {
+            name: ::std::string::String,
+        },
+        FieldWrongType {
+            name: ::std::string::String,
+            expected: crate::ValueType,
+            actual: crate::ValueType,
+        },
+        EdgeMissing {
+            name: ::std::string::String,
+        },
+        EdgeWrongType {
+            name: ::std::string::String,
+            expected: crate::EdgeValueType,
+            actual: crate::EdgeValueType,
+        },
+    }
+
+    impl ::std::fmt::Display for EntToContentEntError {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            write!(f, "{:?}", self)
+        }
+    }
+
+    impl ::std::error::Error for EntToContentEntError {}
+
+    impl ::std::convert::TryFrom<crate::Ent> for ContentEnt {
+        type Error = EntToContentEntError;
+
+        fn try_from(ent: crate::Ent) -> ::std::result::Result<Self, Self::Error> {
+            Err(EntToContentEntError::FieldMissing {
+                name: String::from(""),
+            })
+        }
+    }
 }
