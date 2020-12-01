@@ -16,10 +16,11 @@ pub use value::{
     Number, NumberSign, NumberType, PrimitiveValue, PrimitiveValueType, Value, ValueType,
 };
 
-use crate::Id;
+use crate::{Database, DatabaseError, DatabaseResult, Id};
 use derive_more::{Display, Error};
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
+    fmt,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -89,16 +90,138 @@ impl<T: IEnt> AsAny for T {
 }
 
 /// Represents a general-purpose ent that has no pre-assigned type and
-/// maintains fields and edges using internal maps
-#[derive(Clone, Debug)]
+/// maintains fields and edges using internal maps. This ent can optionally
+/// be connected to a database and supports additional functionality like
+/// loading ents from edges when connected.
+#[derive(Clone, Display)]
+#[display(fmt = "Ent {} of type {}", id, r#type)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ent {
+    #[cfg_attr(feature = "serde", serde(skip))]
+    database: Option<Box<dyn Database>>,
     id: Id,
     r#type: String,
     fields: HashMap<String, Field>,
     edges: HashMap<String, Edge>,
     created: u64,
     last_updated: u64,
+}
+
+impl fmt::Debug for Ent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Ent")
+            .field("id", &self.id)
+            .field("r#type", &self.r#type)
+            .field("fields", &self.fields)
+            .field("edges", &self.edges)
+            .field("created", &self.created)
+            .field("last_updated", &self.last_updated)
+            .finish()
+    }
+}
+
+impl Eq for Ent {}
+
+impl PartialEq for Ent {
+    /// Ents are considered equal if their ids, types, fields, edges, creation
+    /// date, and updated date are all equal
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.r#type == other.r#type
+            && self.fields == other.fields
+            && self.edges == other.edges
+            && self.created == other.created
+            && self.last_updated == other.last_updated
+    }
+}
+
+impl Ent {
+    /// Connects ent to the given database so all future database-related
+    /// operations will be performed against this database
+    #[inline]
+    pub fn connect<D: 'static + Database>(&mut self, database: D) -> &mut Self {
+        self.connect_boxed(Box::from(database))
+    }
+
+    /// Connects ent to the given boxed database trait object so all future
+    /// database-related operations will be performed against this database
+    pub fn connect_boxed(&mut self, database: Box<dyn Database>) -> &mut Self {
+        self.database = Some(database);
+        self
+    }
+
+    /// Disconnects ent from the given database. All future database-related
+    /// operations will fail with a disconnected database error
+    pub fn disconnect(&mut self) -> &mut Self {
+        self.database = None;
+        self
+    }
+
+    /// Returns true if ent is currently connected to a database
+    pub fn is_connected(&self) -> bool {
+        self.database.is_some()
+    }
+
+    /// Loads the ents connected by the edge with the given name
+    ///
+    /// Requires ent to be connected to a database
+    pub fn load_edge(&self, name: &str) -> DatabaseResult<Vec<Ent>> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        match self.edge(name) {
+            Some(e) => e
+                .to_ids()
+                .into_iter()
+                .filter_map(|id| database.get(id).transpose())
+                .collect(),
+            None => Err(DatabaseError::MissingEdge {
+                name: name.to_string(),
+            }),
+        }
+    }
+
+    /// Refreshes ent by checking database for latest version and returning it
+    ///
+    /// Requires ent to be connected to a database
+    pub fn refresh(&mut self) -> DatabaseResult<()> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        let id = self.id;
+        match database.get(id)? {
+            Some(x) => {
+                self.id = x.id;
+                self.r#type = x.r#type;
+                self.fields = x.fields;
+                self.edges = x.edges;
+                self.created = x.created;
+                self.last_updated = x.last_updated;
+
+                Ok(())
+            }
+            None => Err(DatabaseError::MissingEnt { id }),
+        }
+    }
+
+    /// Saves the ent to the database, updating this local instance's id
+    /// if the database has reported a new id
+    ///
+    /// Requires ent to be connected to a database
+    pub fn commit(&mut self) -> DatabaseResult<()> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        match database.insert(self.clone()) {
+            Ok(id) => {
+                self.set_id(id);
+                Ok(())
+            }
+            Err(x) => Err(x),
+        }
+    }
+
+    /// Removes self from database, returning true if successful
+    ///
+    /// Requires ent to be connected to a database
+    pub fn remove(self) -> DatabaseResult<bool> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        database.remove(self.id)
+    }
 }
 
 impl Ent {
@@ -116,6 +239,7 @@ impl Ent {
         edges: HashMap<String, Edge>,
     ) -> Self {
         Self {
+            database: None,
             id,
             r#type,
             fields,
@@ -172,24 +296,6 @@ impl Ent {
     /// by resetting its id to ephemeral prior to storing it
     pub fn set_id(&mut self, id: Id) {
         self.id = id;
-    }
-
-    /// Loads the ents associated by a specific edge from the given database
-    pub fn load_edge<D: crate::Database>(
-        &self,
-        database: &D,
-        name: &str,
-    ) -> crate::DatabaseResult<Vec<Ent>> {
-        match self.edge(name) {
-            Some(e) => e
-                .to_ids()
-                .into_iter()
-                .filter_map(|id| database.get(id).transpose())
-                .collect(),
-            None => Err(crate::DatabaseError::MissingEdge {
-                name: name.to_string(),
-            }),
-        }
     }
 
     /// Replaces the ent's local field's value with the given value, returning

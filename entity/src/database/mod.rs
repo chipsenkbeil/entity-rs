@@ -1,11 +1,12 @@
+mod kvstore;
+pub use kvstore::*;
+
 use crate::{
     ent::{Ent, Query},
     Id,
 };
 use derive_more::Display;
-
-mod kvstore;
-pub use kvstore::*;
+use dyn_clone::DynClone;
 
 /// Alias to a result that can contain a database error
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -15,6 +16,9 @@ pub type DatabaseResult<T> = Result<T, DatabaseError>;
 pub enum DatabaseError {
     #[display(fmt = "Connection Issue: {}", source)]
     Connection { source: Box<dyn std::error::Error> },
+
+    #[display(fmt = "Disconnected")]
+    Disconnected,
 
     #[display(fmt = "Missing Field: {}", name)]
     MissingField { name: String },
@@ -48,11 +52,7 @@ impl std::error::Error for DatabaseError {}
 /// database and it is up to each implementation to provide proper
 /// locking and safeguards to ensure that multi-threaded access does
 /// not cause problems.
-///
-/// The database is required to be cloneable, which should not be an expensive
-/// operation as cloning should only duplicate the underlying connection to
-/// the database, not clone the database itself.
-pub trait Database: Clone {
+pub trait Database: DynClone {
     /// Retrieves a copy of a single, generic ent with the corresponding id
     fn get(&self, id: Id) -> DatabaseResult<Option<Ent>>;
 
@@ -67,8 +67,10 @@ pub trait Database: Clone {
     /// inserted.
     ///
     /// The ent's id is returned after being inserted.
-    fn insert(&self, ent: impl Into<Ent>) -> DatabaseResult<Id>;
+    fn insert(&self, ent: Ent) -> DatabaseResult<Id>;
 }
+
+dyn_clone::clone_trait_object!(Database);
 
 /// Represents extensions to the database to provide advanced functionality.
 pub trait DatabaseExt {

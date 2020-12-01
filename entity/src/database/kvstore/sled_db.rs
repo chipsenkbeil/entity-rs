@@ -133,7 +133,12 @@ impl Database for SledDatabase {
             })?;
 
         maybe_ivec
-            .map(|ivec| bincode::deserialize(ivec.as_ref()))
+            .map(|ivec| {
+                bincode::deserialize(ivec.as_ref()).map(|mut ent: Ent| {
+                    ent.connect(self.clone());
+                    ent
+                })
+            })
             .transpose()
             .map_err(|e| DatabaseError::CorruptedEnt {
                 id,
@@ -225,9 +230,7 @@ impl Database for SledDatabase {
         }
     }
 
-    fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<Id> {
-        let mut ent = into_ent.into();
-
+    fn insert(&self, mut ent: Ent) -> DatabaseResult<Id> {
         // Get the id of the ent, swapping out the ephemeral id
         let id = ent.id();
         let id = self
@@ -379,6 +382,10 @@ mod tests {
 
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_some(), "Unexpectedly missing ent");
+        assert!(
+            result.unwrap().is_connected(),
+            "Ent not connected to database"
+        );
     }
 
     #[test]

@@ -48,7 +48,16 @@ impl Default for InmemoryDatabase {
 
 impl Database for InmemoryDatabase {
     fn get(&self, id: Id) -> DatabaseResult<Option<Ent>> {
-        Ok(self.ents.lock().unwrap().get(&id).map(Clone::clone))
+        Ok(self
+            .ents
+            .lock()
+            .unwrap()
+            .get(&id)
+            .map(Clone::clone)
+            .map(|mut ent| {
+                ent.connect(self.clone());
+                ent
+            }))
     }
 
     fn remove(&self, id: Id) -> DatabaseResult<bool> {
@@ -96,9 +105,7 @@ impl Database for InmemoryDatabase {
         }
     }
 
-    fn insert(&self, into_ent: impl Into<Ent>) -> DatabaseResult<Id> {
-        let mut ent = into_ent.into();
-
+    fn insert(&self, mut ent: Ent) -> DatabaseResult<Id> {
         // Get the id of the ent, swapping out the ephemeral id
         let id = ent.id();
         let id = if id == EPHEMERAL_ID {
@@ -218,6 +225,10 @@ mod tests {
 
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_some(), "Unexpectedly missing ent");
+        assert!(
+            result.unwrap().is_connected(),
+            "Ent not connected to database"
+        );
     }
 
     #[test]
