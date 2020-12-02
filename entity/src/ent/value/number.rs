@@ -1,4 +1,4 @@
-use derive_more::From;
+use derive_more::{From, TryInto};
 use std::{
     cmp::Ordering,
     hash::{Hash, Hasher},
@@ -7,8 +7,9 @@ use strum::{Display, EnumDiscriminants, EnumString};
 
 /// Represents a generic number that maintains an internal Rust representation
 /// of the actual number
-#[derive(Copy, Clone, Debug, From, EnumDiscriminants)]
+#[derive(Copy, Clone, Debug, From, EnumDiscriminants, TryInto)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[try_into(owned, ref, ref_mut)]
 #[strum_discriminants(derive(Display, EnumString))]
 #[strum_discriminants(name(NumberType), strum(serialize_all = "snake_case"))]
 #[cfg_attr(

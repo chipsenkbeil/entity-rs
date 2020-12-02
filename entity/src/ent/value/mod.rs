@@ -5,6 +5,7 @@ use derive_more::From;
 use std::{
     cmp::Ordering,
     collections::HashMap,
+    convert::TryFrom,
     hash::{Hash, Hasher},
 };
 use strum::ParseError;
@@ -167,6 +168,85 @@ impl_from_primitive!(u64);
 impl_from_primitive!(u8);
 impl_from_primitive!(usize);
 
+macro_rules! impl_try_into {
+    ($variant:ident, $type:ty, $convert:expr) => {
+        impl TryFrom<Value> for $type {
+            type Error = &'static str;
+
+            fn try_from(value: Value) -> Result<Self, Self::Error> {
+                match value {
+                    Value::$variant(x) => $convert(x),
+                    _ => Err(concat!(
+                        "Only ",
+                        stringify!($variant),
+                        " can be converted to ",
+                        stringify!($type)
+                    )),
+                }
+            }
+        }
+    };
+}
+macro_rules! impl_generic_try_into {
+    ($variant:ident, $type:ty, $generic:tt, $convert:expr) => {
+        impl<$generic: TryFrom<Value, Error = &'static str>> TryFrom<Value> for $type {
+            type Error = &'static str;
+
+            fn try_from(value: Value) -> Result<Self, Self::Error> {
+                match value {
+                    Value::$variant(x) => $convert(x),
+                    _ => Err(concat!(
+                        "Only ",
+                        stringify!($variant),
+                        " can be converted to ",
+                        stringify!($type)
+                    )),
+                }
+            }
+        }
+    };
+}
+
+impl<T: TryFrom<Value, Error = &'static str>> TryFrom<Value> for Option<T> {
+    type Error = &'static str;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Optional(Some(boxed_value)) => {
+                T::try_from(boxed_value.as_ref().clone()).map(|t| Some(t))
+            }
+            Value::Optional(None) => Ok(None),
+            _ => Err("Only Optional can be converted to Option<T>"),
+        }
+    }
+}
+
+impl_generic_try_into!(List, Vec<T>, T, |x: Vec<Value>| x
+    .into_iter()
+    .map(T::try_from)
+    .collect());
+impl_generic_try_into!(Map, HashMap<String, T>, T, |x: HashMap<String, Value>| x
+    .into_iter()
+    .map(|(k, v)| T::try_from(v).map(|t| (k, t)))
+    .collect());
+impl_try_into!(Text, String, |x| Ok(x));
+impl_try_into!(Primitive, bool, bool::try_from);
+impl_try_into!(Primitive, char, char::try_from);
+impl_try_into!(Primitive, f32, f32::try_from);
+impl_try_into!(Primitive, f64, f64::try_from);
+impl_try_into!(Primitive, i128, i128::try_from);
+impl_try_into!(Primitive, i16, i16::try_from);
+impl_try_into!(Primitive, i32, i32::try_from);
+impl_try_into!(Primitive, i64, i64::try_from);
+impl_try_into!(Primitive, i8, i8::try_from);
+impl_try_into!(Primitive, isize, isize::try_from);
+impl_try_into!(Primitive, u128, u128::try_from);
+impl_try_into!(Primitive, u16, u16::try_from);
+impl_try_into!(Primitive, u32, u32::try_from);
+impl_try_into!(Primitive, u64, u64::try_from);
+impl_try_into!(Primitive, u8, u8::try_from);
+impl_try_into!(Primitive, usize, usize::try_from);
+
 /// Represents value types (primitive or complex). Assumes that complex
 /// types will contain the same inner type and does not vary
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -229,7 +309,7 @@ impl ValueType {
         let maybe_outer_str = tokens.next();
         let inner_str = {
             let mut x = tokens.collect::<String>();
-            if x.ends_with(">") {
+            if x.ends_with('>') {
                 x.pop();
             }
             x
@@ -254,9 +334,10 @@ impl ValueType {
             // verify that the first type paraemter is String
             "hashmap" => {
                 let mut items = inner_str.split(|c| c == ',');
-                let first = items.next();
-                if first.map(|s| s.trim().to_lowercase().as_str()) != Some("string") {
-                    return Err(ParseError::VariantNotFound);
+                if let Some(s) = items.next() {
+                    if s.trim().to_lowercase().as_str() == "string" {
+                        return Err(ParseError::VariantNotFound);
+                    }
                 }
 
                 let rest = items.collect::<String>();
@@ -269,6 +350,7 @@ impl ValueType {
                 &inner_str,
             )?))),
             "string" => Ok(ValueType::Text),
+            _ => Err(ParseError::VariantNotFound),
         }
     }
 }
@@ -466,6 +548,43 @@ impl PartialOrd for PrimitiveValue {
         }
     }
 }
+
+macro_rules! impl_primitive_try_into {
+    ($variant:ident, $type:ty, $convert:expr) => {
+        impl TryFrom<PrimitiveValue> for $type {
+            type Error = &'static str;
+
+            fn try_from(value: PrimitiveValue) -> Result<Self, Self::Error> {
+                match value {
+                    PrimitiveValue::$variant(x) => $convert(x),
+                    _ => Err(concat!(
+                        "Only ",
+                        stringify!($variant),
+                        " can be converted to ",
+                        stringify!($type)
+                    )),
+                }
+            }
+        }
+    };
+}
+
+impl_primitive_try_into!(Bool, bool, |x| Ok(x));
+impl_primitive_try_into!(Char, char, |x| Ok(x));
+impl_primitive_try_into!(Number, f32, f32::try_from);
+impl_primitive_try_into!(Number, f64, f64::try_from);
+impl_primitive_try_into!(Number, i128, i128::try_from);
+impl_primitive_try_into!(Number, i16, i16::try_from);
+impl_primitive_try_into!(Number, i32, i32::try_from);
+impl_primitive_try_into!(Number, i64, i64::try_from);
+impl_primitive_try_into!(Number, i8, i8::try_from);
+impl_primitive_try_into!(Number, isize, isize::try_from);
+impl_primitive_try_into!(Number, u128, u128::try_from);
+impl_primitive_try_into!(Number, u16, u16::try_from);
+impl_primitive_try_into!(Number, u32, u32::try_from);
+impl_primitive_try_into!(Number, u64, u64::try_from);
+impl_primitive_try_into!(Number, u8, u8::try_from);
+impl_primitive_try_into!(Number, usize, usize::try_from);
 
 macro_rules! impl_to_number {
     ($type:ty) => {

@@ -37,6 +37,29 @@ pub enum EntMutationError {
     NoField { name: String },
 }
 
+/// Represents some error that can occur when converting an ent to another type
+#[derive(Debug, Display, Error)]
+pub enum EntConversionError {
+    #[display(fmt = "Expected ent of type {}, but got {}", expected, actual)]
+    EntWrongType { expected: String, actual: String },
+    #[display(fmt = "Missing field {}", name)]
+    FieldMissing { name: String },
+    #[display(fmt = "Expected field {} to be {}, but was {}", name, expected, actual)]
+    FieldWrongType {
+        name: String,
+        expected: ValueType,
+        actual: ValueType,
+    },
+    #[display(fmt = "Missing edge {}", name)]
+    EdgeMissing { name: String },
+    #[display(fmt = "Expected edge {} to be {}, but was {}", name, expected, actual)]
+    EdgeWrongType {
+        name: String,
+        expected: EdgeValueType,
+        actual: EdgeValueType,
+    },
+}
+
 /// Represents the interface for a generic entity whose fields and edges
 /// can be accessed by str name regardless of compile-time characteristics
 ///

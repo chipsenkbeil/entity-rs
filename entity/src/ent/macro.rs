@@ -1,5 +1,3 @@
-use paste::paste;
-
 /// Generates a new ent using the provided definition to outline its name,
 /// fields, and edges for use in an application.
 ///
@@ -45,111 +43,402 @@ macro_rules! ent {
     (@private @edge_type @many $type:ty) => {
         ::std::vec::Vec<$type>
     };
-
-    (@private @params @fields($($name:ident $type:ty;)*);) => {
-        $($name: $type,)*
+    (@private @edge_policy @deep) => {
+        $crate::EdgeDeletionPolicy::DeepDelete,
     };
-    (@private @params @edges($($kind:tt $name:ident $type:ty)*);) => {
-        $($name: ent!(@private @edge_type $kind $type),)*
+    (@private @edge_policy @shallow) => {
+        $crate::EdgeDeletionPolicy::ShallowDelete,
     };
-
-    (@private @args @fields($($name:ident $_:ty;)*);) => {
-        $($name,)*
+    (@private @edge_policy @nothing) => {
+        $crate::EdgeDeletionPolicy::Nothing,
     };
-    (@private @args @edges($($kind:tt $name:ident $_3:ty)*);) => {
-        $($name,)*
+    (@private @edge_policy) => {
+        $crate::EdgeDeletionPolicy::ShallowDelete,
     };
-
-    (@private @attr global_database $type:ty, $getter:expr;) => {
-        impl $name<$type> {
-            pub fn get(id: $crate::Id) -> $crate::DatabaseResult<Option<Self>> {
-                Self::get_from($getter, id)
+    (@private @push_field_attr @indexed $vec:ident) => {
+        $vec.push(crate::FieldAttribute::Indexed);
+    };
+    (@private @check_edge @maybe $name:ident) => {
+        match ent.edge(stringify!($name)) {
+            ::std::option::Option::None => {
+                return ::std::result::Result::Err($crate::EntConversionError::EdgeMissing {
+                    name: stringify!($name).to_string(),
+                });
             }
-
-            pub fn get_required(id: $crate::Id) -> $crate::DatabaseResult<Self> {
-                Self::get_from_required($getter, id)
+            ::std::option::Option::Some(x) if x.to_type() != $crate::EdgeValueType::MaybeOne => {
+                return ::std::result::Result::Err($crate::EntConversionError::EdgeWrongType {
+                    name: stringify!($name).to_string(),
+                    expected: $crate::EdgeValueType::MaybeOne,
+                    actual: x.to_type(),
+                });
             }
-
-            pub fn remove(id: $crate::Id) -> $crate::DatabaseResult<bool> {
-                Self::remove_from($getter, id)
+            _ => {}
+        }
+    };
+    (@private @check_edge @one $name:ident) => {
+        match ent.edge(stringify!($name)) {
+            ::std::option::Option::None => {
+                return ::std::result::Result::Err($crate::EntConversionError::EdgeMissing {
+                    name: stringify!($name).to_string(),
+                });
             }
-
-            pub fn new($(@param $tail:tt)*) -> $crate::DatabaseResult<Self> {
-                Self::new_at($getter, $(@arg $tail:tt)*)
+            ::std::option::Option::Some(x) if x.to_type() != $crate::EdgeValueType::One => {
+                return ::std::result::Result::Err($crate::EntConversionError::EdgeWrongType {
+                    name: stringify!($name).to_string(),
+                    expected: $crate::EdgeValueType::One,
+                    actual: x.to_type(),
+                });
             }
+            _ => {}
+        }
+    };
+    (@private @check_edge @many $name:ident) => {
+        match ent.edge(stringify!($name)) {
+            ::std::option::Option::None => {
+                return ::std::result::Result::Err($crate::EntConversionError::EdgeMissing {
+                    name: stringify!($name).to_string(),
+                });
+            }
+            ::std::option::Option::Some(x) if x.to_type() != $crate::EdgeValueType::Many => {
+                return ::std::result::Result::Err($crate::EntConversionError::EdgeWrongType {
+                    name: stringify!($name).to_string(),
+                    expected: $crate::EdgeValueType::Many,
+                    actual: x.to_type(),
+                });
+            }
+            _ => {}
+        }
+    };
+    (@private @define_load_edge @maybe $name:ident $type:ty) => {
+        pub fn [<load_ $name:snake:lower>](&self) -> $crate::DatabaseResult<::std::option::Option<$type>> {
+            use ::std::convert::TryFrom;
+            self.0
+                .load_edge(stringify!($name))?
+                .into_iter()
+                .nth(0)
+                .map(|ent| {
+                    use $crate::IEnt;
+                    let id = ent.id();
+                    $type::try_from(ent).map_err(|e| $crate::DatabaseError::CorruptedEnt {
+                        id,
+                        source: ::std::boxed::Box::from(e),
+                    })
+                })
+                .transpose()
+        }
+    };
+    (@private @define_load_edge @one $name:ident $type:ty) => {
+        pub fn [<load_ $name:snake:lower>](&self) -> $crate::DatabaseResult<$type> {
+            use ::std::convert::TryFrom;
+            let ent = self
+                .0
+                .load_edge(stringify!($name))?
+                .into_iter()
+                .nth(0)
+                .ok_or($crate::DatabaseError::BrokenEdge {
+                    name: stringify!($name).to_string(),
+                })?;
+
+            use $crate::IEnt;
+            let id = ent.id();
+            $type::try_from(ent).map_err(|e| $crate::DatabaseError::CorruptedEnt {
+                id,
+                source: ::std::boxed::Box::from(e),
+            })
+        }
+    };
+    (@private @define_load_edge @many $name:ident $type:ty) => {
+        pub fn [<load_ $name:snake:lower>](&self) -> $crate::DatabaseResult<::std::vec::Vec<$type>> {
+            use ::std::convert::TryFrom;
+            self.0
+                .load_edge(stringify!($name))?
+                .into_iter()
+                .map(|ent| {
+                    use $crate::IEnt;
+                    let id = ent.id();
+                    $type::try_from(ent).map_err(|e| $crate::DatabaseError::CorruptedEnt {
+                        id,
+                        source: ::std::boxed::Box::from(e),
+                    })
+                })
+                .collect()
         }
     };
 
-    (@name $name:ident; $(@attrs($($attr:tt)*);)? $(@fields($($field:tt)*);)? $(@edges($($edge:tt)*);)?) => {
-        pub struct $name<D: $crate::Database>(D, $crate::Ent);
+    (
+        @name $name:ident;
+        $(@attrs($(@attr $aname:ident;)*);)?
+        $(@fields($($(@indexed)? $fname:ident $ftype:ty;)*);)?
+        $(@edges($($kind:tt $($policy:tt)? $ename:ident $etype:ty;)*);)?
+    ) => {
+        paste! {
+            pub const [<$name _TYPE>]: &str = concat!(module_path!(), "::", stringify!($name));
 
-        ent!($(@ent $name @attr $attr_body;)* $($tail)*);
+            pub struct $name($crate::Ent);
 
-        impl<D: $crate::Database> $name<D> {
-            pub fn get_from(db: D, id: $crate::Id) -> $crate::DatabaseResult<Option<Self>> {
-                db.get(id)
-            }
-
-            pub fn get_from_required(db: D, id: $crate::Id) -> $crate::DatabaseResult<Self> {
-                Self::get_from(db, id).and_then(|maybe_self| {
-                    maybe_self.ok_or(DatabaseError::MissingEnt { id })
-                })
-            }
-
-            pub fn remove_from(db: D, id: $crate::Id) -> $crate::DatabaseResult<bool> {
-                db.remove(id)
-            }
-
-            paste! {
-                pub fn build(db: D) -> [<$name Builder>]<D> {
-                    [<$name Builder>]::from(db)
+            impl ::std::convert::Into<$crate::Ent> for $name {
+                fn into(self) -> $crate::Ent {
+                    self.0
                 }
             }
-        }
 
-        impl<D: $crate::Database> ::std::convert::From<$name> for D {
-            fn from(x: $name) -> Self {
-                self.0
+            /// Implementation for database-oriented operations
+            impl $name {
+                /// Refreshes ent by checking database for latest version and returning it
+                pub fn refresh(&mut self) -> $crate::DatabaseResult<()> {
+                    self.0.refresh()
+                }
+
+                /// Saves the ent to the database, updating this local instance's id
+                /// if the database has reported a new id
+                pub fn commit(&mut self) -> $crate::DatabaseResult<()> {
+                    self.0.commit()
+                }
+
+                /// Removes self from database
+                pub fn remove(self) -> $crate::DatabaseResult<bool> {
+                    self.0.remove()
+                }
+
+                /// Retrieves ent from database with corresponding id and makes sure
+                /// that it can be represented as a typed ent
+                pub fn get_from_database<D: $crate::Database>(
+                    db: D,
+                    id: crate::Id,
+                ) -> $crate::DatabaseResult<::std::option::Option<Self>> {
+                    use $crate::IEnt;
+                    use ::std::convert::TryFrom;
+                    match db.get(id) {
+                        ::std::result::Result::Ok(::std::option::Option::Some(ent)) => {
+                            let id = ent.id();
+                            let x =
+                                PageEnt::try_from(ent).map_err(|e| $crate::DatabaseError::CorruptedEnt {
+                                    id,
+                                    source: ::std::boxed::Box::from(e),
+                                })?;
+                            ::std::result::Result::Ok(::std::option::Option::Some(Self(x.into())))
+                        }
+                        ::std::result::Result::Ok(::std::option::Option::None) => {
+                            ::std::result::Result::Ok(::std::option::Option::None)
+                        }
+                        ::std::result::Result::Err(x) => ::std::result::Result::Err(x),
+                    }
+                }
+
+                /// Produces a new ent builder for the given database
+                pub fn build_with_database<D: $crate::Database + 'static>(db: D) -> [<$name Builder>] {
+                    [<$name Builder>]::default().database(db)
+                }
             }
-        }
 
-        impl ::std::convert::From<$name> for $crate::Ent {
-            fn from(x: $name) -> Self {
-                self.1
-            }
-        }
+            impl $name {
+                $(
+                    pub fn [<$ename:snake:lower>](&self) -> &$etype {
+                        todo!("Need a Value -> specific type try_from conversion")
+                    }
+                )*
 
-        impl<D: $crate::Database> $crate::IEnt for $name<D> {
-            fn id(&self) -> $crate::Id {
-                self.1.id()
-            }
-
-            fn r#type(&self) -> &str {
-                concat!(module_path!(), "::", stringify!($name))
-            }
-
-            fn created(&self) -> u64 {
-                self.1.created()
+                // pub fn set_title<VALUE: ::std::convert::Into<::std::string::String>>(
+                //     &mut self,
+                //     value: VALUE,
+                // ) {
+                //     self.0
+                //         .update_field(stringify!(title), crate::Value::from(value.into()))
+                //         .expect(format!("Corrupted ent field: {}", stringify!(title)));
+                // }
             }
 
-            fn last_updated(&self) -> u64 {
-                self.1.last_updated()
+            impl $name {
+                $(
+                    ent!(@private @define_load_edge $kind $ename $etype);
+                )*
             }
 
-            fn fields(&self) -> ::std::vec::Vec<&$crate::Field> {
-                self.1.fields()
+            /// Implementation of IEnt interface
+            impl $crate::IEnt for $name {
+                fn id(&self) -> $crate::Id {
+                    self.0.id()
+                }
+
+                fn r#type(&self) -> &str {
+                    self.0.r#type()
+                }
+
+                fn created(&self) -> u64 {
+                    self.0.created()
+                }
+
+                fn last_updated(&self) -> u64 {
+                    self.0.last_updated()
+                }
+
+                fn fields(&self) -> ::std::vec::Vec<&$crate::Field> {
+                    self.0.fields()
+                }
+
+                fn field(&self, name: &str) -> ::std::option::Option<&$crate::Field> {
+                    self.0.field(name)
+                }
+
+                fn edges(&self) -> ::std::vec::Vec<&$crate::Edge> {
+                    self.0.edges()
+                }
+
+                fn edge(&self, name: &str) -> ::std::option::Option<&$crate::Edge> {
+                    self.0.edge(name)
+                }
             }
 
-            fn field(&self, name: &str) -> ::std::option::Option<&$crate::Field> {
-                self.1.field(name)
+            impl ::std::convert::TryFrom<$crate::Ent> for $name {
+                type Error = $crate::EntConversionError;
+
+                fn try_from(ent: $crate::Ent) -> ::std::result::Result<Self, Self::Error> {
+                    use $crate::IEnt;
+
+                    if ent.r#type() != [<$name _TYPE>] {
+                        return ::std::result::Result::Err($crate::EntConversionError::EntWrongType {
+                            expected: [<$name _TYPE>].to_string(),
+                            actual: ent.r#type().to_string(),
+                        });
+                    }
+
+                    $(
+                        match ent.field_value(stringify!($fname)) {
+                            ::std::option::Option::None => {
+                                return ::std::result::Result::Err($crate::EntConversionError::FieldMissing {
+                                    name: stringify!($fname).to_string(),
+                                });
+                            }
+                            ::std::option::Option::Some(x)
+                                if x.to_type()
+                                    != $crate::ValueType::from_type_name(stringify!($ftype))
+                                        .expect("Invalid field type") =>
+                            {
+                                return ::std::result::Result::Err($crate::EntConversionError::FieldWrongType {
+                                    name: stringify!($fname).to_string(),
+                                    expected: $crate::ValueType::from_type_name(stringify!($ftype))
+                                        .expect("Invalid field type"),
+                                    actual: x.to_type(),
+                                });
+                            }
+                            _ => {}
+                        }
+                    )*
+
+                    $(
+                        ent!(@private @check_edge $kind $ename);
+                    )*
+
+                    ::std::result::Result::Ok(Self(ent))
+                }
             }
 
-            fn edges(&self) -> ::std::vec::Vec<&$crate::Edge> {
-                self.1.edges()
+            #[derive(Debug)]
+            pub enum [<$name BuilderError>] {
+                MissingDatabase,
+                $([<Missing $fname:camel Field>],)*
+                $([<Missing $ename:camel Edge>],)*
             }
 
-            fn edge(&self, name: &str) -> ::std::option::Option<&$crate::Edge> {
-                self.1.edge(name)
+            impl ::std::fmt::Display for [<$name BuilderError>] {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                    match self {
+                        Self::MissingDatabase => write!(f, "Missing database"),
+                        $(
+                            Self::[<Missing $fname:camel Field>] => write!(f, concat!("Missing ", stringify!([<$fname>]), " field")),
+                        )*
+                        $(
+                            Self::[<Missing $ename:camel Edge>] => write!(f, concat!("Missing ", stringify!([<$ename>]), " edge")),
+                        )*
+                    }
+                }
+            }
+
+            impl ::std::error::Error for [<$name BuilderError>] {}
+
+            pub struct [<$name Builder>] {
+                database: ::std::option::Option<::std::boxed::Box<dyn $crate::Database>>,
+                $(
+                    [<$fname>]: ::std::option::Option<$ftype>,
+                )*
+                $(
+                    [<$ename>]: ::std::option::Option<ent!(@private @edge_type $kind $crate::Id)>,
+                )*
+            }
+
+            impl ::std::default::Default for [<$name Builder>] {
+                fn default() -> Self {
+                    Self {
+                        database: ::std::option::Option::default(),
+                        $(
+                            [<$fname>]: ::std::option::Option::default(),
+                        )*
+                        $(
+                            [<$ename>]: ::std::option::Option::default(),
+                        )*
+                    }
+                }
+            }
+
+            impl [<$name Builder>] {
+                pub fn database<VALUE: $crate::Database + 'static>(mut self, value: VALUE) -> Self {
+                    self.database_boxed(::std::boxed::Box::from(value))
+                }
+
+                pub fn database_boxed(mut self, value: ::std::boxed::Box<dyn $crate::Database>) -> Self {
+                    self.database = ::std::option::Option::Some(value);
+                    self
+                }
+
+                $(
+                    pub fn [<$fname:snake:lower>]<VALUE: ::std::convert::Into<$ftype>>(
+                        mut self,
+                        value: VALUE,
+                    ) -> Self {
+                        self.[<$fname:snake:lower>] = ::std::option::Option::Some(value.into());
+                        self
+                    }
+                )*
+
+                $(
+                    pub fn [<$ename:snake:lower>]<VALUE: ::std::convert::Into<ent!(@private @edge_type $kind $crate::Id)>>(
+                        mut self,
+                        value: VALUE,
+                    ) -> Self {
+                        self.[<$ename:snake:lower>] = ::std::option::Option::Some(value.into());
+                        self
+                    }
+                )*
+
+                pub fn create(self) -> ::std::result::Result<$name, [<$name BuilderError>]> {
+                    let mut fields = ::std::vec::Vec::new();
+                    let mut edges = ::std::vec::Vec::new();
+
+                    $(
+                        let mut field_attrs = ::std::vec::Vec::new();
+                        $(ent!(@private @push_field_attr @indexed field_attrs);)?
+                        fields.push($crate::Field::new_with_attributes(
+                            stringify!([<$fname>]),
+                            self.[<$fname>].ok_or([<$name BuilderError::Missing $fname:camel Field>])?,
+                            field_attrs,
+                        ));
+                    )*
+
+                    $(
+                        edges.push($crate::Edge::new_with_deletion_policy(
+                            stringify!([<$ename>]),
+                            self.[<$ename>].ok_or([<$name BuilderError::Missing $ename:camel Edge>])?,
+                            ent!(@private @edge_policy $policy),
+                        ));
+                    )*
+
+                    let database = self.database.ok_or([<$name BuilderError::MissingDatabase>])?;
+                    let mut ent =
+                        $crate::Ent::from_collections($crate::EPHEMERAL_ID, [<$name _TYPE>], fields, edges);
+                    ent.connect_boxed(database);
+
+                    ::std::result::Result::Ok($name(ent))
+                }
             }
         }
     };
@@ -159,509 +448,14 @@ macro_rules! ent {
 mod tests {
     use super::*;
 
-    // CHIP CHIP CHIP
-    //
-    // The following is an example of the code that would be generated by
-    // our macro so we can get a better idea of how it needs to be constructed
-    // and ensure that we cover everything before writing the macro itself
-
-    //////////////////////////////////////////////////////////////////////////
-    // CONSTANTS
-    //////////////////////////////////////////////////////////////////////////
-
-    const PageEnt_TYPE: &str = concat!(module_path!(), "::", stringify!(PageEnt));
-
-    //////////////////////////////////////////////////////////////////////////
-    // ENT (CONNECTED)
-    //////////////////////////////////////////////////////////////////////////
-
-    pub struct PageEnt(crate::Ent);
-
-    impl ::std::convert::Into<crate::Ent> for PageEnt {
-        fn into(self) -> crate::Ent {
-            self.0
-        }
-    }
-
-    /// Only created if we are given a global database for some type
-    ///
-    /// In this case, we're giving an example of the InmemoryDatabase
-    impl PageEnt {
-        pub fn get(id: crate::Id) -> crate::DatabaseResult<::std::option::Option<Self>> {
-            let global_database: crate::InmemoryDatabase = todo!();
-            Self::get_from_database(global_database, id)
-        }
-
-        pub fn get_required(id: crate::Id) -> crate::DatabaseResult<Self> {
-            Self::get(id).and_then(|maybe_self| match maybe_self {
-                ::std::option::Option::Some(x) => ::std::result::Result::Ok(x),
-                ::std::option::Option::None => {
-                    ::std::result::Result::Err(crate::DatabaseError::MissingEnt { id })
-                }
-            })
-        }
-
-        pub fn build() -> PageEntBuilder {
-            let global_database: crate::InmemoryDatabase = todo!();
-            Self::build_with_database(global_database)
-        }
-    }
-
-    impl PageEnt {
-        pub fn title(&self) -> &::std::string::String {
-            todo!("Need a Value -> specific type try_from conversion")
-        }
-
-        pub fn set_title<VALUE: ::std::convert::Into<::std::string::String>>(
-            &mut self,
-            value: VALUE,
-        ) {
-            self.0
-                .update_field(stringify!(title), crate::Value::from(value.into()))
-                .expect(format!("Corrupted ent field: {}", stringify!(title)));
-        }
-    }
-
-    impl PageEnt {
-        pub fn load_header(&self) -> crate::DatabaseResult<::std::option::Option<ContentEnt>> {
-            use ::std::convert::TryFrom;
-            self.0
-                .load_edge(stringify!(header))?
-                .into_iter()
-                .nth(0)
-                .map(|ent| {
-                    use crate::IEnt;
-                    let id = ent.id();
-                    ContentEnt::try_from(ent).map_err(|e| crate::DatabaseError::CorruptedEnt {
-                        id,
-                        source: ::std::boxed::Box::from(e),
-                    })
-                })
-                .transpose()
-        }
-
-        pub fn load_subheader(&self) -> crate::DatabaseResult<ContentEnt> {
-            use ::std::convert::TryFrom;
-            let ent = self
-                .0
-                .load_edge(stringify!(subheader))?
-                .into_iter()
-                .nth(0)
-                .ok_or(crate::DatabaseError::BrokenEdge {
-                    name: stringify!(subheader).to_string(),
-                })?;
-
-            use crate::IEnt;
-            let id = ent.id();
-            ContentEnt::try_from(ent).map_err(|e| crate::DatabaseError::CorruptedEnt {
-                id,
-                source: ::std::boxed::Box::from(e),
-            })
-        }
-
-        pub fn load_paragraphs(&self) -> crate::DatabaseResult<::std::vec::Vec<ContentEnt>> {
-            use ::std::convert::TryFrom;
-            self.0
-                .load_edge(stringify!(header))?
-                .into_iter()
-                .map(|ent| {
-                    use crate::IEnt;
-                    let id = ent.id();
-                    ContentEnt::try_from(ent).map_err(|e| crate::DatabaseError::CorruptedEnt {
-                        id,
-                        source: ::std::boxed::Box::from(e),
-                    })
-                })
-                .collect()
-        }
-    }
-
-    impl PageEnt {
-        /// Refreshes ent by checking database for latest version and returning it
-        pub fn refresh(&mut self) -> crate::DatabaseResult<()> {
-            self.0.refresh()
-        }
-
-        /// Saves the ent to the database, updating this local instance's id
-        /// if the database has reported a new id
-        pub fn commit(&mut self) -> crate::DatabaseResult<()> {
-            self.0.commit()
-        }
-
-        /// Removes self from database
-        pub fn remove(self) -> crate::DatabaseResult<bool> {
-            self.0.remove()
-        }
-
-        /// Retrieves ent from database with corresponding id and makes sure
-        /// that it can be represented as a typed ent
-        pub fn get_from_database<D: crate::Database>(
-            db: D,
-            id: crate::Id,
-        ) -> crate::DatabaseResult<::std::option::Option<Self>> {
-            use crate::IEnt;
-            use ::std::convert::TryFrom;
-            match db.get(id) {
-                ::std::result::Result::Ok(::std::option::Option::Some(ent)) => {
-                    let id = ent.id();
-                    let x =
-                        PageEnt::try_from(ent).map_err(|e| crate::DatabaseError::CorruptedEnt {
-                            id,
-                            source: ::std::boxed::Box::from(e),
-                        })?;
-                    ::std::result::Result::Ok(::std::option::Option::Some(Self(x.into())))
-                }
-                ::std::result::Result::Ok(::std::option::Option::None) => {
-                    ::std::result::Result::Ok(::std::option::Option::None)
-                }
-                ::std::result::Result::Err(x) => ::std::result::Result::Err(x),
-            }
-        }
-
-        /// Produces a new ent builder for the given database
-        pub fn build_with_database<D: crate::Database + 'static>(db: D) -> PageEntBuilder {
-            PageEntBuilder::default().database(db)
-        }
-    }
-
-    impl crate::IEnt for PageEnt {
-        fn id(&self) -> crate::Id {
-            self.0.id()
-        }
-
-        fn r#type(&self) -> &str {
-            self.0.r#type()
-        }
-
-        fn created(&self) -> u64 {
-            self.0.created()
-        }
-
-        fn last_updated(&self) -> u64 {
-            self.0.last_updated()
-        }
-
-        fn fields(&self) -> ::std::vec::Vec<&crate::Field> {
-            self.0.fields()
-        }
-
-        fn field(&self, name: &str) -> ::std::option::Option<&crate::Field> {
-            self.0.field(name)
-        }
-
-        fn edges(&self) -> ::std::vec::Vec<&crate::Edge> {
-            self.0.edges()
-        }
-
-        fn edge(&self, name: &str) -> ::std::option::Option<&crate::Edge> {
-            self.0.edge(name)
-        }
-    }
-
-    //////////////////////////////////////////////////////////////////////////
-    // ENT (CONVERSIONS)
-    //////////////////////////////////////////////////////////////////////////
-
-    #[derive(Debug)]
-    pub enum EntToPageEntError {
-        EntWrongType {
-            expected: ::std::string::String,
-            actual: ::std::string::String,
-        },
-        FieldMissing {
-            name: ::std::string::String,
-        },
-        FieldWrongType {
-            name: ::std::string::String,
-            expected: crate::ValueType,
-            actual: crate::ValueType,
-        },
-        EdgeMissing {
-            name: ::std::string::String,
-        },
-        EdgeWrongType {
-            name: ::std::string::String,
-            expected: crate::EdgeValueType,
-            actual: crate::EdgeValueType,
-        },
-    }
-
-    impl ::std::fmt::Display for EntToPageEntError {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            write!(f, "{:?}", self)
-        }
-    }
-
-    impl ::std::error::Error for EntToPageEntError {}
-
-    impl ::std::convert::TryFrom<crate::Ent> for PageEnt {
-        type Error = EntToPageEntError;
-
-        fn try_from(ent: crate::Ent) -> ::std::result::Result<Self, Self::Error> {
-            use crate::IEnt;
-
-            if ent.r#type() != PageEnt_TYPE {
-                return ::std::result::Result::Err(EntToPageEntError::EntWrongType {
-                    expected: PageEnt_TYPE.to_string(),
-                    actual: ent.r#type().to_string(),
-                });
-            }
-
-            match ent.field_value(stringify!(title)) {
-                ::std::option::Option::None => {
-                    return ::std::result::Result::Err(EntToPageEntError::FieldMissing {
-                        name: stringify!(title).to_string(),
-                    });
-                }
-                ::std::option::Option::Some(x)
-                    if x.to_type()
-                        != crate::ValueType::from_type_name(stringify!(String))
-                            .expect("Invalid field type") =>
-                {
-                    return ::std::result::Result::Err(EntToPageEntError::FieldWrongType {
-                        name: stringify!(title).to_string(),
-                        expected: crate::ValueType::from_type_name(stringify!(String))
-                            .expect("Invalid field type"),
-                        actual: x.to_type(),
-                    });
-                }
-                _ => {}
-            }
-
-            match ent.edge(stringify!(header)) {
-                ::std::option::Option::None => {
-                    return ::std::result::Result::Err(EntToPageEntError::EdgeMissing {
-                        name: stringify!(header).to_string(),
-                    });
-                }
-                ::std::option::Option::Some(x) if x.to_type() != crate::EdgeValueType::One => {
-                    return ::std::result::Result::Err(EntToPageEntError::EdgeWrongType {
-                        name: stringify!(header).to_string(),
-                        expected: crate::EdgeValueType::One,
-                        actual: x.to_type(),
-                    });
-                }
-                _ => {}
-            }
-
-            match ent.edge(stringify!(subheader)) {
-                ::std::option::Option::None => {
-                    return ::std::result::Result::Err(EntToPageEntError::EdgeMissing {
-                        name: stringify!(subheader).to_string(),
-                    });
-                }
-                ::std::option::Option::Some(x) if x.to_type() != crate::EdgeValueType::MaybeOne => {
-                    return ::std::result::Result::Err(EntToPageEntError::EdgeWrongType {
-                        name: stringify!(subheader).to_string(),
-                        expected: crate::EdgeValueType::MaybeOne,
-                        actual: x.to_type(),
-                    });
-                }
-                _ => {}
-            }
-
-            match ent.edge(stringify!(paragraphs)) {
-                ::std::option::Option::None => {
-                    return ::std::result::Result::Err(EntToPageEntError::EdgeMissing {
-                        name: stringify!(paragraphs).to_string(),
-                    });
-                }
-                ::std::option::Option::Some(x) if x.to_type() != crate::EdgeValueType::Many => {
-                    return ::std::result::Result::Err(EntToPageEntError::EdgeWrongType {
-                        name: stringify!(paragraphs).to_string(),
-                        expected: crate::EdgeValueType::Many,
-                        actual: x.to_type(),
-                    });
-                }
-                _ => {}
-            }
-
-            ::std::result::Result::Ok(Self(ent))
-        }
-    }
-
-    //////////////////////////////////////////////////////////////////////////
-    // BUILDER
-    //////////////////////////////////////////////////////////////////////////
-
-    #[derive(Debug)]
-    pub enum PageEntBuilderError {
-        Database(crate::DatabaseError),
-        Initialization(::std::string::String),
-    }
-
-    impl ::std::fmt::Display for PageEntBuilderError {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match self {
-                Self::Database(x) => write!(f, "Database: {}", x),
-                Self::Initialization(x) => write!(f, "Initialization: {}", x),
-            }
-        }
-    }
-
-    impl ::std::error::Error for PageEntBuilderError {}
-
-    impl ::std::convert::From<crate::DatabaseError> for PageEntBuilderError {
-        fn from(x: crate::DatabaseError) -> Self {
-            Self::Database(x)
-        }
-    }
-
-    impl ::std::convert::From<::std::string::String> for PageEntBuilderError {
-        fn from(x: ::std::string::String) -> Self {
-            Self::Initialization(x)
-        }
-    }
-
-    impl<'a> ::std::convert::From<&'a str> for PageEntBuilderError {
-        fn from(x: &'a str) -> Self {
-            Self::Initialization(x.to_string())
-        }
-    }
-
-    pub struct PageEntBuilder {
-        database: ::std::option::Option<::std::boxed::Box<dyn crate::Database>>,
-        title: ::std::option::Option<::std::string::String>,
-        header: ::std::option::Option<crate::Id>,
-        subheader: ::std::option::Option<::std::option::Option<crate::Id>>,
-        paragraphs: ::std::option::Option<::std::vec::Vec<crate::Id>>,
-    }
-
-    impl ::std::default::Default for PageEntBuilder {
-        fn default() -> Self {
-            Self {
-                database: ::std::option::Option::default(),
-                title: ::std::option::Option::default(),
-                header: ::std::option::Option::default(),
-                subheader: ::std::option::Option::default(),
-                paragraphs: ::std::option::Option::default(),
-            }
-        }
-    }
-
-    impl PageEntBuilder {
-        pub fn database<VALUE: crate::Database + 'static>(mut self, value: VALUE) -> Self {
-            self.database_boxed(::std::boxed::Box::from(value))
-        }
-
-        pub fn database_boxed(mut self, value: ::std::boxed::Box<dyn crate::Database>) -> Self {
-            self.database = ::std::option::Option::Some(value);
-            self
-        }
-
-        pub fn title<VALUE: ::std::convert::Into<::std::string::String>>(
-            mut self,
-            value: VALUE,
-        ) -> Self {
-            self.title = ::std::option::Option::Some(value.into());
-            self
-        }
-
-        pub fn header<VALUE: ::std::convert::Into<crate::Id>>(mut self, value: VALUE) -> Self {
-            self.header = ::std::option::Option::Some(value.into());
-            self
-        }
-
-        pub fn subheader<VALUE: ::std::convert::Into<::std::option::Option<crate::Id>>>(
-            mut self,
-            value: VALUE,
-        ) -> Self {
-            self.subheader = ::std::option::Option::Some(value.into());
-            self
-        }
-
-        pub fn paragraphs<VALUE: ::std::convert::Into<::std::vec::Vec<crate::Id>>>(
-            mut self,
-            value: VALUE,
-        ) -> Self {
-            self.paragraphs = ::std::option::Option::Some(value.into());
-            self
-        }
-
-        pub fn create(self) -> ::std::result::Result<PageEnt, PageEntBuilderError> {
-            let mut fields = ::std::vec::Vec::new();
-            let mut edges = ::std::vec::Vec::new();
-
-            let mut field_attrs = ::std::vec::Vec::new();
-            field_attrs.push(crate::FieldAttribute::Indexed);
-            fields.push(crate::Field::new_with_attributes(
-                "title",
-                self.title.ok_or("title must be initialized")?,
-                field_attrs,
-            ));
-
-            edges.push(crate::Edge::new_with_deletion_policy(
-                "header",
-                self.header.ok_or("header must be initialized")?,
-                crate::EdgeDeletionPolicy::ShallowDelete,
-            ));
-
-            edges.push(crate::Edge::new_with_deletion_policy(
-                "subheader",
-                self.subheader.ok_or("subheader must be initialized")?,
-                crate::EdgeDeletionPolicy::Nothing,
-            ));
-
-            edges.push(crate::Edge::new_with_deletion_policy(
-                "paragraphs",
-                self.paragraphs.ok_or("paragraphs must be initialized")?,
-                crate::EdgeDeletionPolicy::DeepDelete,
-            ));
-
-            let database = self.database.ok_or("database must be initialized")?;
-            let mut ent =
-                crate::Ent::from_collections(crate::EPHEMERAL_ID, PageEnt_TYPE, fields, edges);
-            ent.connect_boxed(database);
-
-            ::std::result::Result::Ok(PageEnt(ent))
-        }
-    }
-
-    //////////////////////////////////////////////////////////////////////////
-    // FILLER FOR ContentEnt
-    //////////////////////////////////////////////////////////////////////////
-
-    pub struct ContentEnt(crate::Ent);
-
-    #[derive(Debug)]
-    pub enum EntToContentEntError {
-        EntWrongType {
-            expected: ::std::string::String,
-            actual: ::std::string::String,
-        },
-        FieldMissing {
-            name: ::std::string::String,
-        },
-        FieldWrongType {
-            name: ::std::string::String,
-            expected: crate::ValueType,
-            actual: crate::ValueType,
-        },
-        EdgeMissing {
-            name: ::std::string::String,
-        },
-        EdgeWrongType {
-            name: ::std::string::String,
-            expected: crate::EdgeValueType,
-            actual: crate::EdgeValueType,
-        },
-    }
-
-    impl ::std::fmt::Display for EntToContentEntError {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            write!(f, "{:?}", self)
-        }
-    }
-
-    impl ::std::error::Error for EntToContentEntError {}
-
-    impl ::std::convert::TryFrom<crate::Ent> for ContentEnt {
-        type Error = EntToContentEntError;
-
-        fn try_from(ent: crate::Ent) -> ::std::result::Result<Self, Self::Error> {
-            Err(EntToContentEntError::FieldMissing {
-                name: String::from(""),
-            })
-        }
+    // @name $name:ident;
+    // $(@attrs($(@attr $aname:ident)*);)?
+    // $(@fields($($($fattr:tt)? $fname:ident $ftype:ty)*);)?
+    // $(@edges($($kind:tt $($policy:tt)? $ename:ident $etype:ty)*);)?
+    ent! {
+        @name PageEnt;
+        @fields(
+            title String;
+        );
     }
 }
