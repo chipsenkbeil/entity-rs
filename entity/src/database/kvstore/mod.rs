@@ -309,7 +309,7 @@ fn process_named_field_condition<T: KeyValueStoreDatabase>(
         .filter_map(|id| this.get(id).ok().flatten())
         .filter_map(
             |ent| match lookup_ent_field_value(ent.as_ref(), &name).ok() {
-                Some(value) if condition.check(value) => Some(ent.id()),
+                Some(value) if condition.check(&value) => Some(ent.id()),
                 _ => None,
             },
         )
@@ -318,12 +318,10 @@ fn process_named_field_condition<T: KeyValueStoreDatabase>(
 
 /// Looks up the value of a field on an ent
 #[inline]
-fn lookup_ent_field_value<'a>(ent: &'a dyn IEnt, name: &str) -> Result<&'a Value, DatabaseError> {
-    let value = ent
-        .field_value(name)
-        .ok_or_else(|| DatabaseError::MissingField {
-            name: name.to_string(),
-        })?;
+fn lookup_ent_field_value<'a>(ent: &'a dyn IEnt, name: &str) -> Result<Value, DatabaseError> {
+    let value = ent.field(name).ok_or_else(|| DatabaseError::MissingField {
+        name: name.to_string(),
+    })?;
 
     Ok(value)
 }

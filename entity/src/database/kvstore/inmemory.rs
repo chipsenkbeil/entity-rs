@@ -71,8 +71,10 @@ impl Database for InmemoryDatabase {
                     EdgeDeletionPolicy::ShallowDelete => {
                         for edge_id in edge.to_ids() {
                             if let Some(ent) = self.ents.lock().unwrap().get_mut(&edge_id) {
-                                for edge in ent.edges_mut() {
+                                for mut edge in ent.edges() {
                                     let _ = edge.value_mut().remove_ids(Some(edge_id));
+                                    let name = edge.name().to_string();
+                                    let _ = ent.update_edge(&name, edge.into_value());
                                 }
                             }
                         }
@@ -210,10 +212,7 @@ mod tests {
             .get(999)
             .expect("Failed to get ent")
             .expect("Ent missing");
-        assert_eq!(
-            ent.field("field1").expect("Field missing").value(),
-            &Value::from(3)
-        );
+        assert_eq!(ent.field("field1").expect("Field missing"), Value::from(3));
     }
 
     #[test]

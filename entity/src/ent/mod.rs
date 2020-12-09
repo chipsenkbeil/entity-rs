@@ -86,44 +86,49 @@ pub trait IEnt: AsAny + DynClone {
     /// as the milliseconds since epoch (1970-01-01 00:00:00 UTC)
     fn last_updated(&self) -> u64;
 
-    /// Returns mut refs to fields contained within the ent instance,
-    /// guaranteeing that fields are unique by name
-    fn fields_mut(&mut self) -> Vec<&mut Field>;
+    /// Returns a list of names of fields contained by the ent
+    fn field_names(&self) -> Vec<String>;
 
-    /// Returns refs to fields contained within the ent instance, guaranteeing
-    /// that fields are unique by name
-    fn fields(&self) -> Vec<&Field>;
+    /// Returns a copy of the value of the field with the specified name
+    fn field(&self, name: &str) -> Option<Value>;
 
-    /// Retrieves mut ref to field with the provided name within the ent instance
-    fn field_mut(&mut self, name: &str) -> Option<&mut Field>;
-
-    /// Retrieves ref to field with the provided name within the ent instance
-    fn field(&self, name: &str) -> Option<&Field>;
-
-    /// Retrieves mut ref to value for the field with the provided name within
-    /// the ent instance
-    fn field_value_mut(&mut self, name: &str) -> Option<&mut Value> {
-        self.field_mut(name).map(|f| f.value_mut())
+    /// Returns a copy of all fields contained by the ent and their associated values
+    fn fields(&self) -> Vec<Field> {
+        let mut fields = Vec::new();
+        for name in self.field_names() {
+            if let Some(value) = self.field(&name) {
+                fields.push(Field::new(name, value));
+            }
+        }
+        fields
     }
 
-    /// Retrieves ref to the value for the field with the provided name within
-    /// the ent instance
-    fn field_value(&self, name: &str) -> Option<&Value> {
-        self.field(name).map(|f| f.value())
+    /// Updates the local value of a field with the specified name, returning
+    /// the old field value if updated. This will also update the last updated
+    /// time for the ent.
+    fn update_field(&mut self, name: &str, value: Value) -> Result<Value, EntMutationError>;
+
+    /// Returns a list of names of edges contained by the ent
+    fn edge_names(&self) -> Vec<String>;
+
+    /// Returns a copy of the value of the edge with the specified name
+    fn edge(&self, name: &str) -> Option<EdgeValue>;
+
+    /// Returns a copy of all edges contained by the ent and their associated values
+    fn edges(&self) -> Vec<Edge> {
+        let mut edges = Vec::new();
+        for name in self.edge_names() {
+            if let Some(value) = self.edge(&name) {
+                edges.push(Edge::new(name, value));
+            }
+        }
+        edges
     }
 
-    /// Represents mutable refs to edges between the ent instance and some
-    /// referred ents
-    fn edges_mut(&mut self) -> Vec<&mut Edge>;
-
-    /// Represents refs to edges between the ent instance and some referred ents
-    fn edges(&self) -> Vec<&Edge>;
-
-    /// Retrieves the mut ref to edge with the provided name within the ent instance
-    fn edge_mut(&mut self, name: &str) -> Option<&mut Edge>;
-
-    /// Retrieves the ref to edge with the provided name within the ent instance
-    fn edge(&self, name: &str) -> Option<&Edge>;
+    /// Updates the local value of an edge with the specified name, returning
+    /// the old edge value if updated. This will also update the last updated
+    /// time for the ent.
+    fn update_edge(&mut self, name: &str, value: EdgeValue) -> Result<EdgeValue, EntMutationError>;
 
     /// Connects ent to the given database so all future
     /// database-related operations will be performed against this database
@@ -171,6 +176,21 @@ impl<T: IEnt> AsAny for T {
 }
 
 dyn_clone::clone_trait_object!(IEnt);
+
+pub trait IEntExt: IEnt {
+    /// Loads ents of a specified type from a named edge
+    fn load_edge_typed<E: IEnt>(&self, name: &str) -> DatabaseResult<Vec<E>>;
+}
+
+impl<T: IEnt> IEntExt for T {
+    fn load_edge_typed<E: IEnt>(&self, name: &str) -> DatabaseResult<Vec<E>> {
+        self.load_edge(name).map(|ents| {
+            ents.into_iter()
+                .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
+                .collect()
+        })
+    }
+}
 
 /// Represents a general-purpose ent that has no pre-assigned type and
 /// maintains fields and edges using internal maps. This ent can optionally
@@ -429,7 +449,7 @@ impl IEnt for Ent {
         self.last_updated
     }
 
-    /// Represents fields contained within the ent instance
+    /// Represents the names of fields contained within the ent instance
     ///
     /// ## Examples
     ///
@@ -442,20 +462,16 @@ impl IEnt for Ent {
     /// ];
     /// let ent = Ent::from_collections(0, "", fields.iter().cloned(), vec![]);
     ///
-    /// let ent_fields = ent.fields();
-    /// assert_eq!(ent_fields.len(), 2);
-    /// assert!(ent_fields.contains(&&Field::new("field1", 123u8)));
-    /// assert!(ent_fields.contains(&&Field::new("field2", "some text")));
+    /// let names = ent.field_names();
+    /// assert_eq!(names.len(), 2);
+    /// assert!(names.contains(&String::from("field1")));
+    /// assert!(names.contains(&String::from("field2")));
     /// ```
-    fn fields(&self) -> Vec<&Field> {
-        self.fields.values().collect()
+    fn field_names(&self) -> Vec<String> {
+        self.fields.keys().cloned().collect()
     }
 
-    fn fields_mut(&mut self) -> Vec<&mut Field> {
-        self.fields.values_mut().collect()
-    }
-
-    /// Retrieves the field with the provided name within the ent instance
+    /// Returns a copy of the value of the field with the specified name
     ///
     /// ## Examples
     ///
@@ -466,67 +482,118 @@ impl IEnt for Ent {
     ///     Field::new("field1", 123u8),
     ///     Field::new("field2", "some text"),
     /// ];
-    /// let ent = Ent::from_collections(0, "", fields, vec![]);
+    /// let ent = Ent::from_collections(0, "", fields.iter().cloned(), vec![]);
     ///
-    /// assert_eq!(ent.field("field1").unwrap().value(), &Value::from(123u8));
-    /// assert_eq!(ent.field("field???"), None);
+    /// assert_eq!(ent.field("field1"), Some(Value::from(123u8)));
+    /// assert_eq!(ent.field("unknown"), None);
     /// ```
-    fn field(&self, name: &str) -> Option<&Field> {
-        self.fields.get(name)
+    fn field(&self, name: &str) -> Option<Value> {
+        self.fields.get(name).map(|f| f.value().clone())
     }
 
-    fn field_mut(&mut self, name: &str) -> Option<&mut Field> {
-        self.fields.get_mut(name)
-    }
-
-    /// Represents edges between the ent instance and some referred ents
+    /// Updates the local value of a field with the specified name, returning
+    /// the old field value if updated
     ///
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, IEnt, Edge, EdgeValue as EV};
+    /// use entity::{Ent, IEnt, Field, Value};
     ///
-    /// let edges = vec![
-    ///     Edge::new("edge1", EV::One(99)),
-    ///     Edge::new("edge2", EV::Many(vec![1, 2, 3])),
+    /// let fields = vec![
+    ///     Field::new("field1", 123u8),
+    ///     Field::new("field2", "some text"),
     /// ];
-    /// let ent = Ent::from_collections(0, "", vec![], edges);
+    /// let mut ent = Ent::from_collections(0, "", fields.iter().cloned(), vec![]);
     ///
-    /// let ent_edges = ent.edges();
-    /// assert_eq!(ent_edges.len(), 2);
-    /// assert!(ent_edges.contains(&&Edge::new("edge1", EV::One(99))));
-    /// assert!(ent_edges.contains(&&Edge::new("edge2", EV::Many(vec![1, 2, 3]))));
+    /// ent.update_field("field1", Value::from(5u8)).unwrap();
+    /// assert_eq!(ent.field("field1"), Some(Value::from(5u8)));
     /// ```
-    fn edges(&self) -> Vec<&Edge> {
-        self.edges.values().collect()
+    fn update_field(&mut self, name: &str, value: Value) -> Result<Value, EntMutationError> {
+        self.mark_updated();
+
+        match self.fields.entry(name.to_string()) {
+            Entry::Occupied(mut x) => {
+                let field = Field::new(name.to_string(), value);
+                Ok(x.insert(field).into_value())
+            }
+            Entry::Vacant(_) => Err(EntMutationError::NoField {
+                name: name.to_string(),
+            }),
+        }
     }
 
-    fn edges_mut(&mut self) -> Vec<&mut Edge> {
-        self.edges.values_mut().collect()
-    }
-
-    /// Retrieves the edge with the provided name within the ent instance
+    /// Returns a list of names of edges contained by the ent
     ///
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, IEnt, Edge, EdgeValue as EV};
+    /// use entity::{Ent, IEnt, Edge};
     ///
     /// let edges = vec![
-    ///     Edge::new("edge1", EV::One(99)),
-    ///     Edge::new("edge2", EV::Many(vec![1, 2, 3])),
+    ///     Edge::new("edge1", 99),
+    ///     Edge::new("edge2", vec![1, 2, 3]),
     /// ];
     /// let ent = Ent::from_collections(0, "", vec![], edges);
     ///
-    /// assert_eq!(ent.edge("edge1").unwrap().value(), &EV::One(99));
-    /// assert_eq!(ent.edge("edge???"), None);
+    /// let names = ent.edge_names();
+    /// assert_eq!(names.len(), 2);
+    /// assert!(names.contains(&String::from("edge1")));
+    /// assert!(names.contains(&String::from("edge2")));
     /// ```
-    fn edge(&self, name: &str) -> Option<&Edge> {
-        self.edges.get(name)
+    fn edge_names(&self) -> Vec<String> {
+        self.edges.keys().cloned().collect()
     }
 
-    fn edge_mut(&mut self, name: &str) -> Option<&mut Edge> {
-        self.edges.get_mut(name)
+    /// Returns a copy of the value of the edge with the specified name
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{Ent, IEnt, Edge, EdgeValue};
+    ///
+    /// let edges = vec![
+    ///     Edge::new("edge1", 99),
+    ///     Edge::new("edge2", vec![1, 2, 3]),
+    /// ];
+    /// let ent = Ent::from_collections(0, "", vec![], edges);
+    ///
+    /// assert_eq!(ent.edge("edge1"), Some(EdgeValue::One(99)));
+    /// assert_eq!(ent.edge("edge2"), Some(EdgeValue::Many(vec![1, 2, 3])));
+    /// assert_eq!(ent.edge("unknown"), None);
+    /// ```
+    fn edge(&self, name: &str) -> Option<EdgeValue> {
+        self.edges.get(name).map(|e| e.value().clone())
+    }
+
+    /// Updates the local value of an edge with the specified name, returning
+    /// the old edge value if updated
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{Ent, IEnt, Edge, EdgeValue};
+    ///
+    /// let edges = vec![
+    ///     Edge::new("edge1", 99),
+    ///     Edge::new("edge2", vec![1, 2, 3]),
+    /// ];
+    /// let mut ent = Ent::from_collections(0, "", vec![], edges);
+    ///
+    /// ent.update_edge("edge1", EdgeValue::One(123)).unwrap();
+    /// assert_eq!(ent.edge("edge1"), Some(EdgeValue::One(123)));
+    /// ```
+    fn update_edge(&mut self, name: &str, value: EdgeValue) -> Result<EdgeValue, EntMutationError> {
+        self.mark_updated();
+
+        match self.edges.entry(name.to_string()) {
+            Entry::Occupied(mut x) => {
+                let edge = Edge::new(name.to_string(), value);
+                Ok(x.insert(edge).into_value())
+            }
+            Entry::Vacant(_) => Err(EntMutationError::NoEdge {
+                name: name.to_string(),
+            }),
+        }
     }
 
     /// Connects ent to the given boxed database trait object so all future

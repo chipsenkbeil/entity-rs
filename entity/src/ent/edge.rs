@@ -73,6 +73,11 @@ impl Edge {
         &mut self.value
     }
 
+    /// Converts edge into its value
+    pub fn into_value(self) -> EdgeValue {
+        self.value
+    }
+
     /// Converts to the ids of the ents referenced by this edge
     pub fn to_ids(&self) -> Vec<Id> {
         self.value.to_ids()
