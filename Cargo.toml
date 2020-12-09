@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "entity",
-    "entity_macros",
+    "entity_derive",
 ]

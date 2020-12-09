@@ -1,6 +1,6 @@
 [package]
-name = "entity_macros"
-description = "Macro library that provides macros to generate entities, queries, and more at compile time."
+name = "entity_derive"
+description = "Macro library that provides ability to derive ent logic at compile-time."
 categories = ["data-structures"]
 version = "0.1.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
@@ -12,6 +12,10 @@ license = "MIT OR Apache-2.0"
 
 [lib]
 proc-macro = true
+
+[features]
+default = []
+typetag = []
 
 [dependencies]
 proc-macro2 = "1.0.24"
