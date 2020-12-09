@@ -1,7 +1,6 @@
 mod any;
 mod edge;
 mod field;
-mod r#macro;
 pub mod query;
 mod value;
 
@@ -18,6 +17,7 @@ pub use value::{
 
 use crate::{Database, DatabaseError, DatabaseResult, Id};
 use derive_more::{Display, Error};
+use dyn_clone::DynClone;
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
     fmt,
@@ -64,9 +64,15 @@ pub enum EntConversionError {
 /// can be accessed by str name regardless of compile-time characteristics
 ///
 /// Based on https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf
-pub trait IEnt: AsAny {
+#[cfg_attr(feature = "typetag", typetag::serde(tag = "type"))]
+pub trait IEnt: AsAny + DynClone {
     /// Represents the unique id associated with each entity instance
     fn id(&self) -> Id;
+
+    /// Updates the id of this ent, useful for databases that want to adjust
+    /// the id or when you want to produce a clone of the ent in a database
+    /// by resetting its id to ephemeral prior to storing it
+    fn set_id(&mut self, id: Id);
 
     /// Represents a unique type associated with the entity, used for
     /// lookups, indexing by type, and conversions
@@ -80,24 +86,76 @@ pub trait IEnt: AsAny {
     /// as the milliseconds since epoch (1970-01-01 00:00:00 UTC)
     fn last_updated(&self) -> u64;
 
-    /// Represents fields contained within the ent instance, guaranteeing
+    /// Returns mut refs to fields contained within the ent instance,
+    /// guaranteeing that fields are unique by name
+    fn fields_mut(&mut self) -> Vec<&mut Field>;
+
+    /// Returns refs to fields contained within the ent instance, guaranteeing
     /// that fields are unique by name
     fn fields(&self) -> Vec<&Field>;
 
-    /// Retrieves the field with the provided name within the ent instance
+    /// Retrieves mut ref to field with the provided name within the ent instance
+    fn field_mut(&mut self, name: &str) -> Option<&mut Field>;
+
+    /// Retrieves ref to field with the provided name within the ent instance
     fn field(&self, name: &str) -> Option<&Field>;
 
-    /// Retrieves the value for the field with the provided name within the
-    /// ent instance
+    /// Retrieves mut ref to value for the field with the provided name within
+    /// the ent instance
+    fn field_value_mut(&mut self, name: &str) -> Option<&mut Value> {
+        self.field_mut(name).map(|f| f.value_mut())
+    }
+
+    /// Retrieves ref to the value for the field with the provided name within
+    /// the ent instance
     fn field_value(&self, name: &str) -> Option<&Value> {
         self.field(name).map(|f| f.value())
     }
 
-    /// Represents edges between the ent instance and some referred ents
+    /// Represents mutable refs to edges between the ent instance and some
+    /// referred ents
+    fn edges_mut(&mut self) -> Vec<&mut Edge>;
+
+    /// Represents refs to edges between the ent instance and some referred ents
     fn edges(&self) -> Vec<&Edge>;
 
-    /// Retrieves the edge with the provided name within the ent instance
+    /// Retrieves the mut ref to edge with the provided name within the ent instance
+    fn edge_mut(&mut self, name: &str) -> Option<&mut Edge>;
+
+    /// Retrieves the ref to edge with the provided name within the ent instance
     fn edge(&self, name: &str) -> Option<&Edge>;
+
+    /// Connects ent to the given database so all future
+    /// database-related operations will be performed against this database
+    fn connect(&mut self, database: Box<dyn Database>);
+
+    /// Disconnects ent from any associated database. All future database
+    /// operations will fail with a disconnected database error
+    fn disconnect(&mut self);
+
+    /// Returns true if ent is currently connected to a database
+    fn is_connected(&self) -> bool;
+
+    /// Loads the ents connected by the edge with the given name
+    ///
+    /// Requires ent to be connected to a database
+    fn load_edge(&self, name: &str) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
+
+    /// Refreshes ent by checking database for latest version and returning it
+    ///
+    /// Requires ent to be connected to a database
+    fn refresh(&mut self) -> DatabaseResult<()>;
+
+    /// Saves the ent to the database, updating this local instance's id
+    /// if the database has reported a new id
+    ///
+    /// Requires ent to be connected to a database
+    fn commit(&mut self) -> DatabaseResult<()>;
+
+    /// Removes self from database, returning true if successful
+    ///
+    /// Requires ent to be connected to a database
+    fn remove(self) -> DatabaseResult<bool>;
 }
 
 /// Blanket implementation for all ents that enables them to be converted
@@ -111,6 +169,8 @@ impl<T: IEnt> AsAny for T {
         self
     }
 }
+
+dyn_clone::clone_trait_object!(IEnt);
 
 /// Represents a general-purpose ent that has no pre-assigned type and
 /// maintains fields and edges using internal maps. This ent can optionally
@@ -159,95 +219,6 @@ impl PartialEq for Ent {
 }
 
 impl Ent {
-    /// Connects ent to the given database so all future database-related
-    /// operations will be performed against this database
-    #[inline]
-    pub fn connect<D: 'static + Database>(&mut self, database: D) -> &mut Self {
-        self.connect_boxed(Box::from(database))
-    }
-
-    /// Connects ent to the given boxed database trait object so all future
-    /// database-related operations will be performed against this database
-    pub fn connect_boxed(&mut self, database: Box<dyn Database>) -> &mut Self {
-        self.database = Some(database);
-        self
-    }
-
-    /// Disconnects ent from the given database. All future database-related
-    /// operations will fail with a disconnected database error
-    pub fn disconnect(&mut self) -> &mut Self {
-        self.database = None;
-        self
-    }
-
-    /// Returns true if ent is currently connected to a database
-    pub fn is_connected(&self) -> bool {
-        self.database.is_some()
-    }
-
-    /// Loads the ents connected by the edge with the given name
-    ///
-    /// Requires ent to be connected to a database
-    pub fn load_edge(&self, name: &str) -> DatabaseResult<Vec<Ent>> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
-        match self.edge(name) {
-            Some(e) => e
-                .to_ids()
-                .into_iter()
-                .filter_map(|id| database.get(id).transpose())
-                .collect(),
-            None => Err(DatabaseError::MissingEdge {
-                name: name.to_string(),
-            }),
-        }
-    }
-
-    /// Refreshes ent by checking database for latest version and returning it
-    ///
-    /// Requires ent to be connected to a database
-    pub fn refresh(&mut self) -> DatabaseResult<()> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
-        let id = self.id;
-        match database.get(id)? {
-            Some(x) => {
-                self.id = x.id;
-                self.r#type = x.r#type;
-                self.fields = x.fields;
-                self.edges = x.edges;
-                self.created = x.created;
-                self.last_updated = x.last_updated;
-
-                Ok(())
-            }
-            None => Err(DatabaseError::MissingEnt { id }),
-        }
-    }
-
-    /// Saves the ent to the database, updating this local instance's id
-    /// if the database has reported a new id
-    ///
-    /// Requires ent to be connected to a database
-    pub fn commit(&mut self) -> DatabaseResult<()> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
-        match database.insert(self.clone()) {
-            Ok(id) => {
-                self.set_id(id);
-                Ok(())
-            }
-            Err(x) => Err(x),
-        }
-    }
-
-    /// Removes self from database, returning true if successful
-    ///
-    /// Requires ent to be connected to a database
-    pub fn remove(self) -> DatabaseResult<bool> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
-        database.remove(self.id)
-    }
-}
-
-impl Ent {
     /// Returns the Ent struct's default type as a str, which should only
     /// be set for Ent instances that are untyped
     pub const fn default_type() -> &'static str {
@@ -283,7 +254,7 @@ impl Ent {
         Self::new(id, r#type.into(), HashMap::new(), HashMap::new())
     }
 
-    /// Creates an emtpy, untyped ent with the provided id
+    /// Creates an empty, untyped ent with the provided id
     pub fn new_untyped(id: Id) -> Self {
         Self::new_empty(id, Self::default_type())
     }
@@ -312,13 +283,6 @@ impl Ent {
                 .map(|e| (e.name().to_string(), e))
                 .collect(),
         )
-    }
-
-    /// Updates the id of this ent, useful for databases that want to adjust
-    /// the id or when you want to produce a clone of the ent in a database
-    /// by resetting its id to ephemeral prior to storing it
-    pub fn set_id(&mut self, id: Id) {
-        self.id = id;
     }
 
     /// Replaces the ent's local field's value with the given value, returning
@@ -415,6 +379,7 @@ impl Default for Ent {
     }
 }
 
+#[cfg_attr(feature = "typetag", typetag::serde)]
 impl IEnt for Ent {
     /// Represents the unique id associated with each entity instance
     ///
@@ -428,6 +393,13 @@ impl IEnt for Ent {
     /// ```
     fn id(&self) -> Id {
         self.id
+    }
+
+    /// Updates the id of this ent, useful for databases that want to adjust
+    /// the id or when you want to produce a clone of the ent in a database
+    /// by resetting its id to ephemeral prior to storing it
+    fn set_id(&mut self, id: Id) {
+        self.id = id;
     }
 
     /// Represents a unique type associated with the entity, used for
@@ -479,6 +451,10 @@ impl IEnt for Ent {
         self.fields.values().collect()
     }
 
+    fn fields_mut(&mut self) -> Vec<&mut Field> {
+        self.fields.values_mut().collect()
+    }
+
     /// Retrieves the field with the provided name within the ent instance
     ///
     /// ## Examples
@@ -497,6 +473,10 @@ impl IEnt for Ent {
     /// ```
     fn field(&self, name: &str) -> Option<&Field> {
         self.fields.get(name)
+    }
+
+    fn field_mut(&mut self, name: &str) -> Option<&mut Field> {
+        self.fields.get_mut(name)
     }
 
     /// Represents edges between the ent instance and some referred ents
@@ -521,6 +501,10 @@ impl IEnt for Ent {
         self.edges.values().collect()
     }
 
+    fn edges_mut(&mut self) -> Vec<&mut Edge> {
+        self.edges.values_mut().collect()
+    }
+
     /// Retrieves the edge with the provided name within the ent instance
     ///
     /// ## Examples
@@ -539,5 +523,95 @@ impl IEnt for Ent {
     /// ```
     fn edge(&self, name: &str) -> Option<&Edge> {
         self.edges.get(name)
+    }
+
+    fn edge_mut(&mut self, name: &str) -> Option<&mut Edge> {
+        self.edges.get_mut(name)
+    }
+
+    /// Connects ent to the given boxed database trait object so all future
+    /// database-related operations will be performed against this database
+    fn connect(&mut self, database: Box<dyn Database>) {
+        self.database = Some(database);
+    }
+
+    /// Disconnects ent from the given database. All future database-related
+    /// operations will fail with a disconnected database error
+    fn disconnect(&mut self) {
+        self.database = None;
+    }
+
+    /// Returns true if ent is currently connected to a database
+    fn is_connected(&self) -> bool {
+        self.database.is_some()
+    }
+
+    /// Loads the ents connected by the edge with the given name
+    ///
+    /// Requires ent to be connected to a database
+    fn load_edge(&self, name: &str) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        match self.edge(name) {
+            Some(e) => e
+                .to_ids()
+                .into_iter()
+                .filter_map(|id| database.get(id).transpose())
+                .collect(),
+            None => Err(DatabaseError::MissingEdge {
+                name: name.to_string(),
+            }),
+        }
+    }
+
+    /// Refreshes ent by checking database for latest version and returning it
+    ///
+    /// Requires ent to be connected to a database
+    fn refresh(&mut self) -> DatabaseResult<()> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        let id = self.id;
+        match database.get(id)? {
+            Some(x) => {
+                self.id = x.id();
+                self.r#type = x.r#type().to_string();
+                self.fields = x
+                    .fields()
+                    .into_iter()
+                    .map(|f| (f.name().to_string(), f.clone()))
+                    .collect();
+                self.edges = x
+                    .edges()
+                    .into_iter()
+                    .map(|e| (e.name().to_string(), e.clone()))
+                    .collect();
+                self.created = x.created();
+                self.last_updated = x.last_updated();
+
+                Ok(())
+            }
+            None => Err(DatabaseError::MissingEnt { id }),
+        }
+    }
+
+    /// Saves the ent to the database, updating this local instance's id
+    /// if the database has reported a new id
+    ///
+    /// Requires ent to be connected to a database
+    fn commit(&mut self) -> DatabaseResult<()> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        match database.insert(Box::from(self.clone())) {
+            Ok(id) => {
+                self.set_id(id);
+                Ok(())
+            }
+            Err(x) => Err(x),
+        }
+    }
+
+    /// Removes self from database, returning true if successful
+    ///
+    /// Requires ent to be connected to a database
+    fn remove(self) -> DatabaseResult<bool> {
+        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        database.remove(self.id)
     }
 }

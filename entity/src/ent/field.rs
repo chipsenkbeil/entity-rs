@@ -48,6 +48,11 @@ impl Field {
         &self.value
     }
 
+    /// Mutable value of the field
+    pub fn value_mut(&mut self) -> &mut Value {
+        &mut self.value
+    }
+
     /// Converts field into its value
     pub fn into_value(self) -> Value {
         self.value

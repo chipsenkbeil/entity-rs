@@ -2,7 +2,7 @@ mod kvstore;
 pub use kvstore::*;
 
 use crate::{
-    ent::{Ent, Query},
+    ent::{IEnt, Query, ValueType},
     Id,
 };
 use derive_more::Display;
@@ -31,8 +31,8 @@ pub enum DatabaseError {
 
     #[display(fmt = "Expected type {}, but got type {}", expected, actual)]
     WrongType {
-        expected: crate::ent::ValueType,
-        actual: crate::ent::ValueType,
+        expected: ValueType,
+        actual: ValueType,
     },
 
     #[display(fmt = "Corrupted Ent {}: {}", id, source)]
@@ -57,7 +57,7 @@ impl std::error::Error for DatabaseError {}
 /// not cause problems.
 pub trait Database: DynClone {
     /// Retrieves a copy of a single, generic ent with the corresponding id
-    fn get(&self, id: Id) -> DatabaseResult<Option<Ent>>;
+    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>>;
 
     /// Removes the ent with the corresponding id, triggering edge
     /// processing for all disconnected ents. Returns a boolean indicating
@@ -70,16 +70,58 @@ pub trait Database: DynClone {
     /// inserted.
     ///
     /// The ent's id is returned after being inserted.
-    fn insert(&self, ent: Ent) -> DatabaseResult<Id>;
+    fn insert(&self, ent: Box<dyn IEnt>) -> DatabaseResult<Id>;
 }
 
 dyn_clone::clone_trait_object!(Database);
 
-/// Represents extensions to the database to provide advanced functionality.
-pub trait DatabaseExt {
-    /// Performs a retrieval of multiple ents
-    fn get_all(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<Ent>>;
+pub trait DatabaseInsertExt: Database {
+    /// Inserts an ent of a specific type
+    fn insert_typed<E: IEnt>(&self, ent: E) -> DatabaseResult<Id>;
+}
 
+impl<T: Database> DatabaseInsertExt for T {
+    fn insert_typed<E: IEnt>(&self, ent: E) -> DatabaseResult<Id> {
+        self.insert(Box::from(ent))
+    }
+}
+
+pub trait DatabaseGetExt: Database {
+    /// Retrieves an ent of a specific type
+    fn get_typed<E: IEnt>(&self, id: Id) -> DatabaseResult<Option<E>>;
+}
+
+impl<T: Database> DatabaseGetExt for T {
+    fn get_typed<E: IEnt>(&self, id: Id) -> DatabaseResult<Option<E>> {
+        self.get(id)
+            .map(|x| x.and_then(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone)))
+    }
+}
+
+pub trait DatabaseGetAllExt: Database {
+    /// Performs a retrieval of multiple ents of any type
+    fn get_all(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
+
+    /// Retrieves ents of a specific type
+    fn get_all_typed<E: IEnt>(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<E>> {
+        self.get_all(ids).map(|x| {
+            x.into_iter()
+                .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
+                .collect()
+        })
+    }
+}
+
+pub trait DatabaseFindAllExt: Database {
     /// Finds all generic ents that match the query
-    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Ent>>;
+    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
+
+    /// Finds ents that match the specified query and are of the specified type
+    fn find_all_typed<E: IEnt>(&self, query: Query) -> DatabaseResult<Vec<E>> {
+        self.find_all(query).map(|x| {
+            x.into_iter()
+                .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
+                .collect()
+        })
+    }
 }

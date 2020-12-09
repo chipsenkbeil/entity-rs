@@ -2,7 +2,7 @@ use super::{EntIdSet, KeyValueStoreDatabase};
 use crate::{
     alloc::{IdAllocator, EPHEMERAL_ID},
     database::{Database, DatabaseError, DatabaseResult},
-    ent::{EdgeDeletionPolicy, Ent},
+    ent::EdgeDeletionPolicy,
     IEnt, Id,
 };
 use derive_more::Constructor;
@@ -124,7 +124,7 @@ impl SledDatabase {
 }
 
 impl Database for SledDatabase {
-    fn get(&self, id: Id) -> DatabaseResult<Option<Ent>> {
+    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>> {
         let maybe_ivec = self
             .0
             .get(id_to_ivec(id))
@@ -134,8 +134,8 @@ impl Database for SledDatabase {
 
         maybe_ivec
             .map(|ivec| {
-                bincode::deserialize(ivec.as_ref()).map(|mut ent: Ent| {
-                    ent.connect(self.clone());
+                bincode::deserialize(ivec.as_ref()).map(|mut ent: Box<dyn IEnt>| {
+                    ent.connect(Box::from(self.clone()));
                     ent
                 })
             })
@@ -153,7 +153,7 @@ impl Database for SledDatabase {
             .map_err(|e| DatabaseError::Connection {
                 source: Box::from(e),
             })?
-            .map(|ivec| bincode::deserialize::<Ent>(ivec.as_ref()))
+            .map(|ivec| bincode::deserialize::<Box<dyn IEnt>>(ivec.as_ref()))
             .transpose()
             .map_err(|e| DatabaseError::CorruptedEnt {
                 id,
@@ -170,7 +170,9 @@ impl Database for SledDatabase {
                                 .transaction(|tx_db| {
                                     let maybe_ivec = tx_db.get(id_to_ivec(id))?;
                                     let result = maybe_ivec
-                                        .map(|ivec| bincode::deserialize::<Ent>(ivec.as_ref()))
+                                        .map(|ivec| {
+                                            bincode::deserialize::<Box<dyn IEnt>>(ivec.as_ref())
+                                        })
                                         .transpose()
                                         .map_err(|e| DatabaseError::CorruptedEnt {
                                             id,
@@ -178,7 +180,9 @@ impl Database for SledDatabase {
                                         });
                                     match result {
                                         Ok(Some(mut ent)) => {
-                                            let _ = ent.remove_ents_from_all_edges(Some(edge_id));
+                                            for edge in ent.edges_mut() {
+                                                let _ = edge.value_mut().remove_ids(Some(edge_id));
+                                            }
                                             match bincode::serialize(&ent) {
                                                 Ok(bytes) => tx_db.insert(id_to_ivec(id), bytes)?,
                                                 Err(x) => sled::transaction::abort(
@@ -230,7 +234,7 @@ impl Database for SledDatabase {
         }
     }
 
-    fn insert(&self, mut ent: Ent) -> DatabaseResult<Id> {
+    fn insert(&self, mut ent: Box<dyn IEnt>) -> DatabaseResult<Id> {
         // Get the id of the ent, swapping out the ephemeral id
         let id = ent.id();
         let id = self
@@ -313,7 +317,7 @@ impl KeyValueStoreDatabase for SledDatabase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Field, Value};
+    use crate::{Ent, Field, Value};
 
     fn new_db() -> SledDatabase {
         let config = sled::Config::new().temporary(true);
@@ -326,7 +330,7 @@ mod tests {
         let db = new_db();
 
         let ent = Ent::new_untyped(EPHEMERAL_ID);
-        let id = db.insert(ent).expect("Failed to insert ent");
+        let id = db.insert(Box::from(ent)).expect("Failed to insert ent");
         assert_ne!(id, EPHEMERAL_ID);
 
         let ent = db.get(id).expect("Failed to get ent").expect("Ent missing");
@@ -338,7 +342,7 @@ mod tests {
         let db = new_db();
 
         let ent = Ent::new_untyped(999);
-        let id = db.insert(ent).expect("Failed to insert ent");
+        let id = db.insert(Box::from(ent)).expect("Failed to insert ent");
         assert_eq!(id, 999);
 
         let ent = db
@@ -359,7 +363,7 @@ mod tests {
             vec![Field::new("field1", 3)],
             vec![],
         );
-        let _ = db.insert(ent).expect("Failed to insert ent");
+        let _ = db.insert(Box::from(ent)).expect("Failed to insert ent");
 
         let ent = db
             .get(999)
@@ -378,7 +382,7 @@ mod tests {
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_none(), "Unexpectedly acquired ent");
 
-        let _ = db.insert(Ent::new_untyped(999)).unwrap();
+        let _ = db.insert(Box::from(Ent::new_untyped(999))).unwrap();
 
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_some(), "Unexpectedly missing ent");
@@ -394,7 +398,7 @@ mod tests {
 
         let _ = db.remove(999).expect("Failed to remove ent");
 
-        let _ = db.insert(Ent::new_untyped(999)).unwrap();
+        let _ = db.insert(Box::from(Ent::new_untyped(999))).unwrap();
         assert!(db.get(999).unwrap().is_some(), "Failed to set up ent");
 
         let _ = db.remove(999).expect("Failed to remove ent");

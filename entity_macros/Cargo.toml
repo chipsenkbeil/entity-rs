@@ -2,10 +2,18 @@
 name = "entity_macros"
 description = "Macro library that provides macros to generate entities, queries, and more at compile time."
 categories = ["data-structures"]
-version = "0.0.0"
+version = "0.1.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
 homepage = "https://github.com/chipsenkbeil/entity-rs"
 repository = "https://github.com/chipsenkbeil/entity-rs"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.24"
+quote = "1.0.7"
+syn = { version = "1.0.53", features = ["full"] }

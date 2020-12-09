@@ -207,19 +207,19 @@ macro_rules! impl_generic_try_into {
     };
 }
 
-impl<T: TryFrom<Value, Error = &'static str>> TryFrom<Value> for Option<T> {
-    type Error = &'static str;
+// impl<T: TryFrom<Value, Error = &'static str>> TryFrom<Value> for Option<T> {
+//     type Error = &'static str;
 
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        match value {
-            Value::Optional(Some(boxed_value)) => {
-                T::try_from(boxed_value.as_ref().clone()).map(|t| Some(t))
-            }
-            Value::Optional(None) => Ok(None),
-            _ => Err("Only Optional can be converted to Option<T>"),
-        }
-    }
-}
+//     fn try_from(value: Value) -> Result<Self, Self::Error> {
+//         match value {
+//             Value::Optional(Some(boxed_value)) => {
+//                 T::try_from(boxed_value.as_ref().clone()).map(|t| Some(t))
+//             }
+//             Value::Optional(None) => Ok(None),
+//             _ => Err("Only Optional can be converted to Option<T>"),
+//         }
+//     }
+// }
 
 impl_generic_try_into!(List, Vec<T>, T, |x: Vec<Value>| x
     .into_iter()
@@ -280,22 +280,22 @@ impl ValueType {
     /// use entity::{ValueType as VT, PrimitiveValueType as PVT, NumberType as NT};
     ///
     /// assert_eq!(
-    ///     VT::from_type_name("u8").unwrap(),
-    ///     VT::Primitive(PVT::U8),
+    ///     VT::from_type_name("u8").expect("one"),
+    ///     VT::Primitive(PVT::Number(NT::U8)),
     /// );
     ///
     /// assert_eq!(
-    ///     VT::from_type_name("std::vec::Vec<std::string::String>").unwrap(),
+    ///     VT::from_type_name("std::vec::Vec<std::string::String>").expect("two"),
     ///     VT::List(Box::from(VT::Text)),
     /// );
     ///
     /// assert_eq!(
-    ///     VT::from_type_name("Vec<Option<u8>>").unwrap(),
+    ///     VT::from_type_name("Vec<Option<u8>>").expect("three"),
     ///     VT::List(Box::from(VT::Optional(Box::from(VT::Primitive(PVT::Number(NT::U8)))))),
     /// );
     ///
     /// assert_eq!(
-    ///     VT::from_type_name("HashMap<String, u8>").unwrap(),
+    ///     VT::from_type_name("HashMap<String, u8>").expect("four"),
     ///     VT::Map(Box::from(VT::Primitive(PVT::Number(NT::U8)))),
     /// );
     /// ```
@@ -308,7 +308,7 @@ impl ValueType {
         let mut tokens = name.split(|c| c == '<');
         let maybe_outer_str = tokens.next();
         let inner_str = {
-            let mut x = tokens.collect::<String>();
+            let mut x = tokens.collect::<Vec<&str>>().join("<");
             if x.ends_with('>') {
                 x.pop();
             }
@@ -335,13 +335,15 @@ impl ValueType {
             "hashmap" => {
                 let mut items = inner_str.split(|c| c == ',');
                 if let Some(s) = items.next() {
-                    if s.trim().to_lowercase().as_str() == "string" {
+                    if s.trim().to_lowercase().as_str() != "string" {
                         return Err(ParseError::VariantNotFound);
                     }
                 }
 
                 let rest = items.collect::<String>();
-                Ok(ValueType::Map(Box::from(Self::from_type_name(&rest)?)))
+                Ok(ValueType::Map(Box::from(Self::from_type_name(
+                    &rest.trim(),
+                )?)))
             }
             "vec" => Ok(ValueType::List(Box::from(Self::from_type_name(
                 &inner_str,
@@ -350,7 +352,7 @@ impl ValueType {
                 &inner_str,
             )?))),
             "string" => Ok(ValueType::Text),
-            _ => Err(ParseError::VariantNotFound),
+            x => Ok(ValueType::Primitive(PrimitiveValueType::from_type_name(x)?)),
         }
     }
 }

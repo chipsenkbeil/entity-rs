@@ -10,10 +10,10 @@ mod sled_db;
 pub use sled_db::SledDatabase;
 
 use crate::{
-    database::{Database, DatabaseError, DatabaseExt, DatabaseResult},
+    database::{Database, DatabaseError, DatabaseFindAllExt, DatabaseGetAllExt, DatabaseResult},
     ent::{
         query::{Condition, EdgeCondition, FieldCondition, Query, TimeCondition},
-        Ent, Value,
+        Value,
     },
     IEnt, Id,
 };
@@ -35,14 +35,16 @@ pub trait KeyValueStoreDatabase: Database {
     fn ids_for_type(&self, r#type: &str) -> EntIdSet;
 }
 
-impl<T: KeyValueStoreDatabase> DatabaseExt for T {
-    fn get_all(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<Ent>> {
+impl<T: KeyValueStoreDatabase> DatabaseGetAllExt for T {
+    fn get_all(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
         ids.into_iter()
             .filter_map(|id| self.get(id).transpose())
             .collect()
     }
+}
 
-    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Ent>> {
+impl<T: KeyValueStoreDatabase> DatabaseFindAllExt for T {
+    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
         process_condition(self, query.as_condition(), None)
             .into_iter()
             .filter_map(|id| self.get(id).transpose())
@@ -305,16 +307,18 @@ fn process_named_field_condition<T: KeyValueStoreDatabase>(
         .unwrap_or_else(|| this.ids())
         .into_iter()
         .filter_map(|id| this.get(id).ok().flatten())
-        .filter_map(|ent| match lookup_ent_field_value(&ent, &name).ok() {
-            Some(value) if condition.check(value) => Some(ent.id()),
-            _ => None,
-        })
+        .filter_map(
+            |ent| match lookup_ent_field_value(ent.as_ref(), &name).ok() {
+                Some(value) if condition.check(value) => Some(ent.id()),
+                _ => None,
+            },
+        )
         .collect()
 }
 
 /// Looks up the value of a field on an ent
 #[inline]
-fn lookup_ent_field_value<'a>(ent: &'a Ent, name: &str) -> Result<&'a Value, DatabaseError> {
+fn lookup_ent_field_value<'a>(ent: &'a dyn IEnt, name: &str) -> Result<&'a Value, DatabaseError> {
     let value = ent
         .field_value(name)
         .ok_or_else(|| DatabaseError::MissingField {
@@ -327,7 +331,7 @@ fn lookup_ent_field_value<'a>(ent: &'a Ent, name: &str) -> Result<&'a Value, Dat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CollectionCondition, Edge, Field, ValueCondition};
+    use crate::{CollectionCondition, Edge, Ent, Field, ValueCondition};
     use std::collections::HashMap;
 
     macro_rules! impl_tests {
@@ -343,44 +347,44 @@ mod tests {
 
                 // 1-3 have no fields or edges
                 let _ = db
-                    .insert(Ent::from_collections(1, "type1", vec![], vec![]))
+                    .insert(Box::from(Ent::from_collections(1, "type1", vec![], vec![])))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(2, "type1", vec![], vec![]))
+                    .insert(Box::from(Ent::from_collections(2, "type1", vec![], vec![])))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(3, "type1", vec![], vec![]))
+                    .insert(Box::from(Ent::from_collections(3, "type1", vec![], vec![])))
                     .unwrap();
 
                 // 4-6 have value fields only
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         4,
                         "type2",
                         vec![Field::new("a", 1), Field::new("b", 2)],
                         vec![],
-                    ))
+                    )))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         5,
                         "type2",
                         vec![Field::new("a", 3), Field::new("b", 4)],
                         vec![],
-                    ))
+                    )))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         6,
                         "type2",
                         vec![Field::new("a", 5), Field::new("b", 6)],
                         vec![],
-                    ))
+                    )))
                     .unwrap();
 
                 // 7-9 have collection fields only
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         7,
                         "type3",
                         vec![Field::new(
@@ -392,18 +396,18 @@ mod tests {
                             ),
                         )],
                         vec![],
-                    ))
+                    )))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         8,
                         "type3",
                         vec![Field::new("f", vec![1, 2])],
                         vec![],
-                    ))
+                    )))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         9,
                         "type3",
                         vec![Field::new(
@@ -418,12 +422,12 @@ mod tests {
                             ),
                         )],
                         vec![],
-                    ))
+                    )))
                     .unwrap();
 
                 // 10-12 have edges only
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         10,
                         "type4",
                         vec![],
@@ -432,18 +436,18 @@ mod tests {
                             Edge::new("b", vec![3, 4, 5]),
                             Edge::new("c", None),
                         ],
-                    ))
+                    )))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         11,
                         "type4",
                         vec![],
                         vec![Edge::new("a", 2), Edge::new("b", vec![1, 2, 3, 4, 5, 6])],
-                    ))
+                    )))
                     .unwrap();
                 let _ = db
-                    .insert(Ent::from_collections(
+                    .insert(Box::from(Ent::from_collections(
                         12,
                         "type4",
                         vec![],
@@ -452,19 +456,19 @@ mod tests {
                             Edge::new("b", vec![]),
                             Edge::new("c", Some(8)),
                         ],
-                    ))
+                    )))
                     .unwrap();
 
                 db
             }
 
-            fn query_and_assert<Q: Into<Query>, T: DatabaseExt>(db: &T, query: Q, expected: &[Id]) {
+            fn query_and_assert<Q: Into<Query>, T: DatabaseFindAllExt>(db: &T, query: Q, expected: &[Id]) {
                 let query = query.into();
                 let results = db
                     .find_all(query.clone())
                     .expect("Failed to retrieve ents")
                     .iter()
-                    .map(Ent::id)
+                    .map(|ent| ent.id())
                     .collect::<HashSet<Id>>();
                 assert_eq!(
                     results,
@@ -480,15 +484,15 @@ mod tests {
             fn get_all_should_return_all_ents_with_associated_ids() {
                 let db = $new_db;
 
-                let _ = db.insert(Ent::new_untyped(1)).unwrap();
-                let _ = db.insert(Ent::new_untyped(2)).unwrap();
-                let _ = db.insert(Ent::new_untyped(3)).unwrap();
+                let _ = db.insert(Box::from(Ent::new_untyped(1))).unwrap();
+                let _ = db.insert(Box::from(Ent::new_untyped(2))).unwrap();
+                let _ = db.insert(Box::from(Ent::new_untyped(3))).unwrap();
 
                 let results = db
                     .get_all(vec![1, 2, 3])
                     .expect("Failed to retrieve ents")
                     .iter()
-                    .map(Ent::id)
+                    .map(|ent| ent.id())
                     .collect::<HashSet<Id>>();
                 assert_eq!(results, [1, 2, 3].iter().copied().collect());
 
@@ -496,7 +500,7 @@ mod tests {
                     .get_all(vec![1, 3])
                     .expect("Failed to retrieve ents")
                     .iter()
-                    .map(Ent::id)
+                    .map(|ent| ent.id())
                     .collect::<HashSet<Id>>();
                 assert_eq!(results, [1, 3].iter().copied().collect());
 
@@ -504,7 +508,7 @@ mod tests {
                     .get_all(vec![2, 3, 4, 5, 6, 7, 8])
                     .expect("Failed to retrieve ents")
                     .iter()
-                    .map(Ent::id)
+                    .map(|ent| ent.id())
                     .collect::<HashSet<Id>>();
                 assert_eq!(results, [2, 3].iter().copied().collect());
             }
@@ -578,7 +582,7 @@ mod tests {
                 // properly test creation time
                 for i in 1..=12 {
                     let ent = Ent::new_untyped(i);
-                    db.insert(ent)
+                    db.insert(Box::from(ent))
                         .expect(&format!("Failed to replace ent {}", i));
                     std::thread::sleep(std::time::Duration::from_millis(1));
                 }
@@ -642,9 +646,10 @@ mod tests {
                 // Update all ents with enough time split between them for us to
                 // properly test last updated time
                 for i in (1..=12).rev() {
-                    let mut ent = db.get(i).unwrap().expect(&format!("Missing ent {}", i));
+                    use crate::DatabaseGetExt;
+                    let mut ent = db.get_typed::<Ent>(i).unwrap().expect(&format!("Missing ent {}", i));
                     ent.mark_updated();
-                    db.insert(ent)
+                    db.insert(Box::from(ent))
                         .expect(&format!("Failed to update ent {}", i));
                     std::thread::sleep(std::time::Duration::from_millis(1));
                 }

@@ -10,4 +10,7 @@ pub use ent::*;
 pub mod vendor {
     #[cfg(feature = "sled_db")]
     pub use sled;
+
+    #[cfg(feature = "typetag")]
+    pub use typetag;
 }

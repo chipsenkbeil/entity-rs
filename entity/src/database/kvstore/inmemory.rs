@@ -2,7 +2,7 @@ use super::{EntIdSet, KeyValueStoreDatabase};
 use crate::{
     alloc::{IdAllocator, EPHEMERAL_ID},
     database::{Database, DatabaseError, DatabaseResult},
-    ent::{EdgeDeletionPolicy, Ent},
+    ent::EdgeDeletionPolicy,
     IEnt, Id,
 };
 use std::{
@@ -26,7 +26,7 @@ use std::{
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InmemoryDatabase {
     /// Primary ent storage
-    ents: Arc<Mutex<HashMap<Id, Ent>>>,
+    ents: Arc<Mutex<HashMap<Id, Box<dyn IEnt>>>>,
 
     /// Type matching from specific ents to all ids of those ents
     ents_of_type: Arc<Mutex<HashMap<String, EntIdSet>>>,
@@ -47,15 +47,15 @@ impl Default for InmemoryDatabase {
 }
 
 impl Database for InmemoryDatabase {
-    fn get(&self, id: Id) -> DatabaseResult<Option<Ent>> {
+    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>> {
         Ok(self
             .ents
             .lock()
             .unwrap()
             .get(&id)
-            .map(Clone::clone)
+            .map(|ent| dyn_clone::clone_box(ent.as_ref()))
             .map(|mut ent| {
-                ent.connect(self.clone());
+                ent.connect(Box::from(self.clone()));
                 ent
             }))
     }
@@ -71,7 +71,9 @@ impl Database for InmemoryDatabase {
                     EdgeDeletionPolicy::ShallowDelete => {
                         for edge_id in edge.to_ids() {
                             if let Some(ent) = self.ents.lock().unwrap().get_mut(&edge_id) {
-                                let _ = ent.remove_ents_from_all_edges(Some(id));
+                                for edge in ent.edges_mut() {
+                                    let _ = edge.value_mut().remove_ids(Some(edge_id));
+                                }
                             }
                         }
                     }
@@ -105,7 +107,7 @@ impl Database for InmemoryDatabase {
         }
     }
 
-    fn insert(&self, mut ent: Ent) -> DatabaseResult<Id> {
+    fn insert(&self, mut ent: Box<dyn IEnt>) -> DatabaseResult<Id> {
         // Get the id of the ent, swapping out the ephemeral id
         let id = ent.id();
         let id = if id == EPHEMERAL_ID {
@@ -162,14 +164,14 @@ impl KeyValueStoreDatabase for InmemoryDatabase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Field, Value};
+    use crate::{Ent, Field, Value};
 
     #[test]
     fn insert_should_replace_ephemeral_id_with_allocator_id() {
         let db = InmemoryDatabase::default();
 
         let ent = Ent::new_untyped(EPHEMERAL_ID);
-        let id = db.insert(ent).expect("Failed to insert ent");
+        let id = db.insert(Box::from(ent)).expect("Failed to insert ent");
         assert_ne!(id, EPHEMERAL_ID);
 
         let ent = db.get(id).expect("Failed to get ent").expect("Ent missing");
@@ -181,7 +183,7 @@ mod tests {
         let db = InmemoryDatabase::default();
 
         let ent = Ent::new_untyped(999);
-        let id = db.insert(ent).expect("Failed to insert ent");
+        let id = db.insert(Box::from(ent)).expect("Failed to insert ent");
         assert_eq!(id, 999);
 
         let ent = db
@@ -202,7 +204,7 @@ mod tests {
             vec![Field::new("field1", 3)],
             vec![],
         );
-        let _ = db.insert(ent).expect("Failed to insert ent");
+        let _ = db.insert(Box::from(ent)).expect("Failed to insert ent");
 
         let ent = db
             .get(999)
@@ -221,7 +223,7 @@ mod tests {
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_none(), "Unexpectedly acquired ent");
 
-        let _ = db.insert(Ent::new_untyped(999)).unwrap();
+        let _ = db.insert(Box::from(Ent::new_untyped(999))).unwrap();
 
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_some(), "Unexpectedly missing ent");
@@ -237,7 +239,7 @@ mod tests {
 
         let _ = db.remove(999).expect("Failed to remove ent");
 
-        let _ = db.insert(Ent::new_untyped(999)).unwrap();
+        let _ = db.insert(Box::from(Ent::new_untyped(999))).unwrap();
         assert!(db.get(999).unwrap().is_some(), "Failed to set up ent");
 
         let _ = db.remove(999).expect("Failed to remove ent");
