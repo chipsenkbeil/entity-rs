@@ -646,7 +646,7 @@ mod tests {
                 for i in (1..=12).rev() {
                     use crate::DatabaseGetExt;
                     let mut ent = db.get_typed::<Ent>(i).unwrap().expect(&format!("Missing ent {}", i));
-                    ent.mark_updated();
+                    ent.mark_updated().unwrap();
                     db.insert(Box::from(ent))
                         .expect(&format!("Failed to update ent {}", i));
                     std::thread::sleep(std::time::Duration::from_millis(1));

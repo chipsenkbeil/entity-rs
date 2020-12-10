@@ -1,5 +1,5 @@
 use crate::Id;
-use derive_more::From;
+use derive_more::{From, TryInto};
 use std::collections::HashSet;
 use strum::{Display, EnumDiscriminants, EnumString};
 
@@ -118,7 +118,7 @@ impl Default for EdgeDeletionPolicy {
 }
 
 /// Represents the value of an edge, which is some collection of ent ids
-#[derive(Clone, Debug, From, PartialEq, Eq, EnumDiscriminants)]
+#[derive(Clone, Debug, From, PartialEq, Eq, EnumDiscriminants, TryInto)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[strum_discriminants(derive(Display, EnumString))]
 #[strum_discriminants(name(EdgeValueType), strum(serialize_all = "snake_case"))]

@@ -21,7 +21,7 @@ use dyn_clone::DynClone;
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
     fmt,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{SystemTime, SystemTimeError, UNIX_EPOCH},
 };
 
 /// Represents some error the can occur when mutating an ent
@@ -30,11 +30,20 @@ pub enum EntMutationError {
     #[display(fmt = "{}", source)]
     BadEdgeValueMutation { source: EdgeValueMutationError },
 
+    #[display(fmt = "Given value for field is wrong type: {}", description)]
+    WrongValueType { description: String },
+
+    #[display(fmt = "Given edge value for edge is wrong type: {}", description)]
+    WrongEdgeValueType { description: String },
+
     #[display(fmt = "No edge with name: {}", name)]
     NoEdge { name: String },
 
     #[display(fmt = "No field with name: {}", name)]
     NoField { name: String },
+
+    #[display(fmt = "Failed to mark ent as updated: {}", source)]
+    MarkUpdatedFailed { source: SystemTimeError },
 }
 
 /// Represents some error that can occur when converting an ent to another type
@@ -314,7 +323,7 @@ impl Ent {
         into_name: N,
         into_value: V,
     ) -> Result<Value, EntMutationError> {
-        self.mark_updated();
+        self.mark_updated()?;
 
         let name = into_name.into();
         let field = Field::new(name.to_string(), into_value);
@@ -383,11 +392,12 @@ impl Ent {
     }
 
     /// Updates the local, internal timestamp of this ent instance
-    pub(crate) fn mark_updated(&mut self) {
+    pub(crate) fn mark_updated(&mut self) -> Result<(), EntMutationError> {
         self.last_updated = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("Invalid system time")
+            .map_err(|e| EntMutationError::MarkUpdatedFailed { source: e })?
             .as_millis() as u64;
+        Ok(())
     }
 }
 
@@ -509,7 +519,7 @@ impl IEnt for Ent {
     /// assert_eq!(ent.field("field1"), Some(Value::from(5u8)));
     /// ```
     fn update_field(&mut self, name: &str, value: Value) -> Result<Value, EntMutationError> {
-        self.mark_updated();
+        self.mark_updated()?;
 
         match self.fields.entry(name.to_string()) {
             Entry::Occupied(mut x) => {
@@ -583,7 +593,7 @@ impl IEnt for Ent {
     /// assert_eq!(ent.edge("edge1"), Some(EdgeValue::One(123)));
     /// ```
     fn update_edge(&mut self, name: &str, value: EdgeValue) -> Result<EdgeValue, EntMutationError> {
-        self.mark_updated();
+        self.mark_updated()?;
 
         match self.edges.entry(name.to_string()) {
             Entry::Occupied(mut x) => {
