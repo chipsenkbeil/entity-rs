@@ -24,7 +24,7 @@ type EntIdSet = HashSet<Id>;
 /// Represents a key-value store database that performs synchronous insertion,
 /// retrieval, and removal. It provides blanket support for `DatabaseExt` to
 /// perform complex operations.
-pub trait KeyValueStoreDatabase: Database {
+pub trait KeyValueDatabase: Database {
     /// Returns ids of all ents stored in the database
     fn ids(&self) -> EntIdSet;
 
@@ -35,15 +35,15 @@ pub trait KeyValueStoreDatabase: Database {
     fn ids_for_type(&self, r#type: &str) -> EntIdSet;
 }
 
-pub struct KeyValueStoreDatabaseExecutor<'a, T: KeyValueStoreDatabase>(&'a T);
+pub struct KeyValueDatabaseExecutor<'a, T: KeyValueDatabase>(&'a T);
 
-impl<'a, T: KeyValueStoreDatabase> From<&'a T> for KeyValueStoreDatabaseExecutor<'a, T> {
+impl<'a, T: KeyValueDatabase> From<&'a T> for KeyValueDatabaseExecutor<'a, T> {
     fn from(db: &'a T) -> Self {
         Self(db)
     }
 }
 
-impl<'a, T: KeyValueStoreDatabase> KeyValueStoreDatabaseExecutor<'a, T> {
+impl<'a, T: KeyValueDatabase> KeyValueDatabaseExecutor<'a, T> {
     pub fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
         ids.into_iter()
             .filter_map(|id| self.0.get(id).transpose())
@@ -60,7 +60,7 @@ impl<'a, T: KeyValueStoreDatabase> KeyValueStoreDatabaseExecutor<'a, T> {
 
 /// Will take a condition and determine the ids of the ents that pass its criteria
 #[inline]
-fn process_condition<T: KeyValueStoreDatabase>(
+fn process_condition<T: KeyValueDatabase>(
     this: &T,
     condition: &Condition,
     pipeline: Option<EntIdSet>,
@@ -85,10 +85,7 @@ fn process_condition<T: KeyValueStoreDatabase>(
 /// else this is the first step in a pipeline, we get all ids
 /// available in the entire database
 #[inline]
-fn process_always_condition<T: KeyValueStoreDatabase>(
-    this: &T,
-    pipeline: Option<EntIdSet>,
-) -> EntIdSet {
+fn process_always_condition<T: KeyValueDatabase>(this: &T, pipeline: Option<EntIdSet>) -> EntIdSet {
     match pipeline {
         Some(ids) => ids,
         None => this.ids(),
@@ -97,7 +94,7 @@ fn process_always_condition<T: KeyValueStoreDatabase>(
 
 /// Regardless of the pipeline state, no ids will pass
 #[inline]
-fn process_never_condition<T: KeyValueStoreDatabase>(
+fn process_never_condition<T: KeyValueDatabase>(
     _this: &T,
     _pipeline: Option<EntIdSet>,
 ) -> EntIdSet {
@@ -108,7 +105,7 @@ fn process_never_condition<T: KeyValueStoreDatabase>(
 /// then b does the second filtering, leaving only those that
 /// pass both a AND b
 #[inline]
-fn process_and_condition<T: KeyValueStoreDatabase>(
+fn process_and_condition<T: KeyValueDatabase>(
     this: &T,
     a: &Condition,
     b: &Condition,
@@ -123,7 +120,7 @@ fn process_and_condition<T: KeyValueStoreDatabase>(
 /// which takes the union of them, maintaining anything that
 /// was in a OR b
 #[inline]
-fn process_or_condition<T: KeyValueStoreDatabase>(
+fn process_or_condition<T: KeyValueDatabase>(
     this: &T,
     a: &Condition,
     b: &Condition,
@@ -139,7 +136,7 @@ fn process_or_condition<T: KeyValueStoreDatabase>(
 /// which takes the difference of them, maintaining anything that
 /// was in a XOR b (only a or only b)
 #[inline]
-fn process_xor_condition<T: KeyValueStoreDatabase>(
+fn process_xor_condition<T: KeyValueDatabase>(
     this: &T,
     a: &Condition,
     b: &Condition,
@@ -157,7 +154,7 @@ fn process_xor_condition<T: KeyValueStoreDatabase>(
 /// If this is the start of a pipeline, we want to filter all
 /// out any ids produced against all ids in the database
 #[inline]
-fn process_not_condition<T: KeyValueStoreDatabase>(
+fn process_not_condition<T: KeyValueDatabase>(
     this: &T,
     condition: &Condition,
     pipeline: Option<EntIdSet>,
@@ -179,7 +176,7 @@ fn process_not_condition<T: KeyValueStoreDatabase>(
 /// if it does. Otherwise, regardless of the pipeline, nothing
 /// passes.
 #[inline]
-fn process_has_id_condition<T: KeyValueStoreDatabase>(
+fn process_has_id_condition<T: KeyValueDatabase>(
     this: &T,
     id: Id,
     pipeline: Option<EntIdSet>,
@@ -198,7 +195,7 @@ fn process_has_id_condition<T: KeyValueStoreDatabase>(
 /// If this is the start of a pipeline, we check all ents for a
 /// created property that passes the condition.
 #[inline]
-fn process_created_condition<T: KeyValueStoreDatabase>(
+fn process_created_condition<T: KeyValueDatabase>(
     this: &T,
     cond: &TimeCondition,
     pipeline: Option<EntIdSet>,
@@ -217,7 +214,7 @@ fn process_created_condition<T: KeyValueStoreDatabase>(
 /// If this is the start of a pipeline, we check all ents for a
 /// last updated property that passes the condition.
 #[inline]
-fn process_last_updated_condition<T: KeyValueStoreDatabase>(
+fn process_last_updated_condition<T: KeyValueDatabase>(
     this: &T,
     cond: &TimeCondition,
     pipeline: Option<EntIdSet>,
@@ -237,7 +234,7 @@ fn process_last_updated_condition<T: KeyValueStoreDatabase>(
 /// return all ids for the given type. Otherwise, regardless of
 /// the pipeline, nothing passes.
 #[inline]
-fn process_has_type_condition<T: KeyValueStoreDatabase>(
+fn process_has_type_condition<T: KeyValueDatabase>(
     this: &T,
     r#type: &str,
     pipeline: Option<EntIdSet>,
@@ -263,7 +260,7 @@ fn process_has_type_condition<T: KeyValueStoreDatabase>(
 /// of a pipeline, we check ALL ents for an edge with the given name and then
 /// perform the given condition.
 #[inline]
-fn process_edge_condition<T: KeyValueStoreDatabase>(
+fn process_edge_condition<T: KeyValueDatabase>(
     this: &T,
     name: &str,
     condition: &EdgeCondition,
@@ -303,7 +300,7 @@ fn process_edge_condition<T: KeyValueStoreDatabase>(
 /// of a pipeline, we check ALL ents for an edge with the given name and then
 /// perform the given condition.
 #[inline]
-fn process_named_field_condition<T: KeyValueStoreDatabase>(
+fn process_named_field_condition<T: KeyValueDatabase>(
     this: &T,
     name: &str,
     condition: &FieldCondition,
@@ -466,7 +463,7 @@ mod tests {
                 db
             }
 
-            fn query_and_assert<Q: Into<Query>, T: KeyValueStoreDatabase>(db: &T, query: Q, expected: &[Id]) {
+            fn query_and_assert<Q: Into<Query>, T: KeyValueDatabase>(db: &T, query: Q, expected: &[Id]) {
                 let query = query.into();
                 let results = db
                     .find_all(query.clone())

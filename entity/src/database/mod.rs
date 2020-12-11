@@ -1,5 +1,5 @@
-mod kvstore;
-pub use kvstore::*;
+mod kv;
+pub use kv::*;
 
 use crate::{
     ent::{IEnt, Query, ValueType},

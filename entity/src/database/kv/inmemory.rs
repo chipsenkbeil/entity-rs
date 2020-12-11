@@ -1,4 +1,4 @@
-use super::{EntIdSet, KeyValueStoreDatabase, KeyValueStoreDatabaseExecutor};
+use super::{EntIdSet, KeyValueDatabase, KeyValueDatabaseExecutor};
 use crate::{
     alloc::{IdAllocator, EPHEMERAL_ID},
     database::{Database, DatabaseError, DatabaseResult},
@@ -48,11 +48,11 @@ impl Default for InmemoryDatabase {
 
 impl Database for InmemoryDatabase {
     fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
-        KeyValueStoreDatabaseExecutor::from(self).get_all(ids)
+        KeyValueDatabaseExecutor::from(self).get_all(ids)
     }
 
     fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
-        KeyValueStoreDatabaseExecutor::from(self).find_all(query)
+        KeyValueDatabaseExecutor::from(self).find_all(query)
     }
 
     fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>> {
@@ -149,7 +149,7 @@ impl Database for InmemoryDatabase {
     }
 }
 
-impl KeyValueStoreDatabase for InmemoryDatabase {
+impl KeyValueDatabase for InmemoryDatabase {
     /// Returns ids of all ents stored in the database
     fn ids(&self) -> EntIdSet {
         self.ents.lock().unwrap().keys().copied().collect()

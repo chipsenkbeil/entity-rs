@@ -1,4 +1,4 @@
-use super::{EntIdSet, KeyValueStoreDatabase, KeyValueStoreDatabaseExecutor};
+use super::{EntIdSet, KeyValueDatabase, KeyValueDatabaseExecutor};
 use crate::{
     alloc::{IdAllocator, EPHEMERAL_ID},
     database::{Database, DatabaseError, DatabaseResult},
@@ -125,11 +125,11 @@ impl SledDatabase {
 
 impl Database for SledDatabase {
     fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
-        KeyValueStoreDatabaseExecutor::from(self).get_all(ids)
+        KeyValueDatabaseExecutor::from(self).get_all(ids)
     }
 
     fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
-        KeyValueStoreDatabaseExecutor::from(self).find_all(query)
+        KeyValueDatabaseExecutor::from(self).find_all(query)
     }
 
     fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>> {
@@ -281,7 +281,7 @@ impl Database for SledDatabase {
     }
 }
 
-impl KeyValueStoreDatabase for SledDatabase {
+impl KeyValueDatabase for SledDatabase {
     /// Returns ids of all ents stored in the database
     fn ids(&self) -> EntIdSet {
         self.0
