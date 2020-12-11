@@ -19,6 +19,9 @@ pub struct EntInfo {
 pub struct EntField {
     pub name: Ident,
     pub ty: Type,
+
+    /// If field(indexed) provided, signifies that this field should be
+    /// indexed by the database where it is stored
     pub indexed: bool,
 }
 
@@ -163,7 +166,7 @@ impl TryFrom<&DeriveInput> for EntInfo {
                     });
                 }
 
-                // ent(field(indexed))
+                // ent(field([indexed], [optional]))
                 Meta::List(x) if x.path.is_ident("field") => {
                     let mut indexed = false;
 

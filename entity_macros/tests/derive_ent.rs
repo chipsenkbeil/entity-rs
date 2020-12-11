@@ -1,4 +1,4 @@
-use entity::{Database, Ent, Id};
+use entity::{Database, Ent, Id, InmemoryDatabase};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -42,6 +42,12 @@ pub struct PageEnt {
 
     #[ent(field)]
     custom: CustomInt,
+
+    #[ent(field)]
+    list: Vec<String>,
+
+    #[ent(field)]
+    opt: Option<String>,
 
     #[ent(edge(shallow, type = "ContentEnt"))]
     header: Id,

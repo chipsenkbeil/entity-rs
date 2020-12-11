@@ -66,6 +66,28 @@ impl Value {
     pub fn to_primitive_type(&self) -> Option<PrimitiveValueType> {
         self.to_primitive().map(PrimitiveValueType::from)
     }
+
+    /// Attempts to convert the value to an underlying option type,
+    /// succeeding if Value is the Optional variant and the inner
+    /// value can be converted to the specified type.
+    ///
+    /// This is only needed due to a blanket impl in the standard library
+    /// blocking the ability to implement `TryFrom<Value> for Option<T>`,
+    /// which will be available some day once specialization is implemented:
+    ///
+    /// https://github.com/rust-lang/rust/issues/31844
+    pub fn try_into_option<T: TryFrom<Value, Error = &'static str>>(
+        self,
+    ) -> Result<Option<T>, &'static str> {
+        match self {
+            Self::Optional(Some(boxed_value)) => {
+                let t = T::try_from(boxed_value.as_ref().clone())?;
+                Ok(Some(t))
+            }
+            Self::Optional(None) => Ok(None),
+            _ => Err("Only Optional can be converted to Option<T>"),
+        }
+    }
 }
 
 impl PartialOrd for Value {
@@ -206,20 +228,6 @@ macro_rules! impl_generic_try_into {
         }
     };
 }
-
-// impl<T: TryFrom<Value, Error = &'static str>> TryFrom<Value> for Option<T> {
-//     type Error = &'static str;
-
-//     fn try_from(value: Value) -> Result<Self, Self::Error> {
-//         match value {
-//             Value::Optional(Some(boxed_value)) => {
-//                 T::try_from(boxed_value.as_ref().clone()).map(|t| Some(t))
-//             }
-//             Value::Optional(None) => Ok(None),
-//             _ => Err("Only Optional can be converted to Option<T>"),
-//         }
-//     }
-// }
 
 impl_generic_try_into!(List, Vec<T>, T, |x: Vec<Value>| x
     .into_iter()

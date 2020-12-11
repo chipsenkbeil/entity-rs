@@ -1,4 +1,4 @@
-use super::EntInfo;
+use super::{utils, EntInfo};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Ident, Type};
@@ -9,7 +9,7 @@ pub(crate) fn impl_ent(
     ent_info: &EntInfo,
     const_type_name: &Ident,
     include_typetag: bool,
-) -> TokenStream {
+) -> Result<TokenStream, syn::Error> {
     let ident_id = &ent_info.id;
     let ident_database = &ent_info.database;
     let ident_created = &ent_info.created;
@@ -18,7 +18,17 @@ pub(crate) fn impl_ent(
     let edges = &ent_info.edges;
 
     let field_names: Vec<Ident> = fields.iter().map(|f| f.name.clone()).collect();
-    let field_types: Vec<Type> = fields.iter().map(|f| f.ty.clone()).collect();
+    let value_to_typed_field: Vec<TokenStream> = fields
+        .iter()
+        .map(|f| {
+            let ty = &f.ty;
+            if let Ok(inner_ty) = utils::strip_option(ty) {
+                Ok(quote! { value.try_into_option::<#inner_ty>() })
+            } else {
+                Ok(quote! { <#ty>::try_from(value) })
+            }
+        })
+        .collect::<Result<Vec<TokenStream>, syn::Error>>()?;
     let edge_names: Vec<Ident> = edges.iter().map(|e| e.name.clone()).collect();
     let edge_types: Vec<Type> = edges.iter().map(|e| e.ty.clone()).collect();
 
@@ -30,7 +40,7 @@ pub(crate) fn impl_ent(
         quote! {}
     };
 
-    quote! {
+    Ok(quote! {
         #typetag_t
         impl #root::IEnt for #name {
             fn id(&self) -> #root::Id {
@@ -82,7 +92,7 @@ pub(crate) fn impl_ent(
                     #(
                         stringify!(#field_names) => {
                             let old_value = self.#field_names.clone();
-                            self.#field_names = <#field_types>::try_from(value).map_err(
+                            self.#field_names = #value_to_typed_field.map_err(
                                 |x| #root::EntMutationError::WrongValueType { description: x.to_string() }
                             )?;
                             ::std::result::Result::Ok(#root::Value::from(old_value))
@@ -204,5 +214,5 @@ pub(crate) fn impl_ent(
                 database.remove(self.#ident_id)
             }
         }
-    }
+    })
 }

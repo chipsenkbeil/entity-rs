@@ -59,7 +59,7 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
         &ent_info,
         &const_type_name,
         utils::has_outer_ent_attr(&input.attrs, "typetag"),
-    );
+    )?;
 
     Ok(quote! {
         #const_type_t
