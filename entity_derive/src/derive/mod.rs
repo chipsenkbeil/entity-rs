@@ -2,6 +2,7 @@ mod builder;
 mod edge;
 mod ent;
 mod info;
+mod query;
 mod utils;
 
 pub use info::{EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
@@ -33,6 +34,15 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
         quote! {}
     };
 
+    // If we have the attribute ent(query), we will add an additional
+    // struct of <name>Query that provides a convenient way to build
+    // a typed ent query
+    let query_t = if utils::has_outer_ent_attr(&input.attrs, "query") {
+        query::impl_ent_query(&root, name, vis, &const_type_name, &ent_info)?
+    } else {
+        quote! {}
+    };
+
     // If we have the attribute ent(typed_load_edge), we will add an additional
     // impl that provides loading of specific edges to corresponding types
     let typed_methods_t = if utils::has_outer_ent_attr(&input.attrs, "typed_methods") {
@@ -56,5 +66,6 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
         #ent_t
         #typed_methods_t
         #builder_t
+        #query_t
     })
 }

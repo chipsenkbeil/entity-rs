@@ -42,6 +42,12 @@ impl From<Condition> for Query {
     }
 }
 
+impl From<Query> for Condition {
+    fn from(query: Query) -> Self {
+        query.0
+    }
+}
+
 /// Provides helper methods on top of the Query for easier composition
 pub trait QueryExt {
     /// Convenience method to add a new condition where the id of the ent

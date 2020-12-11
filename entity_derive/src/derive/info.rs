@@ -1,7 +1,7 @@
 use super::utils;
 use std::convert::TryFrom;
 use syn::spanned::Spanned;
-use syn::{Data, DeriveInput, Fields, Ident, Lit, Meta, NestedMeta, Type};
+use syn::{DeriveInput, Ident, Lit, Meta, NestedMeta, Type};
 
 /// Information about attributes on a struct that will represent an ent
 #[derive(Debug)]

@@ -2,7 +2,7 @@ use entity::{Database, Ent, Id};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Ent, Serialize, Deserialize)]
-#[ent(typetag, typed_methods, builder)]
+#[ent(typetag, typed_methods, builder, query)]
 pub struct PageEnt {
     #[ent(id)]
     id: Id,
@@ -34,7 +34,7 @@ pub struct PageEnt {
 }
 
 #[derive(Clone, Ent, Serialize, Deserialize)]
-#[ent(typetag, typed_methods, builder)]
+#[ent(typetag, typed_methods, builder, query)]
 pub struct ContentEnt {
     #[ent(id)]
     id: Id,
