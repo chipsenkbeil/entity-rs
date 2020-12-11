@@ -1,9 +1,9 @@
-use super::{EntIdSet, KeyValueStoreDatabase};
+use super::{EntIdSet, KeyValueStoreDatabase, KeyValueStoreDatabaseExecutor};
 use crate::{
     alloc::{IdAllocator, EPHEMERAL_ID},
     database::{Database, DatabaseError, DatabaseResult},
     ent::EdgeDeletionPolicy,
-    IEnt, Id,
+    IEnt, Id, Query,
 };
 use derive_more::Constructor;
 use std::collections::HashSet;
@@ -124,6 +124,14 @@ impl SledDatabase {
 }
 
 impl Database for SledDatabase {
+    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+        KeyValueStoreDatabaseExecutor::from(self).get_all(ids)
+    }
+
+    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+        KeyValueStoreDatabaseExecutor::from(self).find_all(query)
+    }
+
     fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>> {
         let maybe_ivec = self
             .0

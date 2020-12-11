@@ -10,7 +10,7 @@ mod sled_db;
 pub use sled_db::SledDatabase;
 
 use crate::{
-    database::{Database, DatabaseError, DatabaseFindAllExt, DatabaseGetAllExt, DatabaseResult},
+    database::{Database, DatabaseError, DatabaseResult},
     ent::{
         query::{Condition, EdgeCondition, FieldCondition, Query, TimeCondition},
         Value,
@@ -35,19 +35,25 @@ pub trait KeyValueStoreDatabase: Database {
     fn ids_for_type(&self, r#type: &str) -> EntIdSet;
 }
 
-impl<T: KeyValueStoreDatabase> DatabaseGetAllExt for T {
-    fn get_all(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
-        ids.into_iter()
-            .filter_map(|id| self.get(id).transpose())
-            .collect()
+pub struct KeyValueStoreDatabaseExecutor<'a, T: KeyValueStoreDatabase>(&'a T);
+
+impl<'a, T: KeyValueStoreDatabase> From<&'a T> for KeyValueStoreDatabaseExecutor<'a, T> {
+    fn from(db: &'a T) -> Self {
+        Self(db)
     }
 }
 
-impl<T: KeyValueStoreDatabase> DatabaseFindAllExt for T {
-    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
-        process_condition(self, query.as_condition(), None)
+impl<'a, T: KeyValueStoreDatabase> KeyValueStoreDatabaseExecutor<'a, T> {
+    pub fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+        ids.into_iter()
+            .filter_map(|id| self.0.get(id).transpose())
+            .collect()
+    }
+
+    pub fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+        process_condition(self.0, query.as_condition(), None)
             .into_iter()
-            .filter_map(|id| self.get(id).transpose())
+            .filter_map(|id| self.0.get(id).transpose())
             .collect()
     }
 }
@@ -460,7 +466,7 @@ mod tests {
                 db
             }
 
-            fn query_and_assert<Q: Into<Query>, T: DatabaseFindAllExt>(db: &T, query: Q, expected: &[Id]) {
+            fn query_and_assert<Q: Into<Query>, T: KeyValueStoreDatabase>(db: &T, query: Q, expected: &[Id]) {
                 let query = query.into();
                 let results = db
                     .find_all(query.clone())
@@ -644,7 +650,7 @@ mod tests {
                 // Update all ents with enough time split between them for us to
                 // properly test last updated time
                 for i in (1..=12).rev() {
-                    use crate::DatabaseGetExt;
+                    use crate::DatabaseExt;
                     let mut ent = db.get_typed::<Ent>(i).unwrap().expect(&format!("Missing ent {}", i));
                     ent.mark_updated().unwrap();
                     db.insert(Box::from(ent))

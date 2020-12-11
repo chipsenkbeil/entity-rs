@@ -190,6 +190,7 @@ pub fn impl_ent_query(
     let default_doc_str = format!("Creates new query that selects all {} by default", name);
 
     Ok(quote! {
+        #[derive(::std::clone::Clone, ::std::fmt::Debug)]
         #vis struct #query_name(#root::Query);
 
         impl ::std::convert::From<#query_name> for #root::Query {
@@ -211,6 +212,12 @@ pub fn impl_ent_query(
 
         impl #query_name {
             #(#struct_setters)*
+
+            #[doc = "Executes query against the given database"]
+            pub fn execute<D: #root::Database>(self, database: D) -> #root::DatabaseResult<Vec<#name>> {
+                use #root::{Database, DatabaseExt};
+                database.find_all_typed::<#name>(self.0)
+            }
         }
     })
 }

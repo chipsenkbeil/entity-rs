@@ -71,52 +71,48 @@ pub trait Database: DynClone {
     ///
     /// The ent's id is returned after being inserted.
     fn insert(&self, ent: Box<dyn IEnt>) -> DatabaseResult<Id>;
+
+    /// Performs a retrieval of multiple ents of any type
+    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
+
+    /// Finds all generic ents that match the query
+    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
 }
 
 dyn_clone::clone_trait_object!(Database);
 
-pub trait DatabaseInsertExt: Database {
+pub trait DatabaseExt: Database {
     /// Inserts an ent of a specific type
     fn insert_typed<E: IEnt>(&self, ent: E) -> DatabaseResult<Id>;
+
+    /// Retrieves an ent by id with a specific type
+    fn get_typed<E: IEnt>(&self, id: Id) -> DatabaseResult<Option<E>>;
+
+    /// Retrieves ents by id with a specific type
+    fn get_all_typed<E: IEnt>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>>;
+
+    /// Finds ents that match the specified query and are of the specified type
+    fn find_all_typed<E: IEnt>(&self, query: Query) -> DatabaseResult<Vec<E>>;
 }
 
-impl<T: Database> DatabaseInsertExt for T {
+impl<T: Database> DatabaseExt for T {
     fn insert_typed<E: IEnt>(&self, ent: E) -> DatabaseResult<Id> {
         self.insert(Box::from(ent))
     }
-}
 
-pub trait DatabaseGetExt: Database {
-    /// Retrieves an ent of a specific type
-    fn get_typed<E: IEnt>(&self, id: Id) -> DatabaseResult<Option<E>>;
-}
-
-impl<T: Database> DatabaseGetExt for T {
     fn get_typed<E: IEnt>(&self, id: Id) -> DatabaseResult<Option<E>> {
         self.get(id)
             .map(|x| x.and_then(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone)))
     }
-}
 
-pub trait DatabaseGetAllExt: Database {
-    /// Performs a retrieval of multiple ents of any type
-    fn get_all(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
-
-    /// Retrieves ents of a specific type
-    fn get_all_typed<E: IEnt>(&self, ids: impl IntoIterator<Item = Id>) -> DatabaseResult<Vec<E>> {
+    fn get_all_typed<E: IEnt>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>> {
         self.get_all(ids).map(|x| {
             x.into_iter()
                 .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
                 .collect()
         })
     }
-}
 
-pub trait DatabaseFindAllExt: Database {
-    /// Finds all generic ents that match the query
-    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
-
-    /// Finds ents that match the specified query and are of the specified type
     fn find_all_typed<E: IEnt>(&self, query: Query) -> DatabaseResult<Vec<E>> {
         self.find_all(query).map(|x| {
             x.into_iter()
