@@ -128,6 +128,8 @@ pub fn impl_ent_query(
         }
     });
 
+    // TODO: Support distinguishing types of methods to support for each
+    //       field type, including collection conditions
     for f in &ent_info.fields {
         let name = &f.name;
         let ty = &f.ty;
@@ -186,6 +188,8 @@ pub fn impl_ent_query(
             }
         });
     }
+
+    // TODO: Support edge query methods
 
     let default_doc_str = format!("Creates new query that selects all {} by default", name);
 
