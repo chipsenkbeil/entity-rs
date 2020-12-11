@@ -2,7 +2,7 @@ use entity::{Database, Ent, Id};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Ent, Serialize, Deserialize)]
-#[ent(typetag)]
+#[ent(typetag, typed_methods)]
 pub struct PageEnt {
     #[ent(id)]
     id: Id,
@@ -19,21 +19,22 @@ pub struct PageEnt {
 
     #[ent(field(indexed))]
     title: String,
-    // #[ent(field)]
-    // url: String,
 
-    // #[ent(edge(shallow, type = "ContentEnt"))]
-    // header: Id,
+    #[ent(field)]
+    url: String,
 
-    // #[ent(edge(deep, type = "ContentEnt"))]
-    // subheader: Option<Id>,
+    #[ent(edge(shallow, type = "ContentEnt"))]
+    header: Id,
 
-    // #[ent(edge(type = "ContentEnt"))]
-    // paragraphs: Vec<Id>,
+    #[ent(edge(deep, type = "ContentEnt"))]
+    subheader: Option<Id>,
+
+    #[ent(edge(type = "ContentEnt"))]
+    paragraphs: Vec<Id>,
 }
 
 #[derive(Clone, Ent, Serialize, Deserialize)]
-#[ent(typetag)]
+#[ent(typetag, typed_methods)]
 pub struct ContentEnt {
     #[ent(id)]
     id: Id,
@@ -47,4 +48,7 @@ pub struct ContentEnt {
 
     #[ent(last_updated)]
     last_updated: u64,
+
+    #[ent(edge(shallow, type = "PageEnt"))]
+    page: Id,
 }

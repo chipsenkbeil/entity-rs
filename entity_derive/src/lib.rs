@@ -4,7 +4,7 @@ use quote::format_ident;
 use quote::quote;
 use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, parse_quote, Data, DeriveInput, Field, Fields, Ident, Lit, Meta, NestedMeta,
+    parse_macro_input, Attribute, Data, DeriveInput, Field, Fields, Ident, Lit, Meta, NestedMeta,
     Type,
 };
 
@@ -21,6 +21,7 @@ use syn::{
 /// /// If using serde, this struct will need to implement serialize and
 /// /// deserialize itself
 /// #[derive(Clone, Ent, serde::Serialize, serde::Deserialize)]
+/// #[ent(typetag)]
 /// pub struct PageEnt {
 ///     /// Required and can only be specified once to indicate the struct
 ///     /// field that contains the ent's id
@@ -94,22 +95,7 @@ fn impl_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::E
 
     // If we have the attribute ent(typetag) on our struct, we will add a
     // new attribute of #[typetag::serde] onto our impl of IEnt
-    let has_typetag_attr =
-        input
-            .attrs
-            .iter()
-            .filter_map(|a| a.parse_meta().ok())
-            .any(|m| match m {
-                Meta::List(x) if x.path.is_ident("ent") => x.nested.iter().any(|m| match m {
-                    NestedMeta::Meta(x) => match x {
-                        Meta::Path(x) => x.is_ident("typetag"),
-                        _ => false,
-                    },
-                    _ => false,
-                }),
-                _ => false,
-            });
-    let typetag_t: TokenStream = if has_typetag_attr {
+    let typetag_t: TokenStream = if has_outer_ent_attr(&input.attrs, "typetag") {
         quote! { #[::typetag::serde] }
     } else {
         quote! {}
@@ -131,28 +117,23 @@ fn impl_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::E
     let edges = ent_inner_info.edges;
 
     let field_names: Vec<Ident> = fields.iter().map(|f| f.name.clone()).collect();
+    let field_types: Vec<Type> = fields.iter().map(|f| f.ty.clone()).collect();
     let edge_names: Vec<Ident> = edges.iter().map(|e| e.name.clone()).collect();
+    let edge_types: Vec<Type> = edges.iter().map(|e| e.ty.clone()).collect();
+
+    // If we have the attribute ent(typed_load_edge), we will add an additional
+    // impl that provides loading of specific edges to corresponding types
+    let typed_methods_t = if has_outer_ent_attr(&input.attrs, "typed_methods") {
+        impl_typed_edge_methods(&root, &name, &edges)
+    } else {
+        quote! {}
+    };
 
     // Build the output, possibly using quasi-quotation
     Ok(quote! {
         #vis const #const_type_name: &str = concat!(module_path!(), "::", stringify!(#name));
 
-        /// CHIP CHIP CHIP
-        /// Alongside the trait impl, we also want to add explicit
-        /// methods to load ents from edges using specific types
-        impl #name {
-            pub fn load_header(&self) -> #root::DatabaseResult<ContentEnt> {
-                todo!()
-            }
-
-            pub fn load_subheader(&self) -> #root::DatabaseResult<::std::option::Option<ContentEnt>> {
-                todo!()
-            }
-
-            pub fn load_paragraphs(&self) -> #root::DatabaseResult<::std::vec::Vec<ContentEnt>> {
-                todo!()
-            }
-        }
+        #typed_methods_t
 
         #typetag_t
         impl #root::IEnt for #name {
@@ -194,7 +175,7 @@ fn impl_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::E
             }
 
             fn update_field(&mut self, name: &str, value: #root::Value) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
-                use ::std::convert::TryInto;
+                use ::std::convert::TryFrom;
 
                 self.#ident_last_updated = ::std::time::SystemTime::now()
                     .duration_since(::std::time::UNIX_EPOCH)
@@ -204,13 +185,11 @@ fn impl_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::E
                 match name {
                     #(
                         stringify!(#field_names) => {
-                            let old_value = &self.#field_names;
-                            self.#field_names = value.try_into().map_err(
+                            let old_value = self.#field_names.clone();
+                            self.#field_names = <#field_types>::try_from(value).map_err(
                                 |x| #root::EntMutationError::WrongValueType { description: x.to_string() }
                             )?;
-                            ::std::result::Result::Ok(
-                                #root::Value::from(old_value.clone())
-                            )
+                            ::std::result::Result::Ok(#root::Value::from(old_value))
                         },
                     )*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoField {
@@ -237,6 +216,8 @@ fn impl_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::E
             }
 
             fn update_edge(&mut self, name: &str, value: #root::EdgeValue) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
+                use ::std::convert::TryFrom;
+
                 self.#ident_last_updated = ::std::time::SystemTime::now()
                     .duration_since(::std::time::UNIX_EPOCH)
                     .map_err(|e| #root::EntMutationError::MarkUpdatedFailed { source: e })?
@@ -244,9 +225,13 @@ fn impl_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::E
 
                 match name {
                     #(
-                        stringify!(#edge_names) => self.#edge_names = value.try_into().map_err(
-                            |x| #root::EntMutationError::WrongEdgeValueType { description: x.to_string() }
-                        )?,
+                        stringify!(#edge_names) => {
+                            let old_value = self.#edge_names.clone();
+                            self.#edge_names = <#edge_types>::try_from(value).map_err(
+                                |x| #root::EntMutationError::WrongEdgeValueType { description: x.to_string() }
+                            )?;
+                            ::std::result::Result::Ok(#root::EdgeValue::from(old_value))
+                        },
                     )*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoEdge {
                         name: name.to_string(),
@@ -326,6 +311,91 @@ fn impl_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::E
     })
 }
 
+fn has_outer_ent_attr(attrs: &[Attribute], ident_str: &str) -> bool {
+    attrs
+        .iter()
+        .filter_map(|a| a.parse_meta().ok())
+        .any(|m| match m {
+            Meta::List(x) if x.path.is_ident("ent") => x.nested.iter().any(|m| match m {
+                NestedMeta::Meta(x) => match x {
+                    Meta::Path(x) => x.is_ident(ident_str),
+                    _ => false,
+                },
+                _ => false,
+            }),
+            _ => false,
+        })
+}
+
+fn impl_typed_edge_methods(root: &TokenStream, name: &Ident, edges: &[EntEdge]) -> TokenStream {
+    let mut edge_methods: Vec<TokenStream> = Vec::new();
+
+    for edge in edges {
+        let name = &edge.name;
+        let ent_ty = &edge.ent_ty;
+        let method_name = format_ident!("load_{}", name);
+        let method = match edge.kind {
+            EntEdgeKind::Maybe => quote! {
+                pub fn #method_name(&self) -> #root::DatabaseResult<::std::option::Option<#ent_ty>> {
+                    use #root::IEnt;
+                    let ents = self.load_edge(stringify!(#name))?;
+                    let typed_ents: ::std::vec::Vec<#ent_ty> =
+                        ents.into_iter().filter_map(|ent|
+                            ent.as_any().downcast_ref::<#ent_ty>()
+                                .map(::std::clone::Clone::clone)
+                        ).collect();
+                    if typed_ents.len() > 1 {
+                        ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
+                            name: stringify!(#name).to_string(),
+                        })
+                    } else {
+                        ::std::result::Result::Ok(typed_ents.into_iter().next())
+                    }
+                }
+            },
+            EntEdgeKind::One => quote! {
+                pub fn #method_name(&self) -> #root::DatabaseResult<#ent_ty> {
+                    use #root::IEnt;
+                    let ents = self.load_edge(stringify!(#name))?;
+                    let typed_ents: ::std::vec::Vec<#ent_ty> =
+                        ents.into_iter().filter_map(|ent|
+                            ent.as_any().downcast_ref::<#ent_ty>()
+                                .map(::std::clone::Clone::clone)
+                        ).collect();
+                    if typed_ents.len() != 1 {
+                        ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
+                            name: stringify!(#name).to_string(),
+                        })
+                    } else {
+                        ::std::result::Result::Ok(typed_ents.into_iter().next().unwrap())
+                    }
+                }
+            },
+            EntEdgeKind::Many => quote! {
+                pub fn #method_name(&self) -> #root::DatabaseResult<::std::vec::Vec<#ent_ty>> {
+                    use #root::IEnt;
+                    let ents = self.load_edge(stringify!(#name))?;
+                    let typed_ents: ::std::vec::Vec<#ent_ty> =
+                        ents.into_iter().filter_map(|ent|
+                            ent.as_any().downcast_ref::<#ent_ty>()
+                                .map(::std::clone::Clone::clone)
+                        ).collect();
+                    ::std::result::Result::Ok(typed_ents)
+                }
+            },
+        };
+
+        edge_methods.push(method);
+    }
+
+    quote! {
+        impl #name {
+            #(#edge_methods)*
+        }
+    }
+}
+
+#[derive(Debug)]
 struct EntInnerInfo {
     id: Ident,
     database: Ident,
@@ -335,22 +405,34 @@ struct EntInnerInfo {
     edges: Vec<EntEdge>,
 }
 
+#[derive(Debug)]
 struct EntField {
     name: Ident,
     ty: Type,
     indexed: bool,
 }
 
+#[derive(Debug)]
 struct EntEdge {
     name: Ident,
     ty: Type,
+    ent_ty: Type,
+    kind: EntEdgeKind,
     deletion_policy: EntEdgeDeletionPolicy,
 }
 
+#[derive(Debug)]
 enum EntEdgeDeletionPolicy {
     Nothing,
     Shallow,
     Deep,
+}
+
+#[derive(Debug)]
+enum EntEdgeKind {
+    Maybe,
+    One,
+    Many,
 }
 
 fn extract_inner_info(
@@ -487,7 +569,7 @@ fn extract_inner_info(
 
             // ent(edge)
             Meta::Path(x) if x.is_ident("edge") => {
-                return Err(syn::Error::new(x.span(), "Edge attribute is missing type"))
+                return Err(syn::Error::new(x.span(), "Edge attribute is missing type"));
             }
 
             // ent([shallow|deep], type = "...")
@@ -517,7 +599,7 @@ fn extract_inner_info(
                             Meta::NameValue(x) if x.path.is_ident("type") => match x.lit {
                                 Lit::Str(x) => {
                                     let type_str = x.value();
-                                    edge_type = Some(parse_quote!(#type_str));
+                                    edge_type = Some(syn::parse_str::<Type>(&type_str)?);
                                 }
                                 x => {
                                     return Err(syn::Error::new(
@@ -536,15 +618,37 @@ fn extract_inner_info(
                     }
                 }
 
+                // Figure out edge type (Maybe/One/Many) based on
+                // (Option<...>, ..., Vec<...>)
+                let kind = match &ty {
+                    Type::Path(x) => {
+                        let segment = x
+                            .path
+                            .segments
+                            .last()
+                            .ok_or_else(|| syn::Error::new(x.span(), "Missing edge id type"))?;
+                        match segment.ident.to_string().to_lowercase().as_str() {
+                            "option" => EntEdgeKind::Maybe,
+                            "vec" => EntEdgeKind::Many,
+                            _ => EntEdgeKind::One,
+                        }
+                    }
+                    x => return Err(syn::Error::new(x.span(), "Unexpected edge id type")),
+                };
+
                 edges.push(EntEdge {
                     name,
-                    ty: edge_type.ok_or_else(|| syn::Error::new(span, "Missing edge type"))?,
+                    ty,
+                    ent_ty: edge_type.ok_or_else(|| syn::Error::new(span, "Missing edge type"))?,
+                    kind,
                     deletion_policy,
                 })
             }
 
             // For anything else, we fail because it is unsupported within ent(...)
-            x => return Err(syn::Error::new(x.span(), "Unexpected ent attribute")),
+            x => {
+                return Err(syn::Error::new(x.span(), "Unexpected ent attribute"));
+            }
         }
     }
 
