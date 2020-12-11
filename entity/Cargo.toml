@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 
 [features]
 default = ["inmemory_db", "sled_db"]
-derive = ["entity_derive"]
+macros = ["entity_macros"]
 inmemory_db = ["serde", "serde/rc", "typetag"]
 sled_db = ["bincode", "serde", "sled", "typetag"]
 
@@ -25,4 +25,4 @@ serde = { version = "1.0.117", features = ["derive"], optional = true }
 sled = { version = "0.34.6", optional = true }
 strum = { version = "0.19", features = ["derive"] }
 typetag = { version = "0.1.6", optional = true }
-entity_derive = { version = "0.1.0", path = "../entity_derive", optional = true }
+entity_macros = { version = "0.1.0", path = "../entity_macros", optional = true }

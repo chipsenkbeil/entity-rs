@@ -6,8 +6,8 @@ pub use alloc::{Id, IdAllocator, EPHEMERAL_ID};
 pub use database::*;
 pub use ent::*;
 
-#[cfg(feature = "derive")]
-pub use entity_derive::*;
+#[cfg(feature = "macros")]
+pub use entity_macros::*;
 
 /// Vendor module to re-expose relevant libraries
 pub mod vendor {
