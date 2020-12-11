@@ -1,6 +1,23 @@
 use entity::{Database, Ent, Id};
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomInt(u32);
+
+impl From<CustomInt> for entity::Value {
+    fn from(x: CustomInt) -> Self {
+        Self::from(x.0)
+    }
+}
+
+impl std::convert::TryFrom<entity::Value> for CustomInt {
+    type Error = &'static str;
+
+    fn try_from(value: entity::Value) -> Result<Self, Self::Error> {
+        Ok(Self(u32::try_from(value)?))
+    }
+}
+
 #[derive(Clone, Ent, Serialize, Deserialize)]
 #[ent(typetag, typed_methods, builder, query)]
 pub struct PageEnt {
@@ -22,6 +39,9 @@ pub struct PageEnt {
 
     #[ent(field)]
     url: String,
+
+    #[ent(field)]
+    custom: CustomInt,
 
     #[ent(edge(shallow, type = "ContentEnt"))]
     header: Id,
