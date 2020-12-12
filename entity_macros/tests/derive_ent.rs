@@ -8,6 +8,8 @@ pub struct CustomString(String);
 pub struct CustomType {
     x: u32,
     y: u64,
+    z: Option<CustomString>,
+    a: Vec<CustomType>,
 }
 
 #[derive(Clone, Value, Serialize, Deserialize)]
@@ -29,13 +31,13 @@ pub struct PageEnt {
     #[ent(last_updated)]
     last_updated: u64,
 
-    #[ent(field(indexed))]
+    #[ent(field(indexed, mutable))]
     title: String,
 
-    #[ent(field)]
+    #[ent(field(mutable))]
     url: String,
 
-    #[ent(field)]
+    #[ent(field(mutable))]
     c1: CustomString,
 
     #[ent(field)]

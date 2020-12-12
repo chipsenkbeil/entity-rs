@@ -23,6 +23,11 @@ pub struct EntField {
     /// If field(indexed) provided, signifies that this field should be
     /// indexed by the database where it is stored
     pub indexed: bool,
+
+    /// If field(mut) provided, signifies that this field should be
+    /// able to be mutated and that a typed method for mutation should
+    /// be included when generating typed methods
+    pub mutable: bool,
 }
 
 /// Information about a specific edge for an ent
@@ -163,17 +168,20 @@ impl TryFrom<&DeriveInput> for EntInfo {
                         name,
                         ty,
                         indexed: false,
+                        mutable: false,
                     });
                 }
 
-                // ent(field([indexed], [optional]))
+                // ent(field([indexed], [mutable]))
                 Meta::List(x) if x.path.is_ident("field") => {
                     let mut indexed = false;
+                    let mut mutable = false;
 
                     for m in x.nested {
                         match m {
                             NestedMeta::Meta(x) => match x {
                                 Meta::Path(x) if x.is_ident("indexed") => indexed = true,
+                                Meta::Path(x) if x.is_ident("mutable") => mutable = true,
                                 x => {
                                     return Err(syn::Error::new(
                                         x.span(),
@@ -190,7 +198,12 @@ impl TryFrom<&DeriveInput> for EntInfo {
                         }
                     }
 
-                    fields.push(EntField { name, ty, indexed });
+                    fields.push(EntField {
+                        name,
+                        ty,
+                        indexed,
+                        mutable,
+                    });
                 }
 
                 // ent(edge)
