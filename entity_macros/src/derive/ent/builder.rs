@@ -61,6 +61,7 @@ pub fn impl_ent_builder(
             #(#struct_fields),*
         }
 
+        #[automatically_derived]
         impl #builder_name {
             #(#struct_setters)*
 

@@ -1,6 +1,6 @@
 use syn::{
-    spanned::Spanned, Attribute, Data, DeriveInput, Fields, FieldsNamed, GenericArgument, Meta,
-    NestedMeta, PathArguments, Type,
+    parse_quote, spanned::Spanned, Attribute, Data, DeriveInput, Expr, Fields, FieldsNamed,
+    GenericArgument, Ident, Meta, NestedMeta, PathArguments, Type,
 };
 
 /// Returns true if the attribute is in the form of ent(...) where
@@ -29,6 +29,20 @@ pub fn get_named_fields(input: &DeriveInput) -> Result<&FieldsNamed, syn::Error>
             _ => Err(syn::Error::new(input.span(), "Expected named fields")),
         },
         _ => Err(syn::Error::new(input.span(), "Expected struct")),
+    }
+}
+
+/// Transforms some value with the given name (ident) to the specified type,
+/// producing an expression
+pub fn convert_from_value(name: &Ident, ty: &Type) -> Expr {
+    if let Ok(inner_ty) = strip_option(ty) {
+        parse_quote! {
+            #name.try_into_option::<#inner_ty>()
+        }
+    } else {
+        parse_quote! {
+            <#ty>::try_from(#name)
+        }
     }
 }
 

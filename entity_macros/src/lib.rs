@@ -80,3 +80,13 @@ pub fn derive_ent(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     proc_macro::TokenStream::from(expanded)
 }
+
+#[proc_macro_derive(Value, attributes(value))]
+pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let root = quote! { ::entity };
+    let expanded = derive::do_derive_value(root, input).unwrap_or_else(|x| x.to_compile_error());
+
+    proc_macro::TokenStream::from(expanded)
+}

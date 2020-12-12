@@ -197,12 +197,14 @@ pub fn impl_ent_query(
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
         #vis struct #query_name(#root::Query);
 
+        #[automatically_derived]
         impl ::std::convert::From<#query_name> for #root::Query {
             fn from(q: #query_name) -> Self {
                 q.0
             }
         }
 
+        #[automatically_derived]
         impl ::std::default::Default for #query_name {
             #[doc = #default_doc_str]
             fn default() -> Self {
@@ -214,6 +216,7 @@ pub fn impl_ent_query(
             }
         }
 
+        #[automatically_derived]
         impl #query_name {
             #(#struct_setters)*
 

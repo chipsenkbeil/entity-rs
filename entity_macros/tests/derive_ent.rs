@@ -1,22 +1,17 @@
-use entity::{Database, Ent, Id, InmemoryDatabase};
+use entity::{Database, Ent, Id, InmemoryDatabase, Value};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct CustomInt(u32);
+#[derive(Clone, Value, Serialize, Deserialize)]
+pub struct CustomString(String);
 
-impl From<CustomInt> for entity::Value {
-    fn from(x: CustomInt) -> Self {
-        Self::from(x.0)
-    }
+#[derive(Clone, Value, Serialize, Deserialize)]
+pub struct CustomType {
+    x: u32,
+    y: u64,
 }
 
-impl std::convert::TryFrom<entity::Value> for CustomInt {
-    type Error = &'static str;
-
-    fn try_from(value: entity::Value) -> Result<Self, Self::Error> {
-        Ok(Self(u32::try_from(value)?))
-    }
-}
+#[derive(Clone, Value, Serialize, Deserialize)]
+pub struct CustomUnit;
 
 #[derive(Clone, Ent, Serialize, Deserialize)]
 #[ent(typetag, typed_methods, builder, query)]
@@ -41,13 +36,16 @@ pub struct PageEnt {
     url: String,
 
     #[ent(field)]
-    custom: CustomInt,
+    c1: CustomString,
+
+    #[ent(field)]
+    c2: CustomType,
+
+    #[ent(field)]
+    c3: CustomUnit,
 
     #[ent(field)]
     list: Vec<String>,
-
-    #[ent(field)]
-    opt: Option<String>,
 
     #[ent(edge(shallow, type = "ContentEnt"))]
     header: Id,

@@ -38,6 +38,7 @@ pub(crate) fn impl_typed_edge_methods(
     }
 
     quote! {
+        #[automatically_derived]
         impl #name {
             #(#edge_methods)*
         }

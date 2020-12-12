@@ -1,9 +1,9 @@
 use super::{utils, EntInfo};
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Ident, Type};
 
-pub(crate) fn impl_ent(
+pub(crate) fn impl_ient(
     root: &TokenStream,
     name: &Ident,
     ent_info: &EntInfo,
@@ -21,14 +21,11 @@ pub(crate) fn impl_ent(
     let value_to_typed_field: Vec<TokenStream> = fields
         .iter()
         .map(|f| {
-            let ty = &f.ty;
-            if let Ok(inner_ty) = utils::strip_option(ty) {
-                Ok(quote! { value.try_into_option::<#inner_ty>() })
-            } else {
-                Ok(quote! { <#ty>::try_from(value) })
-            }
+            let value_ident = Ident::new("value", Span::call_site());
+            let assign_value = utils::convert_from_value(&value_ident, &f.ty);
+            quote! { #assign_value }
         })
-        .collect::<Result<Vec<TokenStream>, syn::Error>>()?;
+        .collect();
     let edge_names: Vec<Ident> = edges.iter().map(|e| e.name.clone()).collect();
     let edge_types: Vec<Type> = edges.iter().map(|e| e.ty.clone()).collect();
 
@@ -42,6 +39,7 @@ pub(crate) fn impl_ent(
 
     Ok(quote! {
         #typetag_t
+        #[automatically_derived]
         impl #root::IEnt for #name {
             fn id(&self) -> #root::Id {
                 self.#ident_id
