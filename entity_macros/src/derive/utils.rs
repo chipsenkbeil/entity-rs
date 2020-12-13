@@ -1,6 +1,6 @@
 use syn::{
     parse_quote, spanned::Spanned, Attribute, Data, DeriveInput, Expr, Fields, FieldsNamed,
-    GenericArgument, Ident, Meta, NestedMeta, PathArguments, Type,
+    GenericArgument, Ident, Meta, NestedMeta, PathArguments, PathSegment, Type,
 };
 
 /// Returns true if the attribute is in the form of ent(...) where
@@ -78,5 +78,27 @@ pub fn strip_option(input: &Type) -> Result<&Type, syn::Error> {
             None => Err(syn::Error::new(x.span(), "Expected type to have a path")),
         },
         x => Err(syn::Error::new(x.span(), "Expected type to be a path")),
+    }
+}
+
+/// Retrieves the inner type from a path segment, returning a reference to
+/// the type at the position if available, or returning an error
+pub fn get_inner_type_from_segment(
+    seg: &PathSegment,
+    pos: usize,
+    max_supported: usize,
+) -> Result<&Type, syn::Error> {
+    match &seg.arguments {
+        PathArguments::AngleBracketed(x) => {
+            if x.args.len() <= max_supported && x.args.len() > pos {
+                match x.args.iter().skip(pos).next().unwrap() {
+                    GenericArgument::Type(x) => Ok(x),
+                    _ => Err(syn::Error::new(seg.span(), "Unexpected type argument")),
+                }
+            } else {
+                Err(syn::Error::new(seg.span(), "Invalid total type arguments"))
+            }
+        }
+        _ => Err(syn::Error::new(seg.span(), "Unsupported type")),
     }
 }

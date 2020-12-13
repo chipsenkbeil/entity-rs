@@ -38,11 +38,6 @@ pub struct EntEdge {
     pub ent_ty: Type,
     pub kind: EntEdgeKind,
     pub deletion_policy: EntEdgeDeletionPolicy,
-
-    /// If edge(mutable) provided, signifies that this edge should be
-    /// able to be mutated (id(s) added/removed) and that a typed mehtod
-    /// for mutation should be included when generating typed methods
-    pub mutable: bool,
 }
 
 /// Information about an an edge's deletion policy
@@ -221,7 +216,6 @@ impl TryFrom<&DeriveInput> for EntInfo {
                     let span = x.span();
                     let mut deletion_policy = EntEdgeDeletionPolicy::Nothing;
                     let mut edge_type = None;
-                    let mut mutable = false;
 
                     // Figure out edge type (Maybe/One/Many) based on
                     // (Option<...>, ..., Vec<...>)
@@ -252,9 +246,6 @@ impl TryFrom<&DeriveInput> for EntInfo {
                                 }
                                 Meta::Path(x) if x.is_ident("deep") => {
                                     deletion_policy = EntEdgeDeletionPolicy::Deep;
-                                }
-                                Meta::Path(x) if x.is_ident("mutable") => {
-                                    mutable = true;
                                 }
                                 Meta::Path(x) if x.is_ident("type") => {
                                     return Err(syn::Error::new(
@@ -297,7 +288,6 @@ impl TryFrom<&DeriveInput> for EntInfo {
                             .ok_or_else(|| syn::Error::new(span, "Missing edge type"))?,
                         kind,
                         deletion_policy,
-                        mutable,
                     })
                 }
 

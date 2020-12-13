@@ -1,7 +1,7 @@
-use super::{utils, EntInfo};
+use super::{utils, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Ident, Type};
+use syn::{spanned::Spanned, Ident, Type};
 
 pub(crate) fn impl_ient(
     root: &TokenStream,
@@ -28,6 +28,9 @@ pub(crate) fn impl_ient(
         .collect();
     let edge_names: Vec<Ident> = edges.iter().map(|e| e.name.clone()).collect();
     let edge_types: Vec<Type> = edges.iter().map(|e| e.ty.clone()).collect();
+
+    let field_definitions = make_field_definitions(root, fields)?;
+    let edge_definitions = make_edge_definitions(root, edges);
 
     // If we have the attribute ent(typetag) on our struct, we will add a
     // new attribute of #[typetag::serde] onto our impl of IEnt
@@ -61,10 +64,8 @@ pub(crate) fn impl_ient(
                 self.#ident_last_updated
             }
 
-            fn field_names(&self) -> ::std::vec::Vec<::std::string::String> {
-                vec![#(
-                    ::std::string::String::from(stringify!(#field_names))
-                ),*]
+            fn field_definitions(&self) -> ::std::vec::Vec<#root::FieldDefinition> {
+                vec![#(#field_definitions),*]
             }
 
             fn field(&self, name: &str) -> ::std::option::Option<#root::Value> {
@@ -102,10 +103,8 @@ pub(crate) fn impl_ient(
                 }
             }
 
-            fn edge_names(&self) -> ::std::vec::Vec<::std::string::String> {
-                vec![#(
-                    ::std::string::String::from(stringify!(#edge_names))
-                ),*]
+            fn edge_definitions(&self) -> ::std::vec::Vec<#root::EdgeDefinition> {
+                vec![#(#edge_definitions),*]
             }
 
             fn edge(&self, name: &str) -> ::std::option::Option<#root::EdgeValue> {
@@ -213,4 +212,124 @@ pub(crate) fn impl_ient(
             }
         }
     })
+}
+
+fn make_field_definitions(
+    root: &TokenStream,
+    fields: &[EntField],
+) -> Result<Vec<TokenStream>, syn::Error> {
+    let mut token_streams = Vec::new();
+
+    for f in fields {
+        let name = &f.name;
+        let value_type = make_field_value_type(root, &f.ty)?;
+
+        let mut attrs = Vec::new();
+
+        if f.indexed {
+            attrs.push(quote! { #root::FieldAttribute::Indexed });
+        }
+
+        if !f.mutable {
+            attrs.push(quote! { #root::FieldAttribute::Immutable });
+        }
+
+        token_streams.push(quote! {
+            #root::FieldDefinition::new_with_attributes(
+                stringify!(#name),
+                #value_type,
+                vec![#(#attrs),*],
+            )
+        });
+    }
+
+    Ok(token_streams)
+}
+
+fn make_field_value_type(root: &TokenStream, r#type: &Type) -> Result<TokenStream, syn::Error> {
+    Ok(match r#type {
+        Type::Path(x) => {
+            if let Some(seg) = x.path.segments.last() {
+                match seg.ident.to_string().to_lowercase().as_str() {
+                    "vec" => {
+                        let inner = utils::get_inner_type_from_segment(seg, 0, 1)?;
+                        let inner_t = make_field_value_type(root, inner)?;
+
+                        quote! {
+                            #root::ValueType::List(::std::boxed::Box::from(#inner_t))
+                        }
+                    }
+                    "hashmap" => {
+                        let inner = utils::get_inner_type_from_segment(seg, 1, 2)?;
+                        let inner_t = make_field_value_type(root, inner)?;
+
+                        quote! {
+                            #root::ValueType::Map(::std::boxed::Box::from(#inner_t))
+                        }
+                    }
+                    "option" => {
+                        let inner = utils::get_inner_type_from_segment(seg, 0, 1)?;
+                        let inner_t = make_field_value_type(root, inner)?;
+
+                        quote! {
+                            #root::ValueType::Optional(::std::boxed::Box::from(#inner_t))
+                        }
+                    }
+                    "string" => quote! { #root::ValueType::Text },
+                    "()" => quote! { #root::PrimitiveValueType::Unit },
+                    "bool" => quote! { #root::PrimitiveValueType::Bool },
+                    "char" => quote! { #root::PrimitiveValueType::Char },
+                    "f32" => quote! { #root::NumberType::F32 },
+                    "f64" => quote! { #root::NumberType::F64 },
+                    "i128" => quote! { #root::NumberType::I128 },
+                    "i16" => quote! { #root::NumberType::I16 },
+                    "i32" => quote! { #root::NumberType::I32 },
+                    "i64" => quote! { #root::NumberType::I64 },
+                    "i8" => quote! { #root::NumberType::I8 },
+                    "isize" => quote! { #root::NumberType::Isize },
+                    "u128" => quote! { #root::NumberType::U128 },
+                    "u16" => quote! { #root::NumberType::U16 },
+                    "u32" => quote! { #root::NumberType::U32 },
+                    "u64" => quote! { #root::NumberType::U64 },
+                    "u8" => quote! { #root::NumberType::U8 },
+                    "usize" => quote! { #root::NumberType::Usize },
+                    _ => quote! { #root::ValueType::Custom },
+                }
+            } else {
+                return Err(syn::Error::new(
+                    r#type.span(),
+                    "Missing last segment in type path",
+                ));
+            }
+        }
+        _ => return Err(syn::Error::new(r#type.span(), "Unexpected type format")),
+    })
+}
+
+fn make_edge_definitions(root: &TokenStream, edges: &[EntEdge]) -> Vec<TokenStream> {
+    let mut token_streams = Vec::new();
+
+    for e in edges {
+        let name = &e.name;
+        let ty = match e.kind {
+            EntEdgeKind::Many => quote! { #root::EdgeValueType::Many },
+            EntEdgeKind::Maybe => quote! { #root::EdgeValueType::MaybeOne },
+            EntEdgeKind::One => quote! { #root::EdgeValueType::One },
+        };
+        let deletion_policy = match e.deletion_policy {
+            EntEdgeDeletionPolicy::Deep => quote! { #root::EdgeDeletionPolicy::DeepDelete },
+            EntEdgeDeletionPolicy::Shallow => quote! { #root::EdgeDeletionPolicy::ShallowDelete },
+            EntEdgeDeletionPolicy::Nothing => quote! { #root::EdgeDeletionPolicy::Nothing },
+        };
+
+        token_streams.push(quote! {
+            #root::EdgeDefinition::new_with_deletion_policy(
+                stringify!(#name),
+                #ty,
+                #deletion_policy,
+            )
+        });
+    }
+
+    token_streams
 }

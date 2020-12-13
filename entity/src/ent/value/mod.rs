@@ -265,6 +265,7 @@ pub enum ValueType {
     Optional(Box<ValueType>),
     Primitive(PrimitiveValueType),
     Text,
+    Custom,
 }
 
 impl ValueType {
@@ -446,6 +447,7 @@ impl std::fmt::Display for ValueType {
             Self::Optional(t) => write!(f, "optional:{}", t),
             Self::Primitive(t) => write!(f, "{}", t),
             Self::Text => write!(f, "text"),
+            Self::Custom => write!(f, "custom"),
         }
     }
 }

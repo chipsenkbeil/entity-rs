@@ -4,18 +4,11 @@ mod field;
 pub mod query;
 mod value;
 
-pub use any::AsAny;
-pub use edge::{
-    Edge, EdgeDefinition, EdgeDeletionPolicy, EdgeValue, EdgeValueMutationError, EdgeValueType,
-};
-pub use field::{Field, FieldAttribute, FieldDefinition};
-pub use query::{
-    CollectionCondition, Condition, EdgeCondition, FieldCondition, Query, QueryExt, TimeCondition,
-    ValueCondition,
-};
-pub use value::{
-    Number, NumberSign, NumberType, PrimitiveValue, PrimitiveValueType, Value, ValueType,
-};
+pub use any::*;
+pub use edge::*;
+pub use field::*;
+pub use query::*;
+pub use value::*;
 
 use crate::{Database, DatabaseError, DatabaseResult, Id};
 use derive_more::{Display, Error};
@@ -100,8 +93,16 @@ pub trait IEnt: AsAny + DynClone {
     /// as the milliseconds since epoch (1970-01-01 00:00:00 UTC)
     fn last_updated(&self) -> u64;
 
+    /// Returns a list of definitions for fields contained by the ent
+    fn field_definitions(&self) -> Vec<FieldDefinition>;
+
     /// Returns a list of names of fields contained by the ent
-    fn field_names(&self) -> Vec<String>;
+    fn field_names(&self) -> Vec<String> {
+        self.field_definitions()
+            .into_iter()
+            .map(|fd| fd.name)
+            .collect()
+    }
 
     /// Returns a copy of the value of the field with the specified name
     fn field(&self, name: &str) -> Option<Value>;
@@ -122,8 +123,16 @@ pub trait IEnt: AsAny + DynClone {
     /// time for the ent.
     fn update_field(&mut self, name: &str, value: Value) -> Result<Value, EntMutationError>;
 
+    /// Returns a list of definitions for edges contained by the ent
+    fn edge_definitions(&self) -> Vec<EdgeDefinition>;
+
     /// Returns a list of names of edges contained by the ent
-    fn edge_names(&self) -> Vec<String>;
+    fn edge_names(&self) -> Vec<String> {
+        self.edge_definitions()
+            .into_iter()
+            .map(|ed| ed.name)
+            .collect()
+    }
 
     /// Returns a copy of the value of the edge with the specified name
     fn edge(&self, name: &str) -> Option<EdgeValue>;
@@ -178,7 +187,7 @@ pub trait IEnt: AsAny + DynClone {
 }
 
 /// Blanket implementation for all ents that enables them to be converted
-/// to any, which is useful when converting `&dyn Ent` into a concrete type
+/// to any, which is useful when converting `&dyn IEnt` into a concrete type
 impl<T: IEnt> AsAny for T {
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -464,6 +473,35 @@ impl IEnt for Ent {
         self.last_updated
     }
 
+    /// Represents the definitions of fields contained within the ent instance
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{Ent, IEnt, Field, FieldDefinition, ValueType};
+    /// use std::str::FromStr;
+    ///
+    /// let fields = vec![
+    ///     Field::new("field1", 123u8),
+    ///     Field::new("field2", "some text"),
+    /// ];
+    /// let ent = Ent::from_collections(0, "", fields.iter().cloned(), vec![]);
+    ///
+    /// let defs = ent.field_definitions();
+    /// assert_eq!(defs.len(), 2);
+    /// assert!(defs.contains(&FieldDefinition::new(
+    ///     "field1",
+    ///     ValueType::from_str("u8").unwrap(),
+    /// )));
+    /// assert!(defs.contains(&FieldDefinition::new(
+    ///     "field2",
+    ///     ValueType::Text,
+    /// )));
+    /// ```
+    fn field_definitions(&self) -> Vec<FieldDefinition> {
+        self.fields.values().map(FieldDefinition::from).collect()
+    }
+
     /// Represents the names of fields contained within the ent instance
     ///
     /// ## Examples
@@ -535,6 +573,35 @@ impl IEnt for Ent {
                 name: name.to_string(),
             }),
         }
+    }
+
+    /// Represents the definitions of edges contained within the ent instance
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use entity::{Ent, IEnt, Edge, EdgeDefinition, EdgeValueType};
+    /// use std::str::FromStr;
+    ///
+    /// let edges = vec![
+    ///     Edge::new("edge1", 99),
+    ///     Edge::new("edge2", vec![1, 2, 3]),
+    /// ];
+    /// let ent = Ent::from_collections(0, "", vec![], edges);
+    ///
+    /// let defs = ent.edge_definitions();
+    /// assert_eq!(defs.len(), 2);
+    /// assert!(defs.contains(&EdgeDefinition::new(
+    ///     "edge1",
+    ///     EdgeValueType::One,
+    /// )));
+    /// assert!(defs.contains(&EdgeDefinition::new(
+    ///     "edge2",
+    ///     EdgeValueType::Many,
+    /// )));
+    /// ```
+    fn edge_definitions(&self) -> Vec<EdgeDefinition> {
+        self.edges.values().map(EdgeDefinition::from).collect()
     }
 
     /// Returns a list of names of edges contained by the ent

@@ -8,7 +8,7 @@ use strum::{Display, EnumDiscriminants, EnumString};
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct EdgeDefinition {
-    name: String,
+    pub(super) name: String,
     r#type: EdgeValueType,
     deletion_policy: EdgeDeletionPolicy,
 }
@@ -74,6 +74,12 @@ impl EdgeDefinition {
 impl From<Edge> for EdgeDefinition {
     fn from(edge: Edge) -> Self {
         Self::new_with_deletion_policy(edge.name, edge.value, edge.deletion_policy)
+    }
+}
+
+impl<'a> From<&'a Edge> for EdgeDefinition {
+    fn from(edge: &'a Edge) -> Self {
+        Self::new_with_deletion_policy(edge.name(), edge.value(), edge.deletion_policy())
     }
 }
 

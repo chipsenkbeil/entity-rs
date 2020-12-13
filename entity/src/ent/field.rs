@@ -6,7 +6,7 @@ use std::collections::HashSet;
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct FieldDefinition {
-    name: String,
+    pub(super) name: String,
     r#type: ValueType,
     attributes: Vec<FieldAttribute>,
 }
@@ -75,6 +75,12 @@ impl FieldDefinition {
 impl From<Field> for FieldDefinition {
     fn from(field: Field) -> Self {
         Self::new_with_attributes(field.name, field.value, field.attributes)
+    }
+}
+
+impl<'a> From<&'a Field> for FieldDefinition {
+    fn from(field: &'a Field) -> Self {
+        Self::new_with_attributes(field.name(), field.value(), field.attributes.clone())
     }
 }
 
