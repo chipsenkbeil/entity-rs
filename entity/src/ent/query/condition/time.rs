@@ -1,6 +1,6 @@
 /// Represents a condition on an ent's created or last updated property
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum TimeCondition {
     /// The time property has a value that comes before the provided value
     /// as the milliseconds since epoch (1970-01-01 00:00:00 UTC)

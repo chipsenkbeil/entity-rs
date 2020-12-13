@@ -24,7 +24,7 @@ pub struct EntField {
     /// indexed by the database where it is stored
     pub indexed: bool,
 
-    /// If field(mut) provided, signifies that this field should be
+    /// If field(mutable) provided, signifies that this field should be
     /// able to be mutated and that a typed method for mutation should
     /// be included when generating typed methods
     pub mutable: bool,
@@ -38,6 +38,11 @@ pub struct EntEdge {
     pub ent_ty: Type,
     pub kind: EntEdgeKind,
     pub deletion_policy: EntEdgeDeletionPolicy,
+
+    /// If edge(mutable) provided, signifies that this edge should be
+    /// able to be mutated (id(s) added/removed) and that a typed mehtod
+    /// for mutation should be included when generating typed methods
+    pub mutable: bool,
 }
 
 /// Information about an an edge's deletion policy
@@ -216,18 +221,40 @@ impl TryFrom<&DeriveInput> for EntInfo {
                     let span = x.span();
                     let mut deletion_policy = EntEdgeDeletionPolicy::Nothing;
                     let mut edge_type = None;
+                    let mut mutable = false;
 
+                    // Figure out edge type (Maybe/One/Many) based on
+                    // (Option<...>, ..., Vec<...>)
+                    let kind = match &ty {
+                        Type::Path(x) => {
+                            let segment =
+                                x.path.segments.last().ok_or_else(|| {
+                                    syn::Error::new(x.span(), "Missing edge id type")
+                                })?;
+                            match segment.ident.to_string().to_lowercase().as_str() {
+                                "option" => EntEdgeKind::Maybe,
+                                "vec" => EntEdgeKind::Many,
+                                _ => EntEdgeKind::One,
+                            }
+                        }
+                        x => return Err(syn::Error::new(x.span(), "Unexpected edge id type")),
+                    };
+
+                    // Determine other properties such as deletion policy and mutability
                     for m in x.nested {
                         match m {
                             NestedMeta::Meta(x) => match x {
                                 Meta::Path(x) if x.is_ident("nothing") => {
-                                    deletion_policy = EntEdgeDeletionPolicy::Nothing
+                                    deletion_policy = EntEdgeDeletionPolicy::Nothing;
                                 }
                                 Meta::Path(x) if x.is_ident("shallow") => {
-                                    deletion_policy = EntEdgeDeletionPolicy::Shallow
+                                    deletion_policy = EntEdgeDeletionPolicy::Shallow;
                                 }
                                 Meta::Path(x) if x.is_ident("deep") => {
-                                    deletion_policy = EntEdgeDeletionPolicy::Deep
+                                    deletion_policy = EntEdgeDeletionPolicy::Deep;
+                                }
+                                Meta::Path(x) if x.is_ident("mutable") => {
+                                    mutable = true;
                                 }
                                 Meta::Path(x) if x.is_ident("type") => {
                                     return Err(syn::Error::new(
@@ -263,23 +290,6 @@ impl TryFrom<&DeriveInput> for EntInfo {
                         }
                     }
 
-                    // Figure out edge type (Maybe/One/Many) based on
-                    // (Option<...>, ..., Vec<...>)
-                    let kind = match &ty {
-                        Type::Path(x) => {
-                            let segment =
-                                x.path.segments.last().ok_or_else(|| {
-                                    syn::Error::new(x.span(), "Missing edge id type")
-                                })?;
-                            match segment.ident.to_string().to_lowercase().as_str() {
-                                "option" => EntEdgeKind::Maybe,
-                                "vec" => EntEdgeKind::Many,
-                                _ => EntEdgeKind::One,
-                            }
-                        }
-                        x => return Err(syn::Error::new(x.span(), "Unexpected edge id type")),
-                    };
-
                     edges.push(EntEdge {
                         name,
                         ty,
@@ -287,6 +297,7 @@ impl TryFrom<&DeriveInput> for EntInfo {
                             .ok_or_else(|| syn::Error::new(span, "Missing edge type"))?,
                         kind,
                         deletion_policy,
+                        mutable,
                     })
                 }
 

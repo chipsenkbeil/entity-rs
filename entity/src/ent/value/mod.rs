@@ -12,7 +12,7 @@ use strum::ParseError;
 
 /// Represents either a primitive or complex value
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum Value {
     List(Vec<Value>),
     Map(HashMap<String, Value>),
@@ -258,7 +258,7 @@ impl_try_into!(Primitive, usize, usize::try_from);
 /// Represents value types (primitive or complex). Assumes that complex
 /// types will contain the same inner type and does not vary
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum ValueType {
     List(Box<ValueType>),
     Map(Box<ValueType>),
@@ -450,6 +450,12 @@ impl std::fmt::Display for ValueType {
     }
 }
 
+impl From<Value> for ValueType {
+    fn from(value: Value) -> Self {
+        Self::from(&value)
+    }
+}
+
 impl<'a> From<&'a Value> for ValueType {
     /// Produces the type of the referenced value by recursively iterating
     /// through complex types, assuming that the first value in types like
@@ -491,7 +497,7 @@ impl Default for PrimitiveValueType {
 
 /// Represents a primitive value
 #[derive(Copy, Clone, Debug, From)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum PrimitiveValue {
     Bool(bool),
     Char(char),
@@ -623,7 +629,7 @@ impl_to_number!(usize);
 
 /// Represents primitive value types
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum PrimitiveValueType {
     Bool,
     Char,

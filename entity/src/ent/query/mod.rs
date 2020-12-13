@@ -7,7 +7,7 @@ pub use condition::*;
 
 /// Represents a generic query to find ents within some database
 #[derive(Constructor, Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct Query(Condition);
 
 impl Query {

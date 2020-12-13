@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Ident, Type};
 
-/// Implements individual load methods for each of the provided edges for
+/// Implements individual typed methods for each of the provided edges for
 /// the ent with the given name
 pub(crate) fn impl_typed_edge_methods(
     root: &TokenStream,
@@ -13,7 +13,7 @@ pub(crate) fn impl_typed_edge_methods(
     let mut edge_methods: Vec<TokenStream> = Vec::new();
 
     for edge in edges {
-        let method = match edge.kind {
+        let load_method = match edge.kind {
             EntEdgeKind::Maybe => fn_typed_load_edge_of_maybe(
                 root,
                 &format_ident!("load_{}", edge.name),
@@ -33,8 +33,7 @@ pub(crate) fn impl_typed_edge_methods(
                 &edge.ent_ty,
             ),
         };
-
-        edge_methods.push(method);
+        edge_methods.push(load_method);
     }
 
     quote! {

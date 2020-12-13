@@ -2,7 +2,7 @@ use super::Condition;
 
 /// Represents a condition on an ent's edge
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum EdgeCondition {
     /// For all ents on a connected edge, check if at least one passes the condition
     Any(Box<Condition>),

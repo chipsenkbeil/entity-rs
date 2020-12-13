@@ -5,8 +5,10 @@ pub mod query;
 mod value;
 
 pub use any::AsAny;
-pub use edge::{Edge, EdgeDeletionPolicy, EdgeValue, EdgeValueMutationError, EdgeValueType};
-pub use field::{Field, FieldAttribute};
+pub use edge::{
+    Edge, EdgeDefinition, EdgeDeletionPolicy, EdgeValue, EdgeValueMutationError, EdgeValueType,
+};
+pub use field::{Field, FieldAttribute, FieldDefinition};
 pub use query::{
     CollectionCondition, Condition, EdgeCondition, FieldCondition, Query, QueryExt, TimeCondition,
     ValueCondition,
@@ -42,6 +44,9 @@ pub enum EntMutationError {
     #[display(fmt = "No field with name: {}", name)]
     NoField { name: String },
 
+    #[display(fmt = "Field cannot be updated as it is immutable: {}", name)]
+    FieldImmutable { name: String },
+
     #[display(fmt = "Failed to mark ent as updated: {}", source)]
     MarkUpdatedFailed { source: SystemTimeError },
 }
@@ -73,7 +78,7 @@ pub enum EntConversionError {
 /// can be accessed by str name regardless of compile-time characteristics
 ///
 /// Based on https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf
-#[cfg_attr(feature = "typetag", typetag::serde(tag = "type"))]
+#[cfg_attr(feature = "serde-1", typetag::serde(tag = "type"))]
 pub trait IEnt: AsAny + DynClone {
     /// Represents the unique id associated with each entity instance
     fn id(&self) -> Id;
@@ -207,9 +212,9 @@ impl<T: IEnt> IEntExt for T {
 /// loading ents from edges when connected.
 #[derive(Clone, Display)]
 #[display(fmt = "Ent {} of type {}", id, r#type)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ent {
-    #[cfg_attr(feature = "serde", serde(skip))]
+    #[cfg_attr(feature = "serde-1", serde(skip))]
     database: Option<Box<dyn Database>>,
     id: Id,
     r#type: String,
@@ -409,7 +414,7 @@ impl Default for Ent {
     }
 }
 
-#[cfg_attr(feature = "typetag", typetag::serde)]
+#[cfg_attr(feature = "serde-1", typetag::serde)]
 impl IEnt for Ent {
     /// Represents the unique id associated with each entity instance
     ///

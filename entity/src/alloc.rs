@@ -7,7 +7,7 @@ pub const EPHEMERAL_ID: Id = 0;
 
 /// Represents the allocator of unique ids
 #[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct IdAllocator {
     /// Represents a counter that keeps track of where an allocator is when
     /// consuming a new id

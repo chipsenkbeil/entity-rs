@@ -23,7 +23,7 @@ use std::{
 /// of the database. Best practice is to load the database only when first
 /// launching an application!
 #[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct InmemoryDatabase {
     /// Primary ent storage
     ents: Arc<Mutex<HashMap<Id, Box<dyn IEnt>>>>,

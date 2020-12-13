@@ -11,7 +11,7 @@ pub use time::TimeCondition;
 
 /// Represents a condition to a query, used to build up the query's logic
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum Condition {
     /// Query condition that always succeeds
     Always,

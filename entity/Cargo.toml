@@ -11,10 +11,11 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 
 [features]
-default = ["inmemory_db", "sled_db"]
+default = ["inmemory_db"]
 macros = ["entity_macros"]
-inmemory_db = ["serde", "serde/rc", "typetag"]
-sled_db = ["bincode", "serde", "sled", "typetag"]
+inmemory_db = []
+serde-1 = ["serde", "serde/rc", "typetag"]
+sled_db = ["bincode", "serde-1", "sled"]
 
 [dependencies]
 bincode = { version = "1.3.1", optional = true }

@@ -2,7 +2,7 @@ use crate::ent::value::Value;
 
 /// Represents a condition on an ent's field
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum FieldCondition {
     /// Query condition that succeeds if the ent's field value is not a
     /// collection and succeeds with the given condition applied to it
@@ -131,7 +131,7 @@ impl From<CollectionCondition> for FieldCondition {
 /// Represents a condition on an ent's field's value that does not represent
 /// a collection
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum ValueCondition {
     /// Query condition that succeeds if the ent's field is less than the
     /// specified field value
@@ -192,7 +192,7 @@ impl ValueCondition {
 
 /// Represents a condition on an ent's field's value that represents a collection
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum CollectionCondition {
     /// For all values within the collection, check if at least one passes the condition
     Any(Box<FieldCondition>),

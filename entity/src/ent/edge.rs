@@ -3,9 +3,83 @@ use derive_more::{From, TryInto};
 use std::collections::HashSet;
 use strum::{Display, EnumDiscriminants, EnumString};
 
+/// Represents a definition of an edge, which is comprised of its name, type
+/// of edge value, and the edge's deletion policy
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
+pub struct EdgeDefinition {
+    name: String,
+    r#type: EdgeValueType,
+    deletion_policy: EdgeDeletionPolicy,
+}
+
+impl EdgeDefinition {
+    /// Creates a new definition for an edge with the given name, type of value,
+    /// and deletion policy of nothing
+    pub fn new<N: Into<String>, T: Into<EdgeValueType>>(name: N, r#type: T) -> Self {
+        Self::new_with_deletion_policy(name, r#type, EdgeDeletionPolicy::default())
+    }
+
+    /// Creates a new definition for an edge with the given name, type of value,
+    /// and deletion policy
+    pub fn new_with_deletion_policy<N: Into<String>, T: Into<EdgeValueType>>(
+        name: N,
+        r#type: T,
+        deletion_policy: EdgeDeletionPolicy,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            r#type: r#type.into(),
+            deletion_policy,
+        }
+    }
+
+    /// The name of the edge tied to the definition
+    #[inline]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// The type of value of the edge tied to the definition
+    #[inline]
+    pub fn r#type(&self) -> &EdgeValueType {
+        &self.r#type
+    }
+
+    /// Returns the deletion policy of the edge tied to the definition
+    #[inline]
+    pub fn deletion_policy(&self) -> EdgeDeletionPolicy {
+        self.deletion_policy
+    }
+
+    /// Returns true if the deletion policy is nothing
+    #[inline]
+    pub fn has_no_deletion_policy(&self) -> bool {
+        matches!(self.deletion_policy(), EdgeDeletionPolicy::Nothing)
+    }
+
+    /// Returns true if the deletion policy is shallow
+    #[inline]
+    pub fn has_shallow_deletion_policy(&self) -> bool {
+        matches!(self.deletion_policy(), EdgeDeletionPolicy::ShallowDelete)
+    }
+
+    /// Returns true if the deletion policy is deep
+    #[inline]
+    pub fn has_deep_deletion_policy(&self) -> bool {
+        matches!(self.deletion_policy(), EdgeDeletionPolicy::DeepDelete)
+    }
+}
+
+impl From<Edge> for EdgeDefinition {
+    fn from(edge: Edge) -> Self {
+        Self::new_with_deletion_policy(edge.name, edge.value, edge.deletion_policy)
+    }
+}
+
 /// Represents a edge from an ent to one or more other ents
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct Edge {
     name: String,
     value: EdgeValue,
@@ -59,21 +133,25 @@ impl Edge {
     }
 
     /// The name of the edge
+    #[inline]
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// The value of the edge
+    #[inline]
     pub fn value(&self) -> &EdgeValue {
         &self.value
     }
 
     /// The mutable value of the edge
+    #[inline]
     pub fn value_mut(&mut self) -> &mut EdgeValue {
         &mut self.value
     }
 
     /// Converts edge into its value
+    #[inline]
     pub fn into_value(self) -> EdgeValue {
         self.value
     }
@@ -89,14 +167,33 @@ impl Edge {
     }
 
     /// Returns the policy to perform for this edge when its ent is deleted
+    #[inline]
     pub fn deletion_policy(&self) -> EdgeDeletionPolicy {
         self.deletion_policy
+    }
+
+    /// Returns true if the deletion policy is nothing
+    #[inline]
+    pub fn has_no_deletion_policy(&self) -> bool {
+        matches!(self.deletion_policy(), EdgeDeletionPolicy::Nothing)
+    }
+
+    /// Returns true if the deletion policy is shallow
+    #[inline]
+    pub fn has_shallow_deletion_policy(&self) -> bool {
+        matches!(self.deletion_policy(), EdgeDeletionPolicy::ShallowDelete)
+    }
+
+    /// Returns true if the deletion policy is deep
+    #[inline]
+    pub fn has_deep_deletion_policy(&self) -> bool {
+        matches!(self.deletion_policy(), EdgeDeletionPolicy::DeepDelete)
     }
 }
 
 /// Represents the policy to apply to an edge when its ent is deleted
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum EdgeDeletionPolicy {
     /// When this ent instance is deleted, nothing else will be done
     Nothing,
@@ -119,11 +216,11 @@ impl Default for EdgeDeletionPolicy {
 
 /// Represents the value of an edge, which is some collection of ent ids
 #[derive(Clone, Debug, From, PartialEq, Eq, EnumDiscriminants, TryInto)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 #[strum_discriminants(derive(Display, EnumString))]
 #[strum_discriminants(name(EdgeValueType), strum(serialize_all = "snake_case"))]
 #[cfg_attr(
-    feature = "serde",
+    feature = "serde-1",
     strum_discriminants(derive(serde::Serialize, serde::Deserialize))
 )]
 pub enum EdgeValue {
