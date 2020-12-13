@@ -1,0 +1,5 @@
+error: &'a T and &'a mut T are not supported as field types
+  --> $DIR/unsupported-field-type-of-reference.rs:18:15
+   |
+18 |     my_field: &'a u32,
+   |               ^

@@ -1,0 +1,5 @@
+error: Unexpected edge id type
+  --> $DIR/unexpected-ent-edge-id-type.rs:18:14
+   |
+18 |     my_edge: (Id, Id),
+   |              ^^^^^^^^

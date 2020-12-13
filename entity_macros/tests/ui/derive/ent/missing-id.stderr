@@ -1,0 +1,5 @@
+error: No id field provided
+ --> $DIR/missing-id.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

@@ -1,0 +1,5 @@
+error: Unexpected literal attribute
+  --> $DIR/unexpected-inner-lit-attr-for-ent-field.rs:17:17
+   |
+17 |     #[ent(field("something"))]
+   |                 ^^^^^^^^^^^

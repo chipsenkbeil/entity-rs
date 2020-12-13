@@ -15,6 +15,8 @@ pub fn impl_ent_builder(
     let vis = &input.vis;
     let named_fields = &utils::get_named_fields(input)?.named;
 
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
     let mut struct_field_names = Vec::new();
     let mut struct_fields = Vec::new();
     let mut struct_setters = Vec::new();
@@ -57,15 +59,15 @@ pub fn impl_ent_builder(
         impl ::std::error::Error for #builder_error_name {}
 
         #[derive(::std::default::Default)]
-        #vis struct #builder_name {
+        #vis struct #builder_name #ty_generics #where_clause {
             #(#struct_fields),*
         }
 
         #[automatically_derived]
-        impl #builder_name {
+        impl #impl_generics #builder_name #ty_generics #where_clause {
             #(#struct_setters)*
 
-            pub fn build(self) -> ::std::result::Result<#ent_name, #builder_error_name> {
+            pub fn build(self) -> ::std::result::Result<#ent_name #ty_generics, #builder_error_name> {
                 ::std::result::Result::Ok(#ent_name {
                     #(
                         #struct_field_names: self.#struct_field_names.ok_or(

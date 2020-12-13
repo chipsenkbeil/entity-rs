@@ -1,0 +1,5 @@
+error: Expected ent(...) attribute
+  --> $DIR/unexpected-ent-attr-with-no-inner.rs:11:5
+   |
+11 |     #[ent]
+   |     ^

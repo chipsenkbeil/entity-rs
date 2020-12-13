@@ -1,0 +1,5 @@
+error: Unexpected edge type assignment
+  --> $DIR/unexpected-ent-edge-type-assignment.rs:17:23
+   |
+17 |     #[ent(edge(type = 3))]
+   |                       ^

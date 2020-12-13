@@ -1,0 +1,8 @@
+error[E0277]: the trait bound `entity::Value: std::convert::From<T>` is not satisfied
+ --> $DIR/generic-field-cannot-convert-to-value.rs:4:17
+  |
+4 | #[derive(Clone, Ent)]
+  |                 ^^^ the trait `std::convert::From<T>` is not implemented for `entity::Value`
+  |
+  = note: required because of the requirements on the impl of `std::convert::Into<entity::Value>` for `T`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

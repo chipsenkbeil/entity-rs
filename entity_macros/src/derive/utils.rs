@@ -41,7 +41,10 @@ pub fn convert_from_value(name: &Ident, ty: &Type) -> Expr {
         }
     } else {
         parse_quote! {
-            <#ty>::try_from(#name)
+            {
+                use ::std::convert::TryInto;
+                #name.try_into()
+            }
         }
     }
 }
@@ -91,7 +94,7 @@ pub fn get_inner_type_from_segment(
     match &seg.arguments {
         PathArguments::AngleBracketed(x) => {
             if x.args.len() <= max_supported && x.args.len() > pos {
-                match x.args.iter().skip(pos).next().unwrap() {
+                match x.args.iter().nth(pos).unwrap() {
                     GenericArgument::Type(x) => Ok(x),
                     _ => Err(syn::Error::new(seg.span(), "Unexpected type argument")),
                 }

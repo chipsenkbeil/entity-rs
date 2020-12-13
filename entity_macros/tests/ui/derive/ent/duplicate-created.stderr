@@ -1,0 +1,5 @@
+error: Already have a created timestamp elsewhere
+  --> $DIR/duplicate-created.rs:14:11
+   |
+14 |     #[ent(created)]
+   |           ^^^^^^^

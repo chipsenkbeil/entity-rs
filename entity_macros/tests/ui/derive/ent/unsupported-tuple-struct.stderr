@@ -1,0 +1,5 @@
+error: Expected named fields
+ --> $DIR/unsupported-tuple-struct.rs:4:1
+  |
+4 | struct TestEnt(
+  | ^^^^^^

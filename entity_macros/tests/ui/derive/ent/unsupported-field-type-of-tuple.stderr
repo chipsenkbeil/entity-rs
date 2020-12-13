@@ -1,0 +1,5 @@
+error: Tuples are not supported as field types
+  --> $DIR/unsupported-field-type-of-tuple.rs:18:15
+   |
+18 |     my_field: (u32, u32),
+   |               ^^^^^^^^^^

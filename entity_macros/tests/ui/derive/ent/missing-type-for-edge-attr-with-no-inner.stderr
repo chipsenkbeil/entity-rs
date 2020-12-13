@@ -1,0 +1,5 @@
+error: Edge attribute is missing type
+  --> $DIR/missing-type-for-edge-attr-with-no-inner.rs:17:11
+   |
+17 |     #[ent(edge)]
+   |           ^^^^

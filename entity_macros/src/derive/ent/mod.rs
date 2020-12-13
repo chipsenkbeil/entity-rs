@@ -17,6 +17,7 @@ use syn::DeriveInput;
 pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::Error> {
     let name = &input.ident;
     let vis = &input.vis;
+    let generics = &input.generics;
     let const_type_name = format_ident!("{}_TYPE", name.to_string().to_shouty_snake_case());
     let ent_info = EntInfo::try_from(&input)?;
 
@@ -38,7 +39,7 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
     // struct of <name>Query that provides a convenient way to build
     // a typed ent query
     let query_t = if utils::has_outer_ent_attr(&input.attrs, "query") {
-        query::impl_ent_query(&root, name, vis, &const_type_name, &ent_info)?
+        query::impl_ent_query(&root, name, vis, generics, &const_type_name, &ent_info)?
     } else {
         quote! {}
     };
@@ -46,9 +47,14 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
     // If we have the attribute ent(typed_load_edge), we will add an additional
     // impl that provides loading of specific edges to corresponding types
     let typed_methods_t = if utils::has_outer_ent_attr(&input.attrs, "typed_methods") {
-        let edge_methods_t = edge::impl_typed_edge_methods(&root, &name, &ent_info.edges);
-        let field_methods_t =
-            field::impl_typed_field_methods(&root, &name, &ent_info.fields, &ent_info.last_updated);
+        let edge_methods_t = edge::impl_typed_edge_methods(&root, &name, generics, &ent_info.edges);
+        let field_methods_t = field::impl_typed_field_methods(
+            &root,
+            &name,
+            generics,
+            &ent_info.fields,
+            &ent_info.last_updated,
+        );
         quote! {
             #edge_methods_t
             #field_methods_t
@@ -62,6 +68,7 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
     let ent_t = ient::impl_ient(
         &root,
         name,
+        generics,
         &ent_info,
         &const_type_name,
         utils::has_outer_ent_attr(&input.attrs, "typetag"),

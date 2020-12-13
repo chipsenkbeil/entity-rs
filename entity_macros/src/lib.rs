@@ -14,9 +14,8 @@ use syn::{parse_macro_input, DeriveInput};
 /// /// the IEnt trait
 /// ///
 /// /// If using serde, this struct will need to implement serialize and
-/// /// deserialize itself
-/// #[derive(Clone, Ent, serde::Serialize, serde::Deserialize)]
-/// #[ent(typetag)]
+/// /// deserialize itself AND include the attribute ent(typetag)
+/// #[derive(Clone, Ent)]
 /// pub struct PageEnt {
 ///     /// Required and can only be specified once to indicate the struct
 ///     /// field that contains the ent's id
@@ -26,11 +25,10 @@ use syn::{parse_macro_input, DeriveInput};
 ///     /// Required and can only be specified once to indicate the struct
 ///     /// field that contains the database. Must be an option!
 ///     ///
-///     /// If using serde, this field will need to be skipped as it will
-///     /// not be serialized and, when deserializing, will be filled in
-///     /// with the database automatically
+///     /// If using serde, this field will need to be skipped via serde(skip)
+///     /// as it will not be serialized and, when deserializing, will be
+///     /// filled in with the database automatically
 ///     #[ent(database)]
-///     #[serde(skip)]
 ///     database: Option<Box<dyn Database>>,
 ///
 ///     /// Required and can only be specified once to indicate the struct

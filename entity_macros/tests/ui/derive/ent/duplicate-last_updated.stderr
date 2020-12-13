@@ -1,0 +1,5 @@
+error: Already have a last_updated timestamp elsewhere
+  --> $DIR/duplicate-last_updated.rs:17:11
+   |
+17 |     #[ent(last_updated)]
+   |           ^^^^^^^^^^^^

@@ -1,0 +1,5 @@
+error: Unions are unsupported
+ --> $DIR/unsupported-union.rs:4:1
+  |
+4 | union TestValue {
+  | ^^^^^

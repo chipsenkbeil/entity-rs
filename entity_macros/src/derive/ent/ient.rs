@@ -1,11 +1,12 @@
 use super::{utils, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{spanned::Spanned, Ident, Type};
+use syn::{spanned::Spanned, Generics, Ident, Type};
 
 pub(crate) fn impl_ient(
     root: &TokenStream,
     name: &Ident,
+    generics: &Generics,
     ent_info: &EntInfo,
     const_type_name: &Ident,
     include_typetag: bool,
@@ -17,7 +18,10 @@ pub(crate) fn impl_ient(
     let fields = &ent_info.fields;
     let edges = &ent_info.edges;
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let field_names: Vec<Ident> = fields.iter().map(|f| f.name.clone()).collect();
+    let field_types: Vec<Type> = fields.iter().map(|f| f.ty.clone()).collect();
     let value_to_typed_field: Vec<TokenStream> = fields
         .iter()
         .map(|f| {
@@ -43,7 +47,7 @@ pub(crate) fn impl_ient(
     Ok(quote! {
         #typetag_t
         #[automatically_derived]
-        impl #root::IEnt for #name {
+        impl #impl_generics #root::IEnt for #name #ty_generics #where_clause {
             fn id(&self) -> #root::Id {
                 self.#ident_id
             }
@@ -72,7 +76,7 @@ pub(crate) fn impl_ient(
                 match name {
                     #(
                         stringify!(#field_names) => ::std::option::Option::Some(
-                            #root::Value::from(self.#field_names.clone())
+                            self.#field_names.clone().into()
                         ),
                     )*
                     _ => ::std::option::Option::None,
@@ -80,8 +84,6 @@ pub(crate) fn impl_ient(
             }
 
             fn update_field(&mut self, name: &str, value: #root::Value) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
-                use ::std::convert::TryFrom;
-
                 self.#ident_last_updated = ::std::time::SystemTime::now()
                     .duration_since(::std::time::UNIX_EPOCH)
                     .map_err(|e| #root::EntMutationError::MarkUpdatedFailed { source: e })?
@@ -91,10 +93,11 @@ pub(crate) fn impl_ient(
                     #(
                         stringify!(#field_names) => {
                             let old_value = self.#field_names.clone();
-                            self.#field_names = #value_to_typed_field.map_err(
+                            let converted: ::std::result::Result<#field_types, &'static str> = #value_to_typed_field;
+                            self.#field_names = converted.map_err(
                                 |x| #root::EntMutationError::WrongValueType { description: x.to_string() }
                             )?;
-                            ::std::result::Result::Ok(#root::Value::from(old_value))
+                            ::std::result::Result::Ok(old_value.into())
                         },
                     )*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoField {
@@ -111,7 +114,7 @@ pub(crate) fn impl_ient(
                 match name {
                     #(
                         stringify!(#edge_names) => ::std::option::Option::Some(
-                            #root::EdgeValue::from(self.#edge_names.clone())
+                            self.#edge_names.clone().into()
                         ),
                     )*
                     _ => ::std::option::Option::None,
@@ -133,7 +136,7 @@ pub(crate) fn impl_ient(
                             self.#edge_names = <#edge_types>::try_from(value).map_err(
                                 |x| #root::EntMutationError::WrongEdgeValueType { description: x.to_string() }
                             )?;
-                            ::std::result::Result::Ok(#root::EdgeValue::from(old_value))
+                            ::std::result::Result::Ok(old_value.into())
                         },
                     )*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoEdge {
@@ -173,7 +176,11 @@ pub(crate) fn impl_ient(
                 use #root::{AsAny, Database, IEnt};
                 let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
                 let id = self.#ident_id;
-                match database.get(id)?.and_then(|ent| ent.as_any().downcast_ref::<#name>().map(::std::clone::Clone::clone)) {
+                match database.get(id)?.and_then(
+                    |ent| ent.as_any()
+                        .downcast_ref::<#name #ty_generics>()
+                        .map(::std::clone::Clone::clone)
+                ) {
                     ::std::option::Option::Some(x) => {
                         self.#ident_id = x.id();
                         self.#ident_created = x.created();
@@ -301,6 +308,42 @@ fn make_field_value_type(root: &TokenStream, r#type: &Type) -> Result<TokenStrea
                     "Missing last segment in type path",
                 ));
             }
+        }
+        Type::Array(_) => {
+            return Err(syn::Error::new(
+                r#type.span(),
+                "Arrays are not supported as field types",
+            ))
+        }
+        Type::BareFn(_) => {
+            return Err(syn::Error::new(
+                r#type.span(),
+                "fn(...) are not supported as field types",
+            ))
+        }
+        Type::Ptr(_) => {
+            return Err(syn::Error::new(
+                r#type.span(),
+                "*const T and *mut T are not supported as field types",
+            ))
+        }
+        Type::Reference(_) => {
+            return Err(syn::Error::new(
+                r#type.span(),
+                "&'a T and &'a mut T are not supported as field types",
+            ))
+        }
+        Type::Slice(_) => {
+            return Err(syn::Error::new(
+                r#type.span(),
+                "Slices are not supported as field types",
+            ))
+        }
+        Type::Tuple(_) => {
+            return Err(syn::Error::new(
+                r#type.span(),
+                "Tuples are not supported as field types",
+            ))
         }
         _ => return Err(syn::Error::new(r#type.span(), "Unexpected type format")),
     })

@@ -1,0 +1,5 @@
+error: Missing edge type
+  --> $DIR/missing-type-for-edge-attr-with-other-attrs.rs:17:11
+   |
+17 |     #[ent(edge(shallow))]
+   |           ^^^^

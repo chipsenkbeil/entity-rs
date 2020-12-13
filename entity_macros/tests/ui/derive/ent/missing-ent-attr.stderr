@@ -1,0 +1,5 @@
+error: Missing ent(...) attribute
+ --> $DIR/missing-ent-attr.rs:5:5
+  |
+5 |     id: Id,
+  |     ^^

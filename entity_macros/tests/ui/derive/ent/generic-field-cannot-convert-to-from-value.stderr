@@ -1,0 +1,31 @@
+error[E0277]: the trait bound `entity::Value: std::convert::From<T>` is not satisfied
+ --> $DIR/generic-field-cannot-convert-to-from-value.rs:3:17
+  |
+3 | #[derive(Clone, Ent)]
+  |                 ^^^ the trait `std::convert::From<T>` is not implemented for `entity::Value`
+  |
+  = note: required because of the requirements on the impl of `std::convert::Into<entity::Value>` for `T`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0271]: type mismatch resolving `<T as std::convert::TryFrom<entity::Value>>::Error == &str`
+ --> $DIR/generic-field-cannot-convert-to-from-value.rs:3:17
+  |
+3 | #[derive(Clone, Ent)]
+  |                 ^^^ expected enum `std::convert::Infallible`, found `&str`
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `T: std::convert::From<entity::Value>` is not satisfied
+ --> $DIR/generic-field-cannot-convert-to-from-value.rs:3:17
+  |
+3 | #[derive(Clone, Ent)]
+  |                 ^^^ the trait `std::convert::From<entity::Value>` is not implemented for `T`
+  |
+  = note: required because of the requirements on the impl of `std::convert::Into<T>` for `entity::Value`
+  = note: required because of the requirements on the impl of `std::convert::TryFrom<entity::Value>` for `T`
+  = note: required because of the requirements on the impl of `std::convert::TryInto<T>` for `entity::Value`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider further restricting this bound
+  |
+4 | struct TestEnt<T: Clone + 'static + std::convert::From<entity::Value>> {
+  |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

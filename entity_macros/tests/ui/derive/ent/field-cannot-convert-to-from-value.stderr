@@ -1,0 +1,33 @@
+error[E0277]: the trait bound `entity::Value: std::convert::From<CustomField>` is not satisfied
+ --> $DIR/field-cannot-convert-to-from-value.rs:6:17
+  |
+6 | #[derive(Clone, Ent)]
+  |                 ^^^ the trait `std::convert::From<CustomField>` is not implemented for `entity::Value`
+  |
+  = help: the following implementations were found:
+            <entity::Value as std::convert::From<&'a str>>
+            <entity::Value as std::convert::From<bool>>
+            <entity::Value as std::convert::From<char>>
+            <entity::Value as std::convert::From<entity::PrimitiveValue>>
+          and 18 others
+  = note: required because of the requirements on the impl of `std::convert::Into<entity::Value>` for `CustomField`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0271]: type mismatch resolving `<CustomField as std::convert::TryFrom<entity::Value>>::Error == &str`
+ --> $DIR/field-cannot-convert-to-from-value.rs:6:17
+  |
+6 | #[derive(Clone, Ent)]
+  |                 ^^^ expected enum `std::convert::Infallible`, found `&str`
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `CustomField: std::convert::From<entity::Value>` is not satisfied
+ --> $DIR/field-cannot-convert-to-from-value.rs:6:17
+  |
+6 | #[derive(Clone, Ent)]
+  |                 ^^^ the trait `std::convert::From<entity::Value>` is not implemented for `CustomField`
+  |
+  = note: required because of the requirements on the impl of `std::convert::Into<CustomField>` for `entity::Value`
+  = note: required because of the requirements on the impl of `std::convert::TryFrom<entity::Value>` for `CustomField`
+  = note: required because of the requirements on the impl of `std::convert::TryInto<CustomField>` for `entity::Value`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

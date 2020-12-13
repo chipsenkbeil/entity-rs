@@ -20,6 +20,5 @@ quote = "1.0.7"
 syn = { version = "1.0.53", features = ["full"] }
 
 [dev-dependencies]
-entity = { version = "0.1.0", path = "../entity", features = ["macros", "serde-1"] }
-serde = { version = "1.0.117", features = ["derive"] }
-typetag = { version = "0.1.6" }
+entity = { version = "0.1.0", path = "../entity", features = ["macros"] }
+trybuild = "1.0.35"

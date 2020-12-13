@@ -1,17 +1,19 @@
 use super::EntField;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::Ident;
+use syn::{Generics, Ident};
 
 /// Implements individual methods for each of the provided fields for
 /// the ent with the given name
 pub(crate) fn impl_typed_field_methods(
     root: &TokenStream,
     name: &Ident,
+    generics: &Generics,
     fields: &[EntField],
     last_updated_ident: &Ident,
 ) -> TokenStream {
     let mut field_methods: Vec<TokenStream> = Vec::new();
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     for field in fields {
         let field_name = &field.name;
@@ -45,7 +47,7 @@ pub(crate) fn impl_typed_field_methods(
 
     quote! {
         #[automatically_derived]
-        impl #name {
+        impl #impl_generics #name #ty_generics #where_clause {
             #(#field_methods)*
         }
     }

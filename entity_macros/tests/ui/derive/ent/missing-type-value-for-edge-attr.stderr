@@ -1,0 +1,5 @@
+error: Edge type must have type specified
+  --> $DIR/missing-type-value-for-edge-attr.rs:17:16
+   |
+17 |     #[ent(edge(type))]
+   |                ^^^^

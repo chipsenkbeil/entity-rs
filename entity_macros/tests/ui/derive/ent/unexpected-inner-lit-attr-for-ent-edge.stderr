@@ -1,0 +1,5 @@
+error: Unexpected literal attribute
+  --> $DIR/unexpected-inner-lit-attr-for-ent-edge.rs:17:34
+   |
+17 |     #[ent(edge(type = "TestEnt", "something"))]
+   |                                  ^^^^^^^^^^^

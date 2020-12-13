@@ -1,0 +1,5 @@
+error: Too many items within ent(...)
+  --> $DIR/too-many-attr-inside-ent-attr.rs:11:5
+   |
+11 |     #[ent(created, created)]
+   |     ^

@@ -1,0 +1,5 @@
+error: No database field provided
+ --> $DIR/missing-database.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

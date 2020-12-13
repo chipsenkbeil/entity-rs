@@ -1,16 +1,18 @@
 use super::{EntEdge, EntEdgeKind};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Ident, Type};
+use syn::{Generics, Ident, Type};
 
 /// Implements individual typed methods for each of the provided edges for
 /// the ent with the given name
 pub(crate) fn impl_typed_edge_methods(
     root: &TokenStream,
     name: &Ident,
+    generics: &Generics,
     edges: &[EntEdge],
 ) -> TokenStream {
     let mut edge_methods: Vec<TokenStream> = Vec::new();
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     for edge in edges {
         let load_method = match edge.kind {
@@ -38,7 +40,7 @@ pub(crate) fn impl_typed_edge_methods(
 
     quote! {
         #[automatically_derived]
-        impl #name {
+        impl #impl_generics #name #ty_generics #where_clause {
             #(#edge_methods)*
         }
     }

@@ -1,17 +1,26 @@
 use super::EntInfo;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Ident, Visibility};
+use syn::{parse_quote, Expr, Generics, Ident, Type, Visibility};
 
 pub fn impl_ent_query(
     root: &TokenStream,
     name: &Ident,
     vis: &Visibility,
+    generics: &Generics,
     const_type_name: &Ident,
     ent_info: &EntInfo,
 ) -> Result<TokenStream, syn::Error> {
     let query_name = format_ident!("{}Query", name);
     let mut struct_setters = Vec::new();
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let ty_phantoms: Vec<Type> = generics
+        .type_params()
+        .map(|tp| parse_quote!(::std::marker::PhantomData<#tp>))
+        .collect();
+    let default_phantoms: Vec<Expr> = (0..generics.type_params().count())
+        .map(|_| parse_quote!(::std::marker::PhantomData))
+        .collect();
 
     // Default query methods available outside of fields
     struct_setters.push(quote! {
@@ -195,33 +204,42 @@ pub fn impl_ent_query(
 
     Ok(quote! {
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
-        #vis struct #query_name(#root::Query);
+        #vis struct #query_name #impl_generics(
+            #root::Query,
+            #(#ty_phantoms),*
+        ) #where_clause;
 
         #[automatically_derived]
-        impl ::std::convert::From<#query_name> for #root::Query {
+        impl #impl_generics ::std::convert::From<#query_name #ty_generics> for #root::Query #where_clause {
             fn from(q: #query_name) -> Self {
                 q.0
             }
         }
 
         #[automatically_derived]
-        impl ::std::default::Default for #query_name {
+        impl #impl_generics ::std::default::Default for #query_name #ty_generics #where_clause {
             #[doc = #default_doc_str]
             fn default() -> Self {
-                Self(#root::Query::new(
-                    #root::Condition::HasType(
-                        ::std::string::String::from(#const_type_name),
-                    )
-                ))
+                Self(
+                    #root::Query::new(
+                        #root::Condition::HasType(
+                            ::std::string::String::from(#const_type_name),
+                        )
+                    ),
+                    #(#default_phantoms),*
+                )
             }
         }
 
         #[automatically_derived]
-        impl #query_name {
+        impl #impl_generics #query_name #ty_generics #where_clause {
             #(#struct_setters)*
 
             #[doc = "Executes query against the given database"]
-            pub fn execute<D: #root::Database>(self, database: &D) -> #root::DatabaseResult<Vec<#name>> {
+            pub fn execute<__entity_D: #root::Database>(
+                self,
+                database: &__entity_D,
+            ) -> #root::DatabaseResult<Vec<#name #ty_generics>> {
                 use #root::{Database, DatabaseExt};
                 database.find_all_typed::<#name>(self.0)
             }

@@ -1,0 +1,5 @@
+error: *const T and *mut T are not supported as field types
+  --> $DIR/unsupported-field-type-of-const-ptr.rs:18:15
+   |
+18 |     my_field: *const u32,
+   |               ^

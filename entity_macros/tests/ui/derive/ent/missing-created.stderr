@@ -1,0 +1,5 @@
+error: No created field provided
+ --> $DIR/missing-created.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

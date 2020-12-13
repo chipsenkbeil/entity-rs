@@ -1,0 +1,5 @@
+error: Arrays are not supported as field types
+  --> $DIR/unsupported-field-type-of-array.rs:18:15
+   |
+18 |     my_field: [u32; 3],
+   |               ^^^^^^^^

@@ -72,10 +72,7 @@ impl TryFrom<&DeriveInput> for EntInfo {
 
         for f in named_fields {
             let span = f.span();
-            let name = f
-                .ident
-                .clone()
-                .ok_or_else(|| syn::Error::new(span, "Expected named field"))?;
+            let name = f.ident.clone().unwrap();
             let ty = f.ty.clone();
 
             // Find the attribute that is ent(...), which is required on each
