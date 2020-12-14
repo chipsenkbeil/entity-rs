@@ -1,0 +1,8 @@
+error[E0599]: no method named `my_edge_id` found for struct `TestEnt` in the current scope
+  --> $DIR/no-ent-typed_methods-means-no-typed-getter-for-edge-id.rs:30:17
+   |
+4  | struct TestEnt {
+   | -------------- method `my_edge_id` not found for this
+...
+30 |     let _ = ent.my_edge_id();
+   |                 ^^^^^^^^^^ method not found in `TestEnt`

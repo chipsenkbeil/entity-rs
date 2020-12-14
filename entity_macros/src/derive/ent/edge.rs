@@ -15,27 +15,9 @@ pub(crate) fn impl_typed_edge_methods(
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     for edge in edges {
-        let load_method = match edge.kind {
-            EntEdgeKind::Maybe => fn_typed_load_edge_of_maybe(
-                root,
-                &format_ident!("load_{}", edge.name),
-                &edge.name,
-                &edge.ent_ty,
-            ),
-            EntEdgeKind::One => fn_typed_load_edge_of_one(
-                root,
-                &format_ident!("load_{}", edge.name),
-                &edge.name,
-                &edge.ent_ty,
-            ),
-            EntEdgeKind::Many => fn_typed_load_edge_of_many(
-                root,
-                &format_ident!("load_{}", edge.name),
-                &edge.name,
-                &edge.ent_ty,
-            ),
-        };
-        edge_methods.push(load_method);
+        edge_methods.push(fn_typed_id_getter(&edge));
+        edge_methods.push(fn_typed_id_setter(&edge));
+        edge_methods.push(fn_typed_load_edge(root, &edge));
     }
 
     quote! {
@@ -43,6 +25,64 @@ pub(crate) fn impl_typed_edge_methods(
         impl #impl_generics #name #ty_generics #where_clause {
             #(#edge_methods)*
         }
+    }
+}
+
+fn fn_typed_id_getter(edge: &EntEdge) -> TokenStream {
+    let name = &edge.name;
+    let ty = &edge.ty;
+
+    let method_name = match edge.kind {
+        EntEdgeKind::Maybe | EntEdgeKind::One => format_ident!("{}_id", name),
+        EntEdgeKind::Many => format_ident!("{}_ids", name),
+    };
+
+    quote! {
+        pub fn #method_name(&self) -> #ty {
+            self.#name.clone()
+        }
+    }
+}
+
+fn fn_typed_id_setter(edge: &EntEdge) -> TokenStream {
+    let name = &edge.name;
+    let ty = &edge.ty;
+
+    let method_name = match edge.kind {
+        EntEdgeKind::Maybe | EntEdgeKind::One => format_ident!("set_{}_id", name),
+        EntEdgeKind::Many => format_ident!("set_{}_ids", name),
+    };
+
+    quote! {
+        #[doc = "Updates edge ids, returning old value"]
+        pub fn #method_name(&mut self, value: #ty) -> #ty {
+            let old_value = self.#name.clone();
+            self.#name = value;
+            old_value
+        }
+    }
+}
+
+fn fn_typed_load_edge(root: &TokenStream, edge: &EntEdge) -> TokenStream {
+    match edge.kind {
+        EntEdgeKind::Maybe => fn_typed_load_edge_of_maybe(
+            root,
+            &format_ident!("load_{}", edge.name),
+            &edge.name,
+            &edge.ent_ty,
+        ),
+        EntEdgeKind::One => fn_typed_load_edge_of_one(
+            root,
+            &format_ident!("load_{}", edge.name),
+            &edge.name,
+            &edge.ent_ty,
+        ),
+        EntEdgeKind::Many => fn_typed_load_edge_of_many(
+            root,
+            &format_ident!("load_{}", edge.name),
+            &edge.name,
+            &edge.ent_ty,
+        ),
     }
 }
 
