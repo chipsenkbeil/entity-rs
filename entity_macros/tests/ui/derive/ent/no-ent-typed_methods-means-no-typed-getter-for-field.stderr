@@ -1,0 +1,10 @@
+error[E0599]: no method named `my_field` found for struct `TestEnt` in the current scope
+  --> $DIR/no-ent-typed_methods-means-no-typed-getter-for-field.rs:30:17
+   |
+4  | struct TestEnt {
+   | -------------- method `my_field` not found for this
+...
+30 |     let _ = ent.my_field();
+   |                 ^^^^^^^^-- help: remove the arguments
+   |                 |
+   |                 field, not a method

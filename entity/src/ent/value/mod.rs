@@ -490,6 +490,13 @@ impl From<PrimitiveValueType> for ValueType {
     }
 }
 
+impl From<NumberType> for ValueType {
+    /// Converts number type (subclass of primitive type) to a value type
+    fn from(t: NumberType) -> Self {
+        Self::Primitive(PrimitiveValueType::Number(t))
+    }
+}
+
 impl Default for PrimitiveValueType {
     /// Returns default primitive value type of unit
     fn default() -> Self {
