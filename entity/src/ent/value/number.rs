@@ -366,9 +366,6 @@ impl PartialOrd for Number {
             return None;
         }
 
-        println!("{:?} | {:?}", self, other);
-        println!("{:?} | {:?}", self.sign(), other.sign());
-
         match (self.sign(), other.sign()) {
             (NumberSign::Negative, NumberSign::Negative) => Some(
                 other
