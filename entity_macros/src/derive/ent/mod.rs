@@ -48,13 +48,8 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
     // impl that provides loading of specific edges to corresponding types
     let typed_methods_t = if utils::has_outer_ent_attr(&input.attrs, "typed_methods") {
         let edge_methods_t = edge::impl_typed_edge_methods(&root, &name, generics, &ent_info.edges);
-        let field_methods_t = field::impl_typed_field_methods(
-            &root,
-            &name,
-            generics,
-            &ent_info.fields,
-            &ent_info.last_updated,
-        );
+        let field_methods_t =
+            field::impl_typed_field_methods(&root, &name, generics, &ent_info.fields);
         quote! {
             #edge_methods_t
             #field_methods_t

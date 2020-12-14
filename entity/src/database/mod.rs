@@ -46,6 +46,9 @@ pub enum DatabaseError {
 
     #[display(fmt = "Ent Capacity Reached")]
     EntCapacityReached,
+
+    #[display(fmt = "{}", source)]
+    Other { source: Box<dyn std::error::Error> },
 }
 
 impl std::error::Error for DatabaseError {}

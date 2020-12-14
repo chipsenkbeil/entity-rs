@@ -68,6 +68,14 @@ pub(crate) fn impl_ient(
                 self.#ident_last_updated
             }
 
+            fn mark_updated(&mut self) -> Result<(), #root::EntMutationError> {
+                self.#ident_last_updated = ::std::time::SystemTime::now()
+                    .duration_since(::std::time::UNIX_EPOCH)
+                    .map_err(|e| #root::EntMutationError::MarkUpdatedFailed { source: e })?
+                    .as_millis() as u64;
+                Ok(())
+            }
+
             fn field_definitions(&self) -> ::std::vec::Vec<#root::FieldDefinition> {
                 vec![#(#field_definitions),*]
             }
@@ -84,11 +92,6 @@ pub(crate) fn impl_ient(
             }
 
             fn update_field(&mut self, name: &str, value: #root::Value) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
-                self.#ident_last_updated = ::std::time::SystemTime::now()
-                    .duration_since(::std::time::UNIX_EPOCH)
-                    .map_err(|e| #root::EntMutationError::MarkUpdatedFailed { source: e })?
-                    .as_millis() as u64;
-
                 match name {
                     #(
                         stringify!(#field_names) => {
@@ -123,11 +126,6 @@ pub(crate) fn impl_ient(
 
             fn update_edge(&mut self, name: &str, value: #root::EdgeValue) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
                 use ::std::convert::TryFrom;
-
-                self.#ident_last_updated = ::std::time::SystemTime::now()
-                    .duration_since(::std::time::UNIX_EPOCH)
-                    .map_err(|e| #root::EntMutationError::MarkUpdatedFailed { source: e })?
-                    .as_millis() as u64;
 
                 match name {
                     #(

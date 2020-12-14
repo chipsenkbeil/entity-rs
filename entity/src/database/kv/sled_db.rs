@@ -261,6 +261,11 @@ impl Database for SledDatabase {
         // Update the ent's id to match what is actually to be used
         ent.set_id(id);
 
+        // Update the ent's last_updated to be the current time
+        ent.mark_updated().map_err(|e| DatabaseError::Other {
+            source: Box::from(e),
+        })?;
+
         // Add our ent's id to the set of ids associated with the ent's type
         self.with_ent_type_set(ent.r#type(), |set| {
             set.insert(id);
@@ -345,6 +350,19 @@ mod tests {
 
         let ent = db.get(id).expect("Failed to get ent").expect("Ent missing");
         assert_eq!(ent.id(), id);
+    }
+
+    #[test]
+    fn insert_should_update_the_last_updated_time_with_the_current_time() {
+        let db = new_db();
+
+        let ent = Ent::new_untyped(EPHEMERAL_ID);
+        let last_updated = ent.last_updated();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
+        let id = db.insert(Box::from(ent)).expect("Failed to insert ent");
+        let ent = db.get(id).expect("Failed to get ent").expect("Ent missing");
+        assert!(ent.last_updated() > last_updated);
     }
 
     #[test]

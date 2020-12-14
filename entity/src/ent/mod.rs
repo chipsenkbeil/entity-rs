@@ -93,6 +93,10 @@ pub trait IEnt: AsAny + DynClone {
     /// as the milliseconds since epoch (1970-01-01 00:00:00 UTC)
     fn last_updated(&self) -> u64;
 
+    /// Updates the time when the instance of the ent was last updated to
+    /// the current time in milliseconds since epoch (1970-01-01 00:00:00 UTC)
+    fn mark_updated(&mut self) -> Result<(), EntMutationError>;
+
     /// Returns a list of definitions for fields contained by the ent
     fn field_definitions(&self) -> Vec<FieldDefinition>;
 
@@ -404,15 +408,6 @@ impl Ent {
 
         Ok(())
     }
-
-    /// Updates the local, internal timestamp of this ent instance
-    pub(crate) fn mark_updated(&mut self) -> Result<(), EntMutationError> {
-        self.last_updated = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| EntMutationError::MarkUpdatedFailed { source: e })?
-            .as_millis() as u64;
-        Ok(())
-    }
 }
 
 impl Default for Ent {
@@ -471,6 +466,15 @@ impl IEnt for Ent {
     /// as the milliseconds since epoch (1970-01-01 00:00:00 UTC)
     fn last_updated(&self) -> u64 {
         self.last_updated
+    }
+
+    /// Updates the local, internal timestamp of this ent instance
+    fn mark_updated(&mut self) -> Result<(), EntMutationError> {
+        self.last_updated = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| EntMutationError::MarkUpdatedFailed { source: e })?
+            .as_millis() as u64;
+        Ok(())
     }
 
     /// Represents the definitions of fields contained within the ent instance

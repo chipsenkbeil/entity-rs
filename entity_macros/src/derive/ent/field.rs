@@ -10,7 +10,6 @@ pub(crate) fn impl_typed_field_methods(
     name: &Ident,
     generics: &Generics,
     fields: &[EntField],
-    last_updated_ident: &Ident,
 ) -> TokenStream {
     let mut field_methods: Vec<TokenStream> = Vec::new();
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -31,13 +30,7 @@ pub(crate) fn impl_typed_field_methods(
             let setter = quote! {
                 pub fn #setter_name(&mut self, x: #field_type) -> ::std::result::Result<#field_type, #root::EntMutationError> {
                     let old_value = self.#field_name.clone();
-
-                    self.#last_updated_ident = ::std::time::SystemTime::now()
-                        .duration_since(::std::time::UNIX_EPOCH)
-                        .map_err(|e| #root::EntMutationError::MarkUpdatedFailed { source: e })?
-                        .as_millis() as u64;
                     self.#field_name = x;
-
                     ::std::result::Result::Ok(old_value)
                 }
             };
