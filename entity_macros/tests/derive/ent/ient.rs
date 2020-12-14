@@ -1,7 +1,8 @@
+use derivative::Derivative;
 use entity::{
-    Database, EdgeDefinition, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent, EntMutationError,
-    FieldAttribute, FieldDefinition, IEnt, Id, InmemoryDatabase, NumberType, PrimitiveValueType,
-    Value, ValueType,
+    Database, DatabaseError, EdgeDefinition, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent,
+    EntMutationError, FieldAttribute, FieldDefinition, IEnt, Id, InmemoryDatabase, NumberType,
+    PrimitiveValueType, Value, ValueType, EPHEMERAL_ID,
 };
 
 #[test]
@@ -105,7 +106,7 @@ fn created_should_return_copy_of_marked_created_field() {
     }
 
     let ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 999,
         last_updated: 0,
@@ -132,7 +133,7 @@ fn last_updated_should_return_copy_of_marked_last_updated_field() {
     }
 
     let ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 0,
         last_updated: 999,
@@ -177,7 +178,7 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
     }
 
     let ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 0,
         last_updated: 0,
@@ -252,7 +253,7 @@ fn field_should_return_abstract_value_if_exists() {
     }
 
     let ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 0,
         last_updated: 0,
@@ -307,7 +308,7 @@ fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() 
     }
 
     let mut ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 0,
         last_updated: 0,
@@ -414,7 +415,7 @@ fn edge_definitions_should_return_list_of_definitions_for_ent_edges() {
     }
 
     let ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 0,
         last_updated: 0,
@@ -529,7 +530,7 @@ fn edge_should_return_abstract_value_if_exists() {
     }
 
     let ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 0,
         last_updated: 0,
@@ -576,7 +577,7 @@ fn update_edge_should_change_the_edge_with_given_name_if_it_exists_to_value() {
     }
 
     let mut ent = TestEnt {
-        id: 0,
+        id: EPHEMERAL_ID,
         database: None,
         created: 0,
         last_updated: 0,
@@ -708,20 +709,299 @@ fn is_connected_should_return_true_if_database_is_contained_within_ent() {
 
 #[test]
 fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
-    todo!();
+    #[derive(Clone, Derivative, Ent)]
+    #[derivative(Debug, PartialEq, Eq)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[derivative(Debug = "ignore")]
+        #[derivative(PartialEq = "ignore")]
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[derivative(PartialEq = "ignore")]
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEnt"))]
+        parent: Option<Id>,
+
+        #[ent(edge(type = "TestEnt"))]
+        favorite: Id,
+
+        #[ent(edge(type = "TestEnt"))]
+        children: Vec<Id>,
+
+        #[ent(field)]
+        value: String,
+    }
+
+    let database = Box::from(InmemoryDatabase::default());
+
+    let mut ent1 = TestEnt {
+        id: 1,
+        database: None,
+        created: 0,
+        last_updated: 0,
+        parent: None,
+        favorite: 2,
+        children: vec![2, 3],
+        value: String::from("ent1"),
+    };
+
+    let mut ent2 = TestEnt {
+        id: 2,
+        database: None,
+        created: 0,
+        last_updated: 0,
+        parent: Some(1),
+        favorite: 3,
+        children: vec![],
+        value: String::from("ent2"),
+    };
+
+    let mut ent3 = TestEnt {
+        id: 3,
+        database: None,
+        created: 0,
+        last_updated: 0,
+        parent: Some(1),
+        favorite: 1,
+        children: vec![],
+        value: String::from("ent3"),
+    };
+
+    assert!(matches!(
+        ent1.load_edge("parent"),
+        Err(DatabaseError::Disconnected)
+    ));
+    assert!(matches!(
+        ent1.load_edge("favorite"),
+        Err(DatabaseError::Disconnected)
+    ));
+    assert!(matches!(
+        ent1.load_edge("children"),
+        Err(DatabaseError::Disconnected)
+    ));
+    assert!(matches!(
+        ent1.load_edge("something"),
+        Err(DatabaseError::Disconnected)
+    ));
+
+    ent1.connect(database.clone());
+    ent2.connect(database.clone());
+    ent3.connect(database);
+
+    ent1.commit().expect("Failed to save Ent1");
+    ent2.commit().expect("Failed to save Ent2");
+    ent3.commit().expect("Failed to save Ent3");
+
+    let children = ent1
+        .load_edge("children")
+        .expect("Failed to load ent1 children");
+    assert_eq!(
+        children
+            .iter()
+            .map(|ent| ent
+                .as_any()
+                .downcast_ref::<TestEnt>()
+                .expect("Could not cast to TestEnt"))
+            .collect::<Vec<&TestEnt>>(),
+        vec![&ent2, &ent3],
+    );
+
+    let parent = ent2
+        .load_edge("parent")
+        .expect("Failed to load ent2 parent");
+    assert_eq!(
+        parent
+            .iter()
+            .map(|ent| ent
+                .as_any()
+                .downcast_ref::<TestEnt>()
+                .expect("Could not cast to TestEnt"))
+            .collect::<Vec<&TestEnt>>(),
+        vec![&ent1],
+    );
+
+    let favorite = ent3
+        .load_edge("favorite")
+        .expect("Failed to load ent3 favorite");
+    assert_eq!(
+        favorite
+            .iter()
+            .map(|ent| ent
+                .as_any()
+                .downcast_ref::<TestEnt>()
+                .expect("Could not cast to TestEnt"))
+            .collect::<Vec<&TestEnt>>(),
+        vec![&ent1],
+    );
+
+    assert!(matches!(
+        ent1.load_edge("something"),
+        Err(DatabaseError::MissingEdge { .. })
+    ));
 }
 
 #[test]
 fn refresh_should_update_ent_inplace_with_database_value() {
-    todo!();
+    #[derive(Clone, Derivative, Ent)]
+    #[derivative(Debug, PartialEq, Eq)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[derivative(Debug = "ignore")]
+        #[derivative(PartialEq = "ignore")]
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[derivative(PartialEq = "ignore")]
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        value: String,
+    }
+
+    let database = InmemoryDatabase::default();
+
+    let mut ent = TestEnt {
+        id: 999,
+        database: None,
+        created: 0,
+        last_updated: 0,
+        value: String::from("test"),
+    };
+
+    assert!(matches!(ent.refresh(), Err(DatabaseError::Disconnected)));
+
+    // Insert ent with same id that has some different values
+    database
+        .insert(Box::from(TestEnt {
+            id: 999,
+            database: None,
+            created: 3,
+            // NOTE: This will get replaced by the database
+            last_updated: 0,
+            value: String::from("different"),
+        }))
+        .expect("Failed to add ent to database");
+
+    ent.connect(Box::from(database.clone()));
+    ent.refresh().expect("Failed to refresh ent");
+    assert_eq!(ent.id, 999);
+    assert_eq!(ent.database.is_some(), true);
+    assert_eq!(ent.created, 3);
+    assert!(ent.last_updated > 0);
+    assert_eq!(ent.value, "different");
 }
 
 #[test]
-fn commit_should_save_ent_to_database() {
-    todo!();
+fn commit_should_save_ent_to_database_and_update_id_if_it_was_changed() {
+    #[derive(Clone, Derivative, Ent)]
+    #[derivative(Debug, PartialEq, Eq)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[derivative(Debug = "ignore")]
+        #[derivative(PartialEq = "ignore")]
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[derivative(PartialEq = "ignore")]
+        #[ent(last_updated)]
+        last_updated: u64,
+    }
+
+    let database = InmemoryDatabase::default();
+
+    let mut ent = TestEnt {
+        id: EPHEMERAL_ID,
+        database: None,
+        created: 0,
+        last_updated: 0,
+    };
+
+    assert!(matches!(ent.commit(), Err(DatabaseError::Disconnected)));
+
+    ent.connect(Box::from(database.clone()));
+    ent.commit().expect("Failed to commit ent");
+    assert_ne!(ent.id, EPHEMERAL_ID, "Ephemeral id was not changed in ent");
+    assert_eq!(
+        database
+            .get(ent.id)
+            .expect("Unexpected database error")
+            .is_some(),
+        true,
+    );
 }
 
 #[test]
 fn remove_should_delete_ent_from_database() {
-    todo!();
+    #[derive(Clone, Derivative, Ent)]
+    #[derivative(Debug, PartialEq, Eq)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[derivative(Debug = "ignore")]
+        #[derivative(PartialEq = "ignore")]
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[derivative(PartialEq = "ignore")]
+        #[ent(last_updated)]
+        last_updated: u64,
+    }
+
+    let database = InmemoryDatabase::default();
+
+    let mut ent = TestEnt {
+        id: 999,
+        database: None,
+        created: 0,
+        last_updated: 0,
+    };
+
+    assert!(matches!(
+        ent.clone().remove(),
+        Err(DatabaseError::Disconnected)
+    ));
+
+    ent.connect(Box::from(database.clone()));
+    assert_eq!(ent.clone().remove().expect("Failed to remove ent"), false);
+    assert_eq!(
+        database.get(999).expect("Failed to get ent").is_none(),
+        true,
+        "Ent unexpectedly in database",
+    );
+
+    ent.commit().expect("Failed to insert ent into database");
+    assert_eq!(
+        database.get(999).expect("Failed to get ent").is_some(),
+        true,
+        "Ent unexpectedly not in database",
+    );
+    assert_eq!(ent.remove().expect("Failed to remove ent"), true);
+    assert_eq!(
+        database.get(999).expect("Failed to get ent").is_none(),
+        true,
+        "Ent unexpectedly in database",
+    );
 }
