@@ -1,4 +1,5 @@
 use entity::{Database, DatabaseError, Ent, IEnt, Id, InmemoryDatabase, Value};
+use std::convert::TryFrom;
 
 #[test]
 fn produces_getters_for_fields_that_returns_references() {
@@ -485,4 +486,41 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
             .collect::<Vec<Id>>(),
         vec![999, 1000],
     );
+}
+
+#[test]
+fn supports_generic_ent_fields() {
+    #[derive(Clone, Ent)]
+    #[ent(typed_methods)]
+    struct TestEnt<T>
+    where
+        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + 'static,
+    {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field(mutable))]
+        generic_field: T,
+    }
+
+    let mut ent = TestEnt {
+        id: 999,
+        database: None,
+        created: 123,
+        last_updated: 456,
+        generic_field: 0.5,
+    };
+
+    assert_eq!(ent.generic_field(), &0.5);
+    assert_eq!(ent.set_generic_field(99.9), 0.5);
+    assert_eq!(ent.generic_field, 99.9);
 }
