@@ -38,7 +38,13 @@ pub fn impl_ent_builder(
     }
 
     Ok(quote! {
-        #[derive(::std::fmt::Debug)]
+        #[derive(
+            ::std::marker::Copy,
+            ::std::clone::Clone,
+            ::std::fmt::Debug,
+            ::std::cmp::PartialEq,
+            ::std::cmp::Eq,
+        )]
         #vis enum #builder_error_name {
             #(#error_variants),*
         }
