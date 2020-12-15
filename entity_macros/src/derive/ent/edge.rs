@@ -1,4 +1,4 @@
-use super::{EntEdge, EntEdgeKind};
+use super::{utils, EntEdge, EntEdgeKind};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Generics, Ident, Type};
@@ -10,25 +10,25 @@ pub(crate) fn impl_typed_edge_methods(
     name: &Ident,
     generics: &Generics,
     edges: &[EntEdge],
-) -> TokenStream {
+) -> Result<TokenStream, syn::Error> {
     let mut edge_methods: Vec<TokenStream> = Vec::new();
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     for edge in edges {
-        edge_methods.push(fn_typed_id_getter(&edge));
+        edge_methods.push(fn_typed_id_getter(&edge)?);
         edge_methods.push(fn_typed_id_setter(&edge));
         edge_methods.push(fn_typed_load_edge(root, &edge));
     }
 
-    quote! {
+    Ok(quote! {
         #[automatically_derived]
         impl #impl_generics #name #ty_generics #where_clause {
             #(#edge_methods)*
         }
-    }
+    })
 }
 
-fn fn_typed_id_getter(edge: &EntEdge) -> TokenStream {
+fn fn_typed_id_getter(edge: &EntEdge) -> Result<TokenStream, syn::Error> {
     let name = &edge.name;
     let ty = &edge.ty;
 
@@ -36,12 +36,23 @@ fn fn_typed_id_getter(edge: &EntEdge) -> TokenStream {
         EntEdgeKind::Maybe | EntEdgeKind::One => format_ident!("{}_id", name),
         EntEdgeKind::Many => format_ident!("{}_ids", name),
     };
-
-    quote! {
-        pub fn #method_name(&self) -> #ty {
-            self.#name.clone()
+    let return_type = match edge.kind {
+        EntEdgeKind::Maybe | EntEdgeKind::One => quote! { #ty },
+        EntEdgeKind::Many => {
+            let inner_t = utils::strip_vec(ty)?;
+            quote! { &[#inner_t] }
         }
-    }
+    };
+    let inner_return = match edge.kind {
+        EntEdgeKind::Maybe | EntEdgeKind::One => quote! { self.#name },
+        EntEdgeKind::Many => quote! { &self.#name },
+    };
+
+    Ok(quote! {
+        pub fn #method_name(&self) -> #return_type {
+            #inner_return
+        }
+    })
 }
 
 fn fn_typed_id_setter(edge: &EntEdge) -> TokenStream {
@@ -56,9 +67,7 @@ fn fn_typed_id_setter(edge: &EntEdge) -> TokenStream {
     quote! {
         #[doc = "Updates edge ids, returning old value"]
         pub fn #method_name(&mut self, value: #ty) -> #ty {
-            let old_value = self.#name.clone();
-            self.#name = value;
-            old_value
+            ::std::mem::replace(&mut self.#name, value)
         }
     }
 }

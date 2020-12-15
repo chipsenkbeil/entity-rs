@@ -52,32 +52,47 @@ pub fn convert_from_value(name: &Ident, ty: &Type) -> Expr {
 /// If given a type of Option<T>, will strip the outer type and return
 /// a reference to type of T, returning an error if anything else
 pub fn strip_option(input: &Type) -> Result<&Type, syn::Error> {
+    strip_for_type_str(input, "Option")
+}
+
+/// If given a type of Vec<T>, will strip the outer type and return
+/// a reference to type of T, returning an error if anything else
+pub fn strip_vec(input: &Type) -> Result<&Type, syn::Error> {
+    strip_for_type_str(input, "Vec")
+}
+
+fn strip_for_type_str<'a, 'b>(input: &'a Type, ty_str: &'b str) -> Result<&'a Type, syn::Error> {
     match input {
         Type::Path(x) => match x.path.segments.last() {
-            Some(x) if x.ident.to_string().to_lowercase() == "option" => match &x.arguments {
-                PathArguments::AngleBracketed(x) if x.args.len() == 1 => {
-                    match x.args.last().unwrap() {
-                        GenericArgument::Type(x) => Ok(x),
-                        _ => Err(syn::Error::new(
-                            x.span(),
-                            "Unexpected type argument for Option",
-                        )),
+            Some(x) if x.ident.to_string().to_lowercase() == ty_str.to_lowercase() => {
+                match &x.arguments {
+                    PathArguments::AngleBracketed(x) if x.args.len() == 1 => {
+                        match x.args.last().unwrap() {
+                            GenericArgument::Type(x) => Ok(x),
+                            _ => Err(syn::Error::new(
+                                x.span(),
+                                format!("Unexpected type argument for {}", ty_str),
+                            )),
+                        }
                     }
+                    PathArguments::AngleBracketed(_) => Err(syn::Error::new(
+                        x.span(),
+                        format!("Unexpected number of type parameters for {}", ty_str),
+                    )),
+                    PathArguments::Parenthesized(_) => Err(syn::Error::new(
+                        x.span(),
+                        format!("Unexpected {}(...) instead of {}<...>", ty_str, ty_str),
+                    )),
+                    PathArguments::None => Err(syn::Error::new(
+                        x.span(),
+                        format!("{} missing generic parameter", ty_str),
+                    )),
                 }
-                PathArguments::AngleBracketed(_) => Err(syn::Error::new(
-                    x.span(),
-                    "Unexpected number of type parameters for Option",
-                )),
-                PathArguments::Parenthesized(_) => Err(syn::Error::new(
-                    x.span(),
-                    "Unexpected Option(...) instead of Option<...>",
-                )),
-                PathArguments::None => Err(syn::Error::new(
-                    x.span(),
-                    "Option missing generic parameter",
-                )),
-            },
-            Some(x) => Err(syn::Error::new(x.span(), "Type is not Option<...>")),
+            }
+            Some(x) => Err(syn::Error::new(
+                x.span(),
+                format!("Type is not {}<...>", ty_str),
+            )),
             None => Err(syn::Error::new(x.span(), "Expected type to have a path")),
         },
         x => Err(syn::Error::new(x.span(), "Expected type to be a path")),

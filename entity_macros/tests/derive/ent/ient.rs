@@ -4,6 +4,40 @@ use entity::{
     EntMutationError, FieldAttribute, FieldDefinition, IEnt, Id, InmemoryDatabase, NumberType,
     PrimitiveValueType, Value, ValueType, EPHEMERAL_ID,
 };
+use std::convert::TryFrom;
+
+#[test]
+fn supports_generic_fields() {
+    #[derive(Clone, Ent)]
+    struct TestEnt<T>
+    where
+        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + 'static,
+    {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        generic_field: T,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: None,
+        created: 123,
+        last_updated: 456,
+        generic_field: 0.5,
+    };
+    assert_eq!(ent.generic_field, 0.5);
+}
 
 #[test]
 fn id_should_return_copy_of_marked_id_field() {

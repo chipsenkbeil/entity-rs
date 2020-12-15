@@ -6,7 +6,6 @@ use syn::{Generics, Ident};
 /// Implements individual methods for each of the provided fields for
 /// the ent with the given name
 pub(crate) fn impl_typed_field_methods(
-    root: &TokenStream,
     name: &Ident,
     generics: &Generics,
     fields: &[EntField],
@@ -28,10 +27,8 @@ pub(crate) fn impl_typed_field_methods(
         if field.mutable {
             let setter_name = format_ident!("set_{}", field_name);
             let setter = quote! {
-                pub fn #setter_name(&mut self, x: #field_type) -> ::std::result::Result<#field_type, #root::EntMutationError> {
-                    let old_value = self.#field_name.clone();
-                    self.#field_name = x;
-                    ::std::result::Result::Ok(old_value)
+                pub fn #setter_name(&mut self, x: #field_type) -> #field_type {
+                    ::std::mem::replace(&mut self.#field_name, x)
                 }
             };
             field_methods.push(setter);
