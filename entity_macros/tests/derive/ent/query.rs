@@ -1,4 +1,4 @@
-use entity::{Database, DatabaseError, Ent, IEnt, Id, InmemoryDatabase, Value};
+use entity::{Database, Ent, IEnt, Id, InmemoryDatabase, Value};
 use std::convert::TryFrom;
 
 #[test]
@@ -583,5 +583,62 @@ fn produces_method_to_filter_by_field_less_than() {
         .collect();
     assert_eq!(results.len(), 2);
     assert!(results.contains(&1));
+    assert!(results.contains(&2));
+}
+
+#[test]
+fn supports_generic_fields() {
+    #[derive(Clone, Ent)]
+    #[ent(query)]
+    struct TestEnt<T>
+    where
+        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + 'static,
+    {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        value: T,
+    }
+
+    let database = InmemoryDatabase::default();
+
+    database
+        .insert(Box::from(TestEnt {
+            id: 1,
+            database: None,
+            created: 0,
+            last_updated: 0,
+            value: 100,
+        }))
+        .expect("Failed to insert a test ent");
+
+    database
+        .insert(Box::from(TestEnt {
+            id: 2,
+            database: None,
+            created: 0,
+            last_updated: 0,
+            value: 200,
+        }))
+        .expect("Failed to insert a test ent");
+
+    let results: Vec<Id> = TestEntQuery::default()
+        .value_eq(200)
+        .execute(&database)
+        .expect("Failed to query for ents")
+        .iter()
+        .map(IEnt::id)
+        .collect();
+    assert_eq!(results.len(), 1);
     assert!(results.contains(&2));
 }

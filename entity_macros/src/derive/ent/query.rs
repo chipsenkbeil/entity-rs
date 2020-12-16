@@ -25,36 +25,38 @@ pub fn impl_ent_query(
     // Default query methods available outside of fields
     struct_setters.push(quote! {
         #[doc = "Produces query that satisifies if either one of self and other pass"]
-        pub fn or(self, other: #query_name) -> Self {
-            Self(#root::Query::new(#root::Condition::Or(
-                ::std::boxed::Box::from(self.0.into_condition()),
-                ::std::boxed::Box::from(other.0.into_condition()),
-            )))
+        pub fn or(self, other: #query_name #ty_generics) -> Self {
+            Self(
+                #root::Query::new(#root::Condition::Or(
+                    ::std::boxed::Box::from(self.0.into_condition()),
+                    ::std::boxed::Box::from(other.0.into_condition()),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Produces query that satisifies if only one of self and other pass"]
-        pub fn xor(self, other: #query_name) -> Self {
-            Self(#root::Query::new(#root::Condition::Xor(
-                ::std::boxed::Box::from(self.0.into_condition()),
-                ::std::boxed::Box::from(other.0.into_condition()),
-            )))
-        }
-
-        #[doc = "Produces query opposite of current definition, including type requirement"]
-        pub fn not(self) -> Self {
-            Self(#root::Query::new(#root::Condition::Not(
-                ::std::boxed::Box::from(self.0.into_condition()),
-            )))
+        pub fn xor(self, other: #query_name #ty_generics) -> Self {
+            Self(
+                #root::Query::new(#root::Condition::Xor(
+                    ::std::boxed::Box::from(self.0.into_condition()),
+                    ::std::boxed::Box::from(other.0.into_condition()),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return ent with given id"]
         pub fn with_id(self, id: #root::Id) -> Self {
             // NOTE: Using HasId first as it is more performant for some of our
             //       databases to check id before other conditions
-            Self(#root::Query::new(#root::Condition::And(
-                ::std::boxed::Box::from(#root::Condition::HasId(id)),
-                ::std::boxed::Box::from(self.0.into_condition()),
-            )))
+            Self(
+                #root::Query::new(#root::Condition::And(
+                    ::std::boxed::Box::from(#root::Condition::HasId(id)),
+                    ::std::boxed::Box::from(self.0.into_condition()),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return ents with any of the id"]
@@ -68,94 +70,133 @@ pub fn impl_ent_query(
 
             // NOTE: Using HasId first as it is more performant for some of our
             //       databases to check id before other conditions
-            Self(#root::Query::new(#root::Condition::And(
-                ::std::boxed::Box::from(cond_has_any_id),
-                ::std::boxed::Box::from(self.0.into_condition()),
-            )))
+            Self(
+                #root::Query::new(#root::Condition::And(
+                    ::std::boxed::Box::from(cond_has_any_id),
+                    ::std::boxed::Box::from(self.0.into_condition()),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents created before N milliseconds since epoch"]
         pub fn created_before(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::Created(
-                #root::TimeCondition::Before(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::Created(
+                    #root::TimeCondition::Before(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents created on or before N milliseconds since epoch"]
         pub fn created_on_or_before(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::Created(
-                #root::TimeCondition::OnOrBefore(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::Created(
+                    #root::TimeCondition::OnOrBefore(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents created after N milliseconds since epoch"]
         pub fn created_after(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::Created(
-                #root::TimeCondition::After(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::Created(
+                    #root::TimeCondition::After(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents created on or after N milliseconds since epoch"]
         pub fn created_on_or_after(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::Created(
-                #root::TimeCondition::OnOrAfter(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::Created(
+                    #root::TimeCondition::OnOrAfter(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents created between N milliseconds since epoch"]
         pub fn created_between(self, start: u64, end: u64) -> Self {
-            Self(self.0.chain(#root::Condition::Created(
-                #root::TimeCondition::Between(start, end),
-            )))
+            Self(
+                self.0.chain(#root::Condition::Created(
+                    #root::TimeCondition::Between(start, end),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents created on or between N milliseconds since epoch"]
         pub fn created_on_or_between(self, start: u64, end: u64) -> Self {
-            Self(self.0.chain(#root::Condition::Created(
-                #root::TimeCondition::OnOrBetween(start, end),
-            )))
+            Self(
+                self.0.chain(#root::Condition::Created(
+                    #root::TimeCondition::OnOrBetween(start, end),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents last updated before N milliseconds since epoch"]
         pub fn last_updated_before(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::LastUpdated(
-                #root::TimeCondition::Before(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::LastUpdated(
+                    #root::TimeCondition::Before(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents last updated on or before N milliseconds since epoch"]
         pub fn last_updated_on_or_before(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::LastUpdated(
-                #root::TimeCondition::OnOrBefore(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::LastUpdated(
+                    #root::TimeCondition::OnOrBefore(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents last updated after N milliseconds since epoch"]
         pub fn last_updated_after(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::LastUpdated(
-                #root::TimeCondition::After(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::LastUpdated(
+                    #root::TimeCondition::After(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents last updated on or after N milliseconds since epoch"]
         pub fn last_updated_on_or_after(self, value: u64) -> Self {
-            Self(self.0.chain(#root::Condition::LastUpdated(
-                #root::TimeCondition::OnOrAfter(value),
-            )))
+            Self(
+                self.0.chain(#root::Condition::LastUpdated(
+                    #root::TimeCondition::OnOrAfter(value),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents last updated between N milliseconds since epoch"]
         pub fn last_updated_between(self, start: u64, end: u64) -> Self {
-            Self(self.0.chain(#root::Condition::LastUpdated(
-                #root::TimeCondition::Between(start, end),
-            )))
+            Self(
+                self.0.chain(#root::Condition::LastUpdated(
+                    #root::TimeCondition::Between(start, end),
+                )),
+                #(#default_phantoms),*
+            )
         }
 
         #[doc = "Updates query to return all ents last updated on or between N milliseconds since epoch"]
         pub fn last_updated_on_or_between(self, start: u64, end: u64) -> Self {
-            Self(self.0.chain(#root::Condition::LastUpdated(
-                #root::TimeCondition::OnOrBetween(start, end),
-            )))
+            Self(
+                self.0.chain(#root::Condition::LastUpdated(
+                    #root::TimeCondition::OnOrBetween(start, end),
+                )),
+                #(#default_phantoms),*
+            )
         }
     });
 
@@ -184,38 +225,35 @@ pub fn impl_ent_query(
         struct_setters.push(quote! {
             #[doc = #doc_eq]
             pub fn #name_eq(self, value: #ty) -> Self {
-                Self(self.0.chain(#root::Condition::Field(
-                    ::std::string::String::from(stringify!(#name)),
-                    #root::FieldCondition::Value(
-                        #root::ValueCondition::EqualTo(
-                            #root::Value::from(value),
-                        ),
-                    ),
-                )))
+                Self(
+                    self.0.chain(#root::Condition::Field(
+                        ::std::string::String::from(stringify!(#name)),
+                        #root::FieldCondition::value_equal_to(value),
+                    )),
+                    #(#default_phantoms),*
+                )
             }
 
             #[doc = #doc_lt]
             pub fn #name_lt(self, value: #ty) -> Self {
-                Self(self.0.chain(#root::Condition::Field(
-                    ::std::string::String::from(stringify!(#name)),
-                    #root::FieldCondition::Value(
-                        #root::ValueCondition::LessThan(
-                            #root::Value::from(value),
-                        ),
-                    ),
-                )))
+                Self(
+                    self.0.chain(#root::Condition::Field(
+                        ::std::string::String::from(stringify!(#name)),
+                        #root::FieldCondition::value_less_than(value),
+                    )),
+                    #(#default_phantoms),*
+                )
             }
 
             #[doc = #doc_gt]
             pub fn #name_gt(self, value: #ty) -> Self {
-                Self(self.0.chain(#root::Condition::Field(
-                    ::std::string::String::from(stringify!(#name)),
-                    #root::FieldCondition::Value(
-                        #root::ValueCondition::GreaterThan(
-                            #root::Value::from(value),
-                        ),
-                    ),
-                )))
+                Self(
+                    self.0.chain(#root::Condition::Field(
+                        ::std::string::String::from(stringify!(#name)),
+                        #root::FieldCondition::value_greater_than(value),
+                    )),
+                    #(#default_phantoms),*
+                )
             }
         });
     }
@@ -233,7 +271,7 @@ pub fn impl_ent_query(
 
         #[automatically_derived]
         impl #impl_generics ::std::convert::From<#query_name #ty_generics> for #root::Query #where_clause {
-            fn from(q: #query_name) -> Self {
+            fn from(q: #query_name #ty_generics) -> Self {
                 q.0
             }
         }
@@ -262,8 +300,8 @@ pub fn impl_ent_query(
                 self,
                 database: &__entity_D,
             ) -> #root::DatabaseResult<Vec<#name #ty_generics>> {
-                use #root::{Database, DatabaseExt};
-                database.find_all_typed::<#name>(self.0)
+                use #root::DatabaseExt;
+                database.find_all_typed::<#name #ty_generics>(self.0)
             }
         }
     })
