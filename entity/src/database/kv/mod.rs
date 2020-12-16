@@ -166,6 +166,7 @@ fn process_not_condition<T: KeyValueDatabase>(
     } else {
         let all_ids = this.ids();
         let ids_to_remove = process_condition(this, condition, None);
+        println!("not .. {:?} - {:?}", all_ids, ids_to_remove);
         all_ids.difference(&ids_to_remove).copied().collect()
     }
 }

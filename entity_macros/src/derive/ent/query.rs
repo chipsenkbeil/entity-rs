@@ -40,7 +40,7 @@ pub fn impl_ent_query(
             )))
         }
 
-        #[doc = "Produces query opposite of current definition"]
+        #[doc = "Produces query opposite of current definition, including type requirement"]
         pub fn not(self) -> Self {
             Self(#root::Query::new(#root::Condition::Not(
                 ::std::boxed::Box::from(self.0.into_condition()),
@@ -49,7 +49,29 @@ pub fn impl_ent_query(
 
         #[doc = "Updates query to return ent with given id"]
         pub fn with_id(self, id: #root::Id) -> Self {
-            Self(self.0.chain(#root::Condition::HasId(id)))
+            // NOTE: Using HasId first as it is more performant for some of our
+            //       databases to check id before other conditions
+            Self(#root::Query::new(#root::Condition::And(
+                ::std::boxed::Box::from(#root::Condition::HasId(id)),
+                ::std::boxed::Box::from(self.0.into_condition()),
+            )))
+        }
+
+        #[doc = "Updates query to return ents with any of the id"]
+        pub fn with_any_id(self, ids: ::std::vec::Vec<#root::Id>) -> Self {
+            let cond_has_any_id = ids.into_iter().fold(#root::Condition::Always, |cond, id| {
+                #root::Condition::Or(
+                    ::std::boxed::Box::from(#root::Condition::HasId(id)), 
+                    ::std::boxed::Box::from(cond),
+                )
+            });
+
+            // NOTE: Using HasId first as it is more performant for some of our
+            //       databases to check id before other conditions
+            Self(#root::Query::new(#root::Condition::And(
+                ::std::boxed::Box::from(cond_has_any_id),
+                ::std::boxed::Box::from(self.0.into_condition()),
+            )))
         }
 
         #[doc = "Updates query to return all ents created before N milliseconds since epoch"]
