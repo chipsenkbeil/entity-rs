@@ -1,18 +1,18 @@
-error[E0277]: the trait bound `T: std::clone::Clone` is not satisfied
+error[E0277]: the trait bound `T: Clone` is not satisfied
   --> $DIR/generic-field-is-not-cloneable.rs:3:17
    |
 3  | #[derive(Clone, Ent)]
-   |                 ^^^ the trait `std::clone::Clone` is not implemented for `T`
+   |                 ^^^ the trait `Clone` is not implemented for `T`
    |
   ::: $WORKSPACE/entity/src/ent/mod.rs
    |
    | pub trait IEnt: AsAny + DynClone {
-   |                         -------- required by this bound in `entity::IEnt`
+   |                         -------- required by this bound in `IEnt`
    |
-   = note: required because of the requirements on the impl of `std::clone::Clone` for `TestEnt<T>`
+   = note: required because of the requirements on the impl of `Clone` for `TestEnt<T>`
    = note: required because of the requirements on the impl of `dyn_clone::DynClone` for `TestEnt<T>`
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 help: consider restricting type parameter `T`
    |
-4  | struct TestEnt<T: std::clone::Clone> {
-   |                 ^^^^^^^^^^^^^^^^^^^
+4  | struct TestEnt<T: Clone> {
+   |                 ^^^^^^^

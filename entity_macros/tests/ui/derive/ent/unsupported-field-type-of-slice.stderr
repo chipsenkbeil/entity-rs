@@ -10,6 +10,6 @@ error[E0277]: the size for values of type `[u32]` cannot be known at compilation
 3   | #[derive(Clone, Ent)]
     |          ^^^^^ doesn't have a size known at compile-time
     |
-    = help: within `TestEnt`, the trait `std::marker::Sized` is not implemented for `[u32]`
+    = help: within `TestEnt`, the trait `Sized` is not implemented for `[u32]`
     = note: required because it appears within the type `TestEnt`
     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

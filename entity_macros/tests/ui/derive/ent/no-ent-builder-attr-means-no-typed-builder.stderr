@@ -1,5 +1,5 @@
-error[E0433]: failed to resolve: use of undeclared type or module `TestEntBuilder`
+error[E0433]: failed to resolve: use of undeclared type `TestEntBuilder`
   --> $DIR/no-ent-builder-attr-means-no-typed-builder.rs:19:13
    |
 19 |     let _ = TestEntBuilder::default();
-   |             ^^^^^^^^^^^^^^ use of undeclared type or module `TestEntBuilder`
+   |             ^^^^^^^^^^^^^^ use of undeclared type `TestEntBuilder`

@@ -4,14 +4,14 @@ error: &'a T and &'a mut T are not supported as field types
 18 |     my_field: &'a mut u32,
    |               ^
 
-error[E0277]: the trait bound `&mut u32: std::clone::Clone` is not satisfied
+error[E0277]: the trait bound `&mut u32: Clone` is not satisfied
   --> $DIR/unsupported-field-type-of-mut-reference.rs:18:5
    |
 18 |     my_field: &'a mut u32,
-   |     ^^^^^^^^^^^^^^^^^^^^^ the trait `std::clone::Clone` is not implemented for `&mut u32`
+   |     ^^^^^^^^^^^^^^^^^^^^^ the trait `Clone` is not implemented for `&mut u32`
    |
    = help: the following implementations were found:
-             <u32 as std::clone::Clone>
-   = note: `std::clone::Clone` is implemented for `&u32`, but not for `&mut u32`
-   = note: required by `std::clone::Clone::clone`
+             <u32 as Clone>
+   = note: `Clone` is implemented for `&u32`, but not for `&mut u32`
+   = note: required by `clone`
    = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
