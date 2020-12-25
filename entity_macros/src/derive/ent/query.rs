@@ -89,10 +89,11 @@ pub fn impl_ent_query(
             pub fn #method_name(ent: &#ent_ty) -> Self {
                 use #root::IEnt;
                 use ::std::default::Default;
-                Self::default().0.where_edge(
+                use ::std::convert::From;
+                Self::from(Self::default().0.where_edge(
                     stringify!(#name),
                     #root::Filter::Id(#root::TypedPredicate::equals(ent.id())),
-                )
+                ))
             }
         });
 
@@ -152,9 +153,9 @@ pub fn impl_ent_query(
             fn default() -> Self {
                 use std::convert::From;
                 Self::from(
-                    #root::Query::new(
-                        #root::Condition::HasType(
-                            ::std::string::String::from(#const_type_name),
+                    #root::Query::default().where_type(
+                        #root::TypedPredicate::equals(
+                            ::std::string::String::from(#const_type_name)
                         )
                     )
                 )
