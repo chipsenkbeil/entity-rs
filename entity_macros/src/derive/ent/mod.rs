@@ -26,27 +26,29 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
         #vis const #const_type_name: &str = concat!(module_path!(), "::", stringify!(#name));
     };
 
-    // If we have the attribute ent(builder), we will add an additional
+    // Unless we have the attribute ent(no_builder), we will add an additional
     // struct of <name>Builder that provides a convenient way to build
     // an ent struct one field at a time
-    let builder_t = if utils::has_outer_ent_attr(&input.attrs, "builder") {
-        builder::impl_ent_builder(&root, &input)?
-    } else {
+    let builder_t = if utils::has_outer_ent_attr(&input.attrs, "no_builder") {
         quote! {}
+    } else {
+        builder::impl_ent_builder(&root, &input)?
     };
 
-    // If we have the attribute ent(query), we will add an additional
+    // Unless we have the attribute ent(no_query), we will add an additional
     // struct of <name>Query that provides a convenient way to build
     // a typed ent query
-    let query_t = if utils::has_outer_ent_attr(&input.attrs, "query") {
-        query::impl_ent_query(&root, name, vis, generics, &const_type_name, &ent_info)?
-    } else {
+    let query_t = if utils::has_outer_ent_attr(&input.attrs, "no_query") {
         quote! {}
+    } else {
+        query::impl_ent_query(&root, name, vis, generics, &const_type_name, &ent_info)?
     };
 
-    // If we have the attribute ent(typed_load_edge), we will add an additional
+    // Unless we have the attribute ent(no_typed_methods), we will add an additional
     // impl that provides loading of specific edges to corresponding types
-    let typed_methods_t = if utils::has_outer_ent_attr(&input.attrs, "typed_methods") {
+    let typed_methods_t = if utils::has_outer_ent_attr(&input.attrs, "no_typed_methods") {
+        quote! {}
+    } else {
         let edge_methods_t =
             edge::impl_typed_edge_methods(&root, &name, generics, &ent_info.edges)?;
         let field_methods_t = field::impl_typed_field_methods(&name, generics, &ent_info.fields);
@@ -54,8 +56,6 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
             #edge_methods_t
             #field_methods_t
         }
-    } else {
-        quote! {}
     };
 
     // Implement the IEnt interface with optional typetag if we have the

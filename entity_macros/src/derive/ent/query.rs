@@ -15,7 +15,10 @@ pub fn impl_ent_query(
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let ty_phantoms: Vec<Type> = generics
         .type_params()
-        .map(|tp| parse_quote!(::std::marker::PhantomData<#tp>))
+        .map(|tp| {
+            let tp_ident = &tp.ident;
+            parse_quote!(::std::marker::PhantomData<#tp_ident>)
+        })
         .collect();
     let default_phantoms: Vec<Expr> = (0..generics.type_params().count())
         .map(|_| parse_quote!(::std::marker::PhantomData))

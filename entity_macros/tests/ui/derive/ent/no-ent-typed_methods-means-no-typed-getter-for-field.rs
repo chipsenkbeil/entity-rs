@@ -1,6 +1,7 @@
 use entity::{Database, Ent, Id};
 
 #[derive(Clone, Ent)]
+#[ent(no_typed_methods)]
 struct TestEnt {
     #[ent(id)]
     id: Id,

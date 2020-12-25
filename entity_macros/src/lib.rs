@@ -68,6 +68,24 @@ use syn::{parse_macro_input, DeriveInput};
 ///     #[ent(edge(type = "ContentEnt"))]
 ///     paragraphs: Vec<Id>,
 /// }
+///
+/// #[derive(Clone, Ent)]
+/// pub struct ContentEnt {
+///     #[ent(id)]
+///     id: Id,
+///
+///     #[ent(database)]
+///     database: Option<Box<dyn Database>>,
+///
+///     #[ent(created)]
+///     created: u64,
+///
+///     #[ent(last_updated)]
+///     last_updated: u64,
+///
+///     #[ent(field)]
+///     text: String,
+/// }
 /// ```
 #[proc_macro_derive(Ent, attributes(ent))]
 pub fn derive_ent(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

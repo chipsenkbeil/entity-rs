@@ -1,8 +1,8 @@
 error[E0599]: no method named `load_my_edge` found for struct `TestEnt` in the current scope
-  --> $DIR/no-ent-typed_methods-means-no-typed-load-for-edge.rs:30:17
+  --> $DIR/no-ent-typed_methods-means-no-typed-load-for-edge.rs:31:17
    |
-4  | struct TestEnt {
+5  | struct TestEnt {
    | -------------- method `load_my_edge` not found for this
 ...
-30 |     let _ = ent.load_my_edge().unwrap();
+31 |     let _ = ent.load_my_edge().unwrap();
    |                 ^^^^^^^^^^^^ method not found in `TestEnt`
