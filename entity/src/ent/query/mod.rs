@@ -45,4 +45,8 @@ impl Query {
     pub fn where_edge<S: Into<String>, F: Into<Filter>>(self, name: S, filter: F) -> Self {
         self.chain(Filter::where_edge(name, filter))
     }
+
+    pub fn where_into_edge<S: Into<String>>(self, name: S) -> Self {
+        self.chain(Filter::where_into_edge(name))
+    }
 }

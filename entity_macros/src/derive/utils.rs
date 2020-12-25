@@ -49,6 +49,35 @@ pub fn convert_from_value(name: &Ident, ty: &Type) -> Expr {
     }
 }
 
+/// Returns true if given type appears to be any of the following:
+/// * [`std::collections::HashMap`]
+/// * [`std::collections::BTreeMap`]
+pub fn is_map_type(input: &Type) -> bool {
+    type_to_ident(input)
+        .map(|ident| {
+            matches!(
+                ident.to_string().to_lowercase().as_str(),
+                "hashmap" | "btreemap"
+            )
+        })
+        .unwrap_or_default()
+}
+
+/// Returns ident of a type if it is a type path
+///
+/// * `path::to::MyType` -> Some(`MyType`)
+/// * `MyType` -> Some(`MyType`)
+/// * `MyType<String>` -> Some(`MyType`)
+pub fn type_to_ident(input: &Type) -> Option<&Ident> {
+    match input {
+        Type::Path(x) => match x.path.segments.last() {
+            Some(x) => Some(&x.ident),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 /// If given a type of Option<T>, will strip the outer type and return
 /// a reference to type of T, returning an error if anything else
 pub fn strip_option(input: &Type) -> Result<&Type, syn::Error> {

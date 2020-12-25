@@ -11,18 +11,24 @@ pub use sled_db::SledDatabase;
 
 use crate::{
     database::{Database, DatabaseResult},
-    Filter, IEnt, Id, Query,
+    Filter, IEnt, Id, Predicate, PrimitiveValue, Query, Value,
 };
 use std::collections::HashSet;
 
 type EntIdSet = HashSet<Id>;
 
 /// Represents a key-value store database that performs synchronous insertion,
-/// retrieval, and removal. It provides blanket support for `DatabaseExt` to
-/// perform complex operations.
+/// retrieval, and removal. It provides blanket support for
+/// [Database](`super::Database`] to perform complex operations.
 pub trait KeyValueDatabase: Database {
     /// Returns ids of all ents stored in the database
     fn ids(&self) -> EntIdSet;
+
+    /// Returns true if database contains the provided id
+    fn has_id(&self, id: Id) -> bool;
+
+    /// Returns ids of all ents for the given type
+    fn ids_for_type(&self, r#type: &str) -> EntIdSet;
 }
 
 pub struct KeyValueDatabaseExecutor<'a, T: KeyValueDatabase>(&'a T);
@@ -44,9 +50,37 @@ impl<'a, T: KeyValueDatabase> KeyValueDatabaseExecutor<'a, T> {
         let mut pipeline: Option<EntIdSet> = None;
 
         for filter in query {
-            pipeline
-                .get_or_insert_with(|| self.0.ids())
-                .retain(|id| filter_id(self.0, id, &filter));
+            let mut_pipeline = pipeline.get_or_insert_with(|| prefill_ids(self.0, &filter));
+
+            // If our filter is the special IntoEdge case, we don't want to
+            // actually filter out ids but rather transform them into the ids
+            // of their edge
+            match filter {
+                Filter::IntoEdge(name) => {
+                    pipeline = Some(
+                        mut_pipeline
+                            .iter()
+                            .flat_map(|id| {
+                                self.0
+                                    .get(*id)
+                                    .map(|maybe_ent| {
+                                        maybe_ent
+                                            .and_then(|ent| {
+                                                ent.edge(&name).map(|edge| edge.to_ids())
+                                            })
+                                            .unwrap_or_default()
+                                    })
+                                    .unwrap_or_default()
+                            })
+                            .collect(),
+                    )
+                }
+                // Otherwise, the filter is a traditional case where we will
+                // strip out ids by the filter
+                f => {
+                    mut_pipeline.retain(|id| filter_id(self.0, id, &f));
+                }
+            }
         }
 
         pipeline
@@ -54,6 +88,69 @@ impl<'a, T: KeyValueDatabase> KeyValueDatabaseExecutor<'a, T> {
             .into_iter()
             .filter_map(|id| self.0.get(id).transpose())
             .collect()
+    }
+}
+
+/// Called once when first beginning to filter to determine which ent ids
+/// to start with based on the leading filter
+///
+/// 1. If lead filter by id equality, will only include those ids that match
+///    the predicate
+/// 2. If lead filter by type equality, will only include those ids that equal
+///    the type (or many types if wrapped in Or)
+/// 3. Any other variation of id/type filter or other kind of filter will
+///    result in the more expensive pulling of all ids
+fn prefill_ids<D: KeyValueDatabase>(db: &D, filter: &Filter) -> EntIdSet {
+    fn from_id_predicate<D: KeyValueDatabase>(
+        db: &D,
+        p: &Predicate,
+        mut ids: EntIdSet,
+    ) -> Option<EntIdSet> {
+        match p {
+            Predicate::Equals(Value::Primitive(PrimitiveValue::Number(id))) => Some({
+                ids.insert(id.to_usize());
+                ids
+            }),
+            Predicate::Or(list) => list.iter().fold(Some(ids), |ids, p| match ids {
+                Some(ids) => from_id_predicate(db, p, ids),
+                None => None,
+            }),
+            _ => None,
+        }
+    }
+
+    fn from_type_predicate<D: KeyValueDatabase>(
+        db: &D,
+        p: &Predicate,
+        ids: EntIdSet,
+    ) -> Option<EntIdSet> {
+        match p {
+            Predicate::Equals(Value::Text(t)) => Some(db.ids_for_type(t)),
+            Predicate::Or(list) => list.iter().fold(Some(ids), |ids, p| match ids {
+                Some(ids) => from_type_predicate(db, p, ids),
+                None => None,
+            }),
+            _ => None,
+        }
+    }
+
+    match filter {
+        // If leading with id, support Equals and Or(Equals(...), ...) for
+        // specific ids; otherwise, too hard to figure out so we pull in all ids
+        Filter::Id(p) => {
+            from_id_predicate(db, p.as_untyped(), EntIdSet::new()).unwrap_or_else(|| db.ids())
+        }
+
+        // If leading with type, support Equals and Or(Equals(...), ...) for
+        // specific ids; otherwise, too hard to figure out so we pull in all ids
+        Filter::Type(p) => {
+            from_type_predicate(db, p.as_untyped(), EntIdSet::new()).unwrap_or_else(|| db.ids())
+        }
+
+        // Otherwise, currently no cached/indexed way to look up (yet)
+        // TODO: Support database field indexing so equality of a field can
+        //       be used for faster id lookup; do the same for timestamp fields
+        _ => db.ids(),
     }
 }
 
@@ -71,6 +168,10 @@ fn filter_id<D: KeyValueDatabase>(db: &D, id: &Id, filter: &Filter) -> bool {
             Some(edge) => edge.to_ids().iter().any(|id| filter_id(db, id, f)),
             None => false,
         }),
+
+        // NOTE: Logically, this should be impossible to reach since we only
+        //       call this when we know that the filter is not a transformation
+        Filter::IntoEdge(_) => unreachable!("Bug: Transformation in filter"),
     }
 }
 
@@ -368,7 +469,7 @@ mod tests {
                 let time = db.get(3).unwrap().expect("Missing ent 3").created();
                 let q = Query::default()
                     .where_id(TP::equals(2))
-                    .where_created(TP::greater_than(time));
+                    .where_last_updated(TP::greater_than(time));
                 query_and_assert(&db, q, &[2]);
             }
 
@@ -382,16 +483,43 @@ mod tests {
 
                 // If already have ents in pipeline, they will be filtered by "field"
                 let q = Query::default()
-                    .where_type(TP::equals(String::from("type2")))
-                    .where_field("a", P::equals(3));
-                query_and_assert(&db, q, &[5]);
+                    .where_id(TP::equals(4) | TP::equals(6))
+                    .where_field("a", P::greater_than(1));
+                query_and_assert(&db, q, &[6]);
             }
 
             #[test]
             fn find_all_should_support_filtering_by_edge() {
                 let db = new_test_database();
 
-                todo!();
+                // If ent's edge passes condition, it will be included in return
+                let q = Query::default().where_edge("a", Filter::Id(TP::equals(3)));
+                query_and_assert(&db, q, &[12]);
+
+                // If already have ents in pipeline, they will be filtered by "edge"
+                let q = Query::default()
+                    .where_id(TP::equals(10) | TP::equals(12))
+                    .where_edge("a", Filter::Id(TP::always()));
+                query_and_assert(&db, q, &[10, 12]);
+            }
+
+            #[test]
+            fn find_all_should_support_transforming_into_edge() {
+                let db = new_test_database();
+
+                // Will take the ids of each ent with the given edge and use
+                // them going forward; in this example, ents #10 and #11 have
+                // overlapping ids for edge b
+                let q = Query::default().where_into_edge("b");
+                query_and_assert(&db, q, &[1, 2, 3, 4, 5, 6]);
+
+                // If already have ents in pipeline, their edge's ids will
+                // be used specifically; in this example, ent #12 has no ents
+                // for edge b
+                let q = Query::default()
+                    .where_id(TP::equals(10) | TP::equals(12))
+                    .where_into_edge("b");
+                query_and_assert(&db, q, &[3, 4, 5]);
             }
         };
     }

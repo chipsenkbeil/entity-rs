@@ -1,4 +1,6 @@
 use derive_more::{From, TryInto};
+use doc_comment::doc_comment;
+use paste::paste;
 use std::{
     cmp::Ordering,
     hash::{Hash, Hasher},
@@ -31,6 +33,39 @@ pub enum Number {
     U64(u64),
     U8(u8),
     Usize(usize),
+}
+
+macro_rules! impl_cast {
+    ($type:ty) => {
+        paste! {
+            doc_comment! {
+                concat!(
+                    "Naive casting of number's inner representation to ",
+                    stringify!($type),
+                    "by performing `x as ", stringify!($type), "`",
+                ),
+                #[inline]
+                pub fn [<to_ $type>](&self) -> $type {
+                    match self {
+                        Self::F32(x) => *x as $type,
+                        Self::F64(x) => *x as $type,
+                        Self::I128(x) => *x as $type,
+                        Self::I16(x) => *x as $type,
+                        Self::I32(x) => *x as $type,
+                        Self::I64(x) => *x as $type,
+                        Self::I8(x) => *x as $type,
+                        Self::Isize(x) => *x as $type,
+                        Self::U128(x) => *x as $type,
+                        Self::U16(x) => *x as $type,
+                        Self::U32(x) => *x as $type,
+                        Self::U64(x) => *x as $type,
+                        Self::U8(x) => *x as $type,
+                        Self::Usize(x) => *x as $type,
+                    }
+                }
+            }
+        }
+    };
 }
 
 impl Number {
@@ -250,27 +285,20 @@ impl Number {
         }
     }
 
-    /// Naive casting of number's inner representation to a unsigned, 128-bit
-    /// primitive integer by performing `x as u128`
-    #[inline]
-    pub fn to_u128(&self) -> u128 {
-        match self {
-            Self::F32(x) => *x as u128,
-            Self::F64(x) => *x as u128,
-            Self::I128(x) => *x as u128,
-            Self::I16(x) => *x as u128,
-            Self::I32(x) => *x as u128,
-            Self::I64(x) => *x as u128,
-            Self::I8(x) => *x as u128,
-            Self::Isize(x) => *x as u128,
-            Self::U128(x) => *x as u128,
-            Self::U16(x) => *x as u128,
-            Self::U32(x) => *x as u128,
-            Self::U64(x) => *x as u128,
-            Self::U8(x) => *x as u128,
-            Self::Usize(x) => *x as u128,
-        }
-    }
+    impl_cast!(f64);
+    impl_cast!(f32);
+    impl_cast!(isize);
+    impl_cast!(i128);
+    impl_cast!(i64);
+    impl_cast!(i32);
+    impl_cast!(i16);
+    impl_cast!(i8);
+    impl_cast!(usize);
+    impl_cast!(u128);
+    impl_cast!(u64);
+    impl_cast!(u32);
+    impl_cast!(u16);
+    impl_cast!(u8);
 
     /// Converts into type of number
     #[inline]

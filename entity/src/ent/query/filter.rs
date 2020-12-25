@@ -19,8 +19,12 @@ pub enum Filter {
     /// Filters by an ent's field
     Field(String, Predicate),
 
-    /// Filters by an ent connected by an edge
+    /// Filters by an ent connected by an edge; not the same as
+    /// [`Filter::IntoEdge`], which converts an ent to its edge's ents
     Edge(String, Box<Filter>),
+
+    /// **(Special case)** Filters by converting an ent into the ents on its edge
+    IntoEdge(String),
 }
 
 impl Filter {
@@ -46,5 +50,9 @@ impl Filter {
 
     pub fn where_edge<S: Into<String>, F: Into<Filter>>(name: S, filter: F) -> Self {
         Self::Edge(name.into(), Box::new(filter.into()))
+    }
+
+    pub fn where_into_edge<S: Into<String>>(name: S) -> Self {
+        Self::IntoEdge(name.into())
     }
 }

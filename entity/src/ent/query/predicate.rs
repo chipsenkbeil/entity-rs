@@ -1175,10 +1175,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(2)), true);
     /// assert_eq!(p.check(&V::from(1)), false);
     /// ```
-    pub fn and<T: Into<Value>, P: Into<TypedPredicate<T>>, I: IntoIterator<Item = P>>(
-        i: I,
-    ) -> Self {
-        Self::And(i.into_iter().map(|p| p.into().into()).collect())
+    pub fn and<P: Into<Predicate>, I: IntoIterator<Item = P>>(i: I) -> Self {
+        Self::And(i.into_iter().map(|p| p.into()).collect())
     }
 
     /// Creates a new predicate for [`Predicate::Not`]
@@ -1192,8 +1190,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(1)), true);
     /// assert_eq!(p.check(&V::from(2)), false);
     /// ```
-    pub fn not<T: Into<Value>, P: Into<TypedPredicate<T>>>(p: P) -> Self {
-        Self::Not(Box::new(p.into().into()))
+    pub fn not<P: Into<Predicate>>(p: P) -> Self {
+        Self::Not(Box::new(p.into()))
     }
 
     /// Creates a new predicate for [`Predicate::Or`]
@@ -1208,8 +1206,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(2)), true);
     /// assert_eq!(p.check(&V::from(0)), false);
     /// ```
-    pub fn or<T: Into<Value>, P: Into<TypedPredicate<T>>, I: IntoIterator<Item = P>>(i: I) -> Self {
-        Self::Or(i.into_iter().map(|p| p.into().into()).collect())
+    pub fn or<P: Into<Predicate>, I: IntoIterator<Item = P>>(i: I) -> Self {
+        Self::Or(i.into_iter().map(|p| p.into()).collect())
     }
 
     /// Creates a new predicate for [`Predicate::Xor`]
@@ -1224,10 +1222,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(3)), false);
     /// assert_eq!(p.check(&V::from(1)), false);
     /// ```
-    pub fn xor<T: Into<Value>, P: Into<TypedPredicate<T>>, I: IntoIterator<Item = P>>(
-        i: I,
-    ) -> Self {
-        Self::Xor(i.into_iter().map(|p| p.into().into()).collect())
+    pub fn xor<P: Into<Predicate>, I: IntoIterator<Item = P>>(i: I) -> Self {
+        Self::Xor(i.into_iter().map(|p| p.into()).collect())
     }
 
     /// Creates a new predicate for [`Predicate::Any`]
@@ -1243,8 +1239,8 @@ impl Predicate {
     /// let p = P::any(P::equals(4));
     /// assert_eq!(p.check(&V::from(vec![1, 2, 3])), false);
     /// ```
-    pub fn any<T: Into<Value>, P: Into<TypedPredicate<T>>>(p: P) -> Self {
-        Self::Any(Box::new(p.into().into()))
+    pub fn any<P: Into<Predicate>>(p: P) -> Self {
+        Self::Any(Box::new(p.into()))
     }
 
     /// Creates a new predicate for [`Predicate::Contains`]
@@ -1272,10 +1268,10 @@ impl Predicate {
     /// use entity::{Predicate as P, Value as V};
     ///
     /// let p = P::contains_all(vec![1, 3]);
-    /// assert_eq!(&V::from(p.check(vec![1, 2, 3])), true);
+    /// assert_eq!(p.check(&V::from(vec![1, 2, 3])), true);
     ///
     /// let p = P::contains_all(vec![1, 4]);
-    /// assert_eq!(&V::from(p.check(vec![1, 2, 3])), false);
+    /// assert_eq!(p.check(&V::from(vec![1, 2, 3])), false);
     /// ```
     pub fn contains_all<T: Into<Value>, I: IntoIterator<Item = T>>(i: I) -> Self {
         Self::ContainsAll(i.into_iter().map(|p| p.into()).collect())
@@ -1509,11 +1505,8 @@ impl Predicate {
     /// let p = P::has_key_where_value("d", P::equals(1));
     /// assert_eq!(p.check(&V::from(map)), false);
     /// ```
-    pub fn has_key_where_value<K: Into<String>, T: Into<Value>, P: Into<TypedPredicate<T>>>(
-        k: K,
-        p: P,
-    ) -> Self {
-        Self::HasKeyWhereValue(k.into(), Box::new(p.into().into()))
+    pub fn has_key_where_value<K: Into<String>, P: Into<Predicate>>(k: K, p: P) -> Self {
+        Self::HasKeyWhereValue(k.into(), Box::new(p.into()))
     }
 
     /// Creates a new predicate for [`Predicate::IsNone`]
@@ -1524,7 +1517,7 @@ impl Predicate {
     /// use entity::{Predicate as P, Value as V};
     ///
     /// let p = P::is_none();
-    /// assert_eq!(p.check(&V::from(None)), true);
+    /// assert_eq!(p.check(&V::from(None::<u32>)), true);
     /// assert_eq!(p.check(&V::from(Some(3))), false);
     /// ```
     #[inline]
@@ -1542,10 +1535,10 @@ impl Predicate {
     /// let p = P::not_none_and(P::equals(3));
     /// assert_eq!(p.check(&V::from(Some(3))), true);
     /// assert_eq!(p.check(&V::from(Some(2))), false);
-    /// assert_eq!(p.check(&V::from(None)), false);
+    /// assert_eq!(p.check(&V::from(None::<u32>)), false);
     /// ```
-    pub fn not_none_and<T: Into<Value>, P: Into<TypedPredicate<T>>>(p: P) -> Self {
-        Self::NotNoneAnd(Box::new(p.into().into()))
+    pub fn not_none_and<P: Into<Predicate>>(p: P) -> Self {
+        Self::NotNoneAnd(Box::new(p.into()))
     }
 
     /// Creates a new predicate for [`Predicate::NoneOr`]
@@ -1557,11 +1550,11 @@ impl Predicate {
     ///
     /// let p = P::none_or(P::equals(3));
     /// assert_eq!(p.check(&V::from(Some(3))), true);
-    /// assert_eq!(p.check(&V::from(None)), true);
+    /// assert_eq!(p.check(&V::from(None::<u32>)), true);
     /// assert_eq!(p.check(&V::from(Some(2))), false);
     /// ```
-    pub fn none_or<T: Into<Value>, P: Into<TypedPredicate<T>>>(p: P) -> Self {
-        Self::NoneOr(Box::new(p.into().into()))
+    pub fn none_or<P: Into<Predicate>>(p: P) -> Self {
+        Self::NoneOr(Box::new(p.into()))
     }
 
     /// Creates a new predicate for [`Predicate::TextEndsWith`]
@@ -2313,7 +2306,9 @@ impl<T: Into<Value>> TypedPredicate<T> {
     /// assert_eq!(p.check(1), false);
     /// ```
     pub fn and<P: Into<TypedPredicate<T>>, I: IntoIterator<Item = P>>(i: I) -> Self {
-        Self::new(Predicate::and(i))
+        Self::new(Predicate::and::<TypedPredicate<T>, Vec<TypedPredicate<T>>>(
+            i.into_iter().map(|p| p.into()).collect(),
+        ))
     }
 
     /// Creates a new typed predicate for [`Predicate::Not`]
@@ -2344,7 +2339,9 @@ impl<T: Into<Value>> TypedPredicate<T> {
     /// assert_eq!(p.check(0), false);
     /// ```
     pub fn or<P: Into<TypedPredicate<T>>, I: IntoIterator<Item = P>>(i: I) -> Self {
-        Self::new(Predicate::or(i))
+        Self::new(Predicate::or::<TypedPredicate<T>, Vec<TypedPredicate<T>>>(
+            i.into_iter().map(|p| p.into()).collect(),
+        ))
     }
 
     /// Creates a new typed predicate for [`Predicate::Xor`]
@@ -2360,7 +2357,9 @@ impl<T: Into<Value>> TypedPredicate<T> {
     /// assert_eq!(p.check(1), false);
     /// ```
     pub fn xor<P: Into<TypedPredicate<T>>, I: IntoIterator<Item = P>>(i: I) -> Self {
-        Self::new(Predicate::xor(i))
+        Self::new(Predicate::xor::<TypedPredicate<T>, Vec<TypedPredicate<T>>>(
+            i.into_iter().map(|p| p.into()).collect(),
+        ))
     }
 }
 
@@ -3141,7 +3140,7 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> MapTyped
     /// assert_eq!(p.check(map), false);
     /// ```
     pub fn any<P: Into<TypedPredicate<T>>>(p: P) -> Self {
-        Self::new(Predicate::any(p))
+        Self::new(Predicate::any(p.into()))
     }
 
     /// Creates a new typed predicate for [`Predicate::Contains`]

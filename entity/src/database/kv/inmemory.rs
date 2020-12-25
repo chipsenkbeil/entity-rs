@@ -159,6 +159,21 @@ impl KeyValueDatabase for InmemoryDatabase {
     fn ids(&self) -> EntIdSet {
         self.ents.lock().unwrap().keys().copied().collect()
     }
+
+    /// Returns true if database contains the provided id
+    fn has_id(&self, id: Id) -> bool {
+        self.ents.lock().unwrap().contains_key(&id)
+    }
+
+    /// Returns ids of all ents for the given type
+    fn ids_for_type(&self, r#type: &str) -> EntIdSet {
+        self.ents_of_type
+            .lock()
+            .unwrap()
+            .get(r#type)
+            .cloned()
+            .unwrap_or_default()
+    }
 }
 
 #[cfg(test)]
