@@ -296,37 +296,6 @@ impl KeyValueDatabase for SledDatabase {
             .filter_map(ivec_to_id)
             .collect()
     }
-
-    /// Returns true if database contains the provided id
-    fn has_id(&self, id: Id) -> bool {
-        self.0.contains_key(id_to_ivec(id)).ok().unwrap_or_default()
-    }
-
-    /// Returns ids of all ents for the given type
-    fn ids_for_type(&self, r#type: &str) -> EntIdSet {
-        fn inner(this: &SledDatabase, r#type: &str) -> DatabaseResult<EntIdSet> {
-            match this
-                .0
-                .open_tree(ENTS_OF_TYPE)
-                .map_err(|e| DatabaseError::Connection {
-                    source: Box::from(e),
-                })?
-                .get(r#type)
-                .map_err(|e| DatabaseError::Connection {
-                    source: Box::from(e),
-                })? {
-                Some(ivec) => match bincode::deserialize::<EntIdSet>(&ivec) {
-                    Ok(x) => Ok(x),
-                    Err(x) => Err(DatabaseError::Connection {
-                        source: Box::from(x),
-                    }),
-                },
-                None => Ok(HashSet::new()),
-            }
-        }
-
-        inner(self, r#type).ok().unwrap_or_default()
-    }
 }
 
 #[cfg(test)]

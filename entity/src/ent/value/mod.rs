@@ -1,17 +1,18 @@
 mod number;
+
 pub use number::{Number, NumberSign, NumberType};
 
 use derive_more::From;
 use std::{
     cmp::Ordering,
-    collections::HashMap,
+    collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
     convert::TryFrom,
     hash::{Hash, Hasher},
 };
 use strum::ParseError;
 
 /// Represents either a primitive or complex value
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub enum Value {
     List(Vec<Value>),
@@ -90,6 +91,50 @@ impl Value {
     }
 }
 
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Self::List(x) => x.hash(state),
+            Self::Map(x) => {
+                let mut keys = x.keys().collect::<Vec<&String>>();
+                keys.sort_unstable();
+                keys.hash(state);
+
+                // TODO: Is there a better way to approach hashing when a value
+                //       might not support ordering? Should we filter out all
+                //       values that are not comparable? If so, we would need
+                //       to provide some method on value, primitive, and number
+                //       that can tell us if it is comparable
+                let mut values = x.values().collect::<Vec<&Value>>();
+                values.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+                values.hash(state);
+            }
+            Self::Optional(x) => x.hash(state),
+            Self::Primitive(x) => x.hash(state),
+            Self::Text(x) => x.hash(state),
+        }
+    }
+}
+
+impl Eq for Value {}
+
+impl PartialEq for Value {
+    /// Compares two values of same type for equality, otherwise
+    /// returns false
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::List(a), Self::List(b)) => a == b,
+            (Self::Map(a), Self::Map(b)) => a == b,
+            (Self::Optional(a), Self::Optional(b)) => a == b,
+            (Self::Optional(Some(a)), b) => a.as_ref() == b,
+            (a, Self::Optional(Some(b))) => a == b.as_ref(),
+            (Self::Primitive(a), Self::Primitive(b)) => a == b,
+            (Self::Text(a), Self::Text(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
 impl PartialOrd for Value {
     /// Compares same variants for ordering, otherwise returns none
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -102,6 +147,10 @@ impl PartialOrd for Value {
                 (Some(a), Some(b)) => a.partial_cmp(b),
                 _ => None,
             },
+
+            // Compare value inside option against any other type
+            (Self::Optional(Some(a)), b) => a.as_ref().partial_cmp(b),
+            (a, Self::Optional(Some(b))) => a.partial_cmp(b.as_ref()),
 
             // Compare primitives based on primitive value ordering
             (Self::Primitive(a), Self::Primitive(b)) => a.partial_cmp(b),
@@ -128,9 +177,51 @@ impl<T: Into<Value>> From<Vec<T>> for Value {
     }
 }
 
+impl<T: Into<Value>> From<VecDeque<T>> for Value {
+    /// Converts a vec deque of some value into a value list
+    fn from(list: VecDeque<T>) -> Self {
+        Self::List(list.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+impl<T: Into<Value>> From<LinkedList<T>> for Value {
+    /// Converts a linked list of some value into a value list
+    fn from(list: LinkedList<T>) -> Self {
+        Self::List(list.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+impl<T: Into<Value>> From<BinaryHeap<T>> for Value {
+    /// Converts a binary heap of some value into a value list
+    fn from(list: BinaryHeap<T>) -> Self {
+        Self::List(list.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+impl<T: Into<Value>> From<HashSet<T>> for Value {
+    /// Converts a hashset of some value into a value list
+    fn from(list: HashSet<T>) -> Self {
+        Self::List(list.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+impl<T: Into<Value>> From<BTreeSet<T>> for Value {
+    /// Converts a btree set of some value into a value list
+    fn from(list: BTreeSet<T>) -> Self {
+        Self::List(list.into_iter().map(|v| v.into()).collect())
+    }
+}
+
 impl<T: Into<Value>> From<HashMap<String, T>> for Value {
     /// Converts a hashmap of string keys and some value into a value map
     fn from(map: HashMap<String, T>) -> Self {
+        Self::Map(map.into_iter().map(|(k, v)| (k, v.into())).collect())
+    }
+}
+
+impl<T: Into<Value>> From<BTreeMap<String, T>> for Value {
+    /// Converts a btree map of string keys and some value into a value map
+    fn from(map: BTreeMap<String, T>) -> Self {
         Self::Map(map.into_iter().map(|(k, v)| (k, v.into())).collect())
     }
 }
@@ -533,6 +624,7 @@ impl PrimitiveValue {
         self.to_type() == other.to_type()
     }
 }
+
 impl Hash for PrimitiveValue {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
