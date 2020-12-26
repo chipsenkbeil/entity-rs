@@ -1,4 +1,5 @@
-use super::{utils, EntInfo};
+use super::EntInfo;
+use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_quote, Expr, Generics, Ident, Type, Visibility};

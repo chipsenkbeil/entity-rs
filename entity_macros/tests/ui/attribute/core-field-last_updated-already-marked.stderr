@@ -1,0 +1,5 @@
+error: Cannot mark a last_updated field if including ent core
+ --> $DIR/core-field-last_updated-already-marked.rs:6:5
+  |
+6 |     #[ent(last_updated)]
+  |     ^

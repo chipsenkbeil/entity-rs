@@ -1,4 +1,5 @@
-use super::{utils, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
+use super::{EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
+use crate::utils;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{spanned::Spanned, Generics, Ident, Type};

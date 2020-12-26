@@ -1,0 +1,5 @@
+error: Tuple struct not supported
+ --> $DIR/unsupported-tuple-struct.rs:4:1
+  |
+4 | #[derive(Clone, Ent)]
+  | ^^^^^^^^^^^^^^^^^^^^^

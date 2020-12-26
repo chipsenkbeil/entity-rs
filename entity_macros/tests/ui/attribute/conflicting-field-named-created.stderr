@@ -1,0 +1,5 @@
+error: Field named created reserved for ent
+ --> $DIR/conflicting-field-named-created.rs:6:5
+  |
+6 |     #[ent(field)]
+  |     ^

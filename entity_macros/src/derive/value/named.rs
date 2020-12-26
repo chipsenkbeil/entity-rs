@@ -1,4 +1,4 @@
-use crate::derive::utils;
+use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Expr, FieldsNamed, Generics, Ident};

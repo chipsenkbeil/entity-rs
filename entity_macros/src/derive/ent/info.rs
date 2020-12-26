@@ -1,4 +1,4 @@
-use super::utils;
+use crate::utils;
 use std::convert::TryFrom;
 use syn::spanned::Spanned;
 use syn::{DeriveInput, Ident, Lit, Meta, NestedMeta, Type};

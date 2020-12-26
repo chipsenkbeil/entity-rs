@@ -1,5 +1,6 @@
 mod attribute;
 mod derive;
+mod utils;
 
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, ItemStruct};

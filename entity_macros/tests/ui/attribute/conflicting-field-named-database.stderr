@@ -1,0 +1,5 @@
+error: Field named database reserved for ent
+ --> $DIR/conflicting-field-named-database.rs:6:5
+  |
+6 |     #[ent(field)]
+  |     ^

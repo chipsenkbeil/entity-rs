@@ -7,7 +7,7 @@ mod query;
 
 pub use info::{EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
 
-use super::utils;
+use crate::utils;
 use heck::ShoutySnakeCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};

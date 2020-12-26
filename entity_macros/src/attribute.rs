@@ -1,3 +1,4 @@
+use crate::utils;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
@@ -12,6 +13,7 @@ pub fn do_include_ent_core(
     root: TokenStream,
     mut input: ItemStruct,
 ) -> Result<TokenStream, syn::Error> {
+    // Ensure that we have no conflicting field
     let new_fields: Punctuated<ParsableNamedField, Token![,]> = parse_quote! {
         #[ent(id)]
         id: #root::Id,
@@ -27,7 +29,45 @@ pub fn do_include_ent_core(
     };
 
     match &mut input.fields {
-        Fields::Named(x) => x.named.extend(new_fields.into_iter().map(|p| p.field)),
+        Fields::Named(x) => {
+            // Ensure we have no conflicts
+            for f in x.named.iter() {
+                let name = f.ident.as_ref().unwrap().to_string();
+                match name.as_str() {
+                    "id" | "database" | "created" | "last_updated" => {
+                        return Err(syn::Error::new(
+                            f.span(),
+                            format!("Field named {} reserved for ent", name),
+                        ))
+                    }
+                    _ => {}
+                }
+
+                if utils::has_outer_ent_attr(&f.attrs, "id") {
+                    return Err(syn::Error::new(
+                        f.span(),
+                        "Cannot mark an id field if including ent core",
+                    ));
+                } else if utils::has_outer_ent_attr(&f.attrs, "database") {
+                    return Err(syn::Error::new(
+                        f.span(),
+                        "Cannot mark a database field if including ent core",
+                    ));
+                } else if utils::has_outer_ent_attr(&f.attrs, "created") {
+                    return Err(syn::Error::new(
+                        f.span(),
+                        "Cannot mark a created field if including ent core",
+                    ));
+                } else if utils::has_outer_ent_attr(&f.attrs, "last_updated") {
+                    return Err(syn::Error::new(
+                        f.span(),
+                        "Cannot mark a last_updated field if including ent core",
+                    ));
+                }
+            }
+
+            x.named.extend(new_fields.into_iter().map(|p| p.field))
+        }
         Fields::Unnamed(_) => {
             return Err(syn::Error::new(input.span(), "Tuple struct not supported"))
         }
