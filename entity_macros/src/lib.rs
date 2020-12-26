@@ -1,9 +1,10 @@
+mod attribute;
 mod derive;
 
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, DeriveInput, ItemStruct};
 
-/// Transforms pseudo-struct syntax into an ent representation
+/// Derives the IEnt trait and additional typed functionality
 ///
 /// ```
 /// use entity::{Ent, Id, Database};
@@ -103,6 +104,35 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let root = quote! { ::entity };
     let expanded = derive::do_derive_value(root, input).unwrap_or_else(|x| x.to_compile_error());
+
+    proc_macro::TokenStream::from(expanded)
+}
+
+/// Injects the basic struct fields needed for an ent to be derived.
+///
+/// ```
+/// use entity::{Ent, include_ent_core};
+///
+/// #[include_ent_core]
+/// #[derive(Clone, Ent)]
+/// pub struct SimpleEnt {
+///     #[ent(field)]
+///     name: String,
+///
+///     #[ent(field)]
+///     value: u32,
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn include_ent_core(
+    _attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(item as ItemStruct);
+
+    let root = quote! { ::entity };
+    let expanded =
+        attribute::do_include_ent_core(root, input).unwrap_or_else(|x| x.to_compile_error());
 
     proc_macro::TokenStream::from(expanded)
 }
