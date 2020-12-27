@@ -26,10 +26,12 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
         #vis const #const_type_name: &str = concat!(module_path!(), "::", stringify!(#name));
     };
 
+    let ent_attrs = utils::attrs_into_attr_map(&input.attrs, "ent").unwrap_or_default();
+
     // Unless we have the attribute ent(no_builder), we will add an additional
     // struct of <name>Builder that provides a convenient way to build
     // an ent struct one field at a time
-    let builder_t = if utils::has_outer_ent_attr(&input.attrs, "no_builder") {
+    let builder_t = if !ent_attrs.get("builder").copied().unwrap_or_default() {
         quote! {}
     } else {
         builder::impl_ent_builder(&root, &input)?
@@ -38,7 +40,7 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
     // Unless we have the attribute ent(no_query), we will add an additional
     // struct of <name>Query that provides a convenient way to build
     // a typed ent query
-    let query_t = if utils::has_outer_ent_attr(&input.attrs, "no_query") {
+    let query_t = if !ent_attrs.get("query").copied().unwrap_or_default() {
         quote! {}
     } else {
         query::impl_ent_query(&root, name, vis, generics, &const_type_name, &ent_info)?
@@ -46,7 +48,7 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
 
     // Unless we have the attribute ent(no_typed_methods), we will add an additional
     // impl that provides loading of specific edges to corresponding types
-    let typed_methods_t = if utils::has_outer_ent_attr(&input.attrs, "no_typed_methods") {
+    let typed_methods_t = if !ent_attrs.get("typed_methods").copied().unwrap_or_default() {
         quote! {}
     } else {
         let edge_methods_t =
@@ -66,7 +68,7 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
         generics,
         &ent_info,
         &const_type_name,
-        utils::has_outer_ent_attr(&input.attrs, "typetag"),
+        ent_attrs.get("typetag").copied().unwrap_or_default(),
     )?;
 
     Ok(quote! {

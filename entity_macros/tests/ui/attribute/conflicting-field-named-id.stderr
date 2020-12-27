@@ -1,5 +1,5 @@
-error: Field named id reserved for ent
- --> $DIR/conflicting-field-named-id.rs:6:5
+error: Conflicting field with same name
+ --> $DIR/conflicting-field-named-id.rs:7:5
   |
-6 |     #[ent(field)]
-  |     ^
+7 |     id: usize,
+  |     ^^

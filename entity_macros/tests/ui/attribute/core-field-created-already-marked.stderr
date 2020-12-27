@@ -1,5 +1,0 @@
-error: Cannot mark a created field if including ent core
- --> $DIR/core-field-created-already-marked.rs:6:5
-  |
-6 |     #[ent(created)]
-  |     ^

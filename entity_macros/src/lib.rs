@@ -3,7 +3,10 @@ mod derive;
 mod utils;
 
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, ItemStruct};
+use syn::{parse_macro_input, AttributeArgs, DeriveInput, ItemStruct};
+
+#[cfg(doctest)]
+doc_comment::doctest!("../README.md");
 
 /// Derives the IEnt trait and additional typed functionality
 ///
@@ -109,14 +112,13 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     proc_macro::TokenStream::from(expanded)
 }
 
-/// Injects the basic struct fields needed for an ent to be derived.
+/// Injects elements needed for an ent to be derived.
 ///
 /// ```
-/// use entity::{Ent, include_ent_core};
+/// use entity::{simple_ent};
 ///
-/// #[include_ent_core]
-/// #[derive(Clone, Ent)]
-/// pub struct SimpleEnt {
+/// #[simple_ent]
+/// pub struct MyEnt {
 ///     #[ent(field)]
 ///     name: String,
 ///
@@ -125,15 +127,16 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-pub fn include_ent_core(
-    _attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
+pub fn simple_ent(
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(item as ItemStruct);
+    let args = parse_macro_input!(args as AttributeArgs);
+    let input = parse_macro_input!(input as ItemStruct);
 
     let root = quote! { ::entity };
     let expanded =
-        attribute::do_include_ent_core(root, input).unwrap_or_else(|x| x.to_compile_error());
+        attribute::do_simple_ent(root, args, input).unwrap_or_else(|x| x.to_compile_error());
 
     proc_macro::TokenStream::from(expanded)
 }

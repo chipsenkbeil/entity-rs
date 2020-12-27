@@ -1,5 +1,5 @@
-error: Field named database reserved for ent
- --> $DIR/conflicting-field-named-database.rs:6:5
+error: Conflicting field with same name
+ --> $DIR/conflicting-field-named-database.rs:7:5
   |
-6 |     #[ent(field)]
-  |     ^
+7 |     database: usize,
+  |     ^^^^^^^^

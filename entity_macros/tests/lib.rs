@@ -1,3 +1,4 @@
+mod attribute;
 mod derive;
 
 /// Runs all ui tests - note that all tests run through trybuild must be done

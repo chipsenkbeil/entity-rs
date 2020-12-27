@@ -1,6 +1,6 @@
-use entity::{include_ent_core, Ent};
+use entity::{simple_ent, Ent};
 
-#[include_ent_core]
+#[simple_ent]
 #[derive(Clone, Ent)]
 pub struct SimpleEnt {
     #[ent(field)]

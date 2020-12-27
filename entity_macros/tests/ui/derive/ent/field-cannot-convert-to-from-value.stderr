@@ -1,19 +1,33 @@
 error[E0277]: the trait bound `Value: From<CustomField>` is not satisfied
-    --> $DIR/field-cannot-convert-to-from-value.rs:6:17
-     |
-6    | #[derive(Clone, Ent)]
-     |                 ^^^ the trait `From<CustomField>` is not implemented for `Value`
-     |
-    ::: $WORKSPACE/entity/src/ent/query/predicate.rs
-     |
-     | pub struct TypedPredicate<T: Into<Value>>(Predicate, PhantomData<T>);
-     |                              ----------- required by this bound in `TypedPredicate`
-     |
-     = help: the following implementations were found:
-               <Value as From<&'a str>>
-               <Value as From<BTreeMap<String, T>>>
-               <Value as From<BTreeSet<T>>>
-               <Value as From<BinaryHeap<T>>>
-             and 24 others
-     = note: required because of the requirements on the impl of `Into<Value>` for `CustomField`
-     = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+ --> $DIR/field-cannot-convert-to-from-value.rs:6:17
+  |
+6 | #[derive(Clone, Ent)]
+  |                 ^^^ the trait `From<CustomField>` is not implemented for `Value`
+  |
+  = help: the following implementations were found:
+            <Value as From<&'a str>>
+            <Value as From<BTreeMap<String, T>>>
+            <Value as From<BTreeSet<T>>>
+            <Value as From<BinaryHeap<T>>>
+          and 24 others
+  = note: required because of the requirements on the impl of `Into<Value>` for `CustomField`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0271]: type mismatch resolving `<CustomField as TryFrom<Value>>::Error == &str`
+ --> $DIR/field-cannot-convert-to-from-value.rs:6:17
+  |
+6 | #[derive(Clone, Ent)]
+  |                 ^^^ expected enum `Infallible`, found `&str`
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `CustomField: From<Value>` is not satisfied
+ --> $DIR/field-cannot-convert-to-from-value.rs:6:17
+  |
+6 | #[derive(Clone, Ent)]
+  |                 ^^^ the trait `From<Value>` is not implemented for `CustomField`
+  |
+  = note: required because of the requirements on the impl of `Into<CustomField>` for `Value`
+  = note: required because of the requirements on the impl of `TryFrom<Value>` for `CustomField`
+  = note: required because of the requirements on the impl of `TryInto<CustomField>` for `Value`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

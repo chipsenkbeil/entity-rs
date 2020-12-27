@@ -1,11 +1,12 @@
+use std::collections::HashMap;
 use syn::{
     parse_quote, spanned::Spanned, Attribute, Data, DeriveInput, Expr, Fields, FieldsNamed,
-    GenericArgument, Ident, Meta, NestedMeta, PathArguments, PathSegment, Type,
+    GenericArgument, Ident, Lit, Meta, NestedMeta, PathArguments, PathSegment, Type,
 };
 
 /// Returns true if the attribute is in the form of ent(...) where
 /// the interior is checked for an identifier of the given str
-pub fn has_outer_ent_attr(attrs: &[Attribute], ident_str: &str) -> bool {
+pub fn has_ent_attr(attrs: &[Attribute], ident_str: &str) -> bool {
     attrs
         .iter()
         .filter_map(|a| a.parse_meta().ok())
@@ -19,6 +20,76 @@ pub fn has_outer_ent_attr(attrs: &[Attribute], ident_str: &str) -> bool {
             }),
             _ => false,
         })
+}
+
+/// Returns a map of inner attributes for <ROOT>(...) where
+/// the the map's keys are the identifiers as strings and the values are
+/// true/false for whether the attribute was <NAME> or no_<NAME>
+pub fn attrs_into_attr_map(attrs: &[Attribute], root: &str) -> Option<HashMap<String, bool>> {
+    attrs
+        .iter()
+        .filter_map(|a| a.parse_meta().ok())
+        .find_map(|m| match m {
+            Meta::List(x) if x.path.is_ident(root) => {
+                Some(nested_meta_iter_into_attr_map(x.nested.iter()))
+            }
+            Meta::Path(x) if x.is_ident(root) => Some(HashMap::new()),
+            Meta::NameValue(x) if x.path.is_ident(root) => Some(HashMap::new()),
+            _ => None,
+        })
+}
+
+pub fn nested_meta_iter_into_attr_map<'a, I: Iterator<Item = &'a NestedMeta>>(
+    it: I,
+) -> HashMap<String, bool> {
+    it.filter_map(|m| match m {
+        NestedMeta::Meta(x) => match x {
+            Meta::Path(x) => x.segments.last().map(|s| s.ident.to_string()).map(|s| {
+                let is_no = s.starts_with("no_");
+                (s, !is_no)
+            }),
+            _ => None,
+        },
+        _ => None,
+    })
+    .collect()
+}
+
+pub fn nested_meta_iter_into_named_attr_map<'a, I: Iterator<Item = &'a NestedMeta>>(
+    it: I,
+) -> HashMap<String, Option<String>> {
+    it.filter_map(|m| match m {
+        NestedMeta::Meta(x) => match x {
+            Meta::Path(x) => x
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .map(|s| (s, None)),
+            Meta::NameValue(x) => x
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .map(|s| {
+                    (
+                        s,
+                        Some(match &x.lit {
+                            Lit::Str(x) => x.value(),
+                            Lit::ByteStr(x) => String::from_utf8_lossy(&x.value()).to_string(),
+                            Lit::Byte(x) => x.value().to_string(),
+                            Lit::Char(x) => x.value().to_string(),
+                            Lit::Int(x) => x.base10_digits().to_string(),
+                            Lit::Float(x) => x.base10_digits().to_string(),
+                            Lit::Bool(x) => x.value.to_string(),
+                            Lit::Verbatim(x) => x.to_string(),
+                        }),
+                    )
+                }),
+            _ => None,
+        },
+        _ => None,
+    })
+    .collect()
 }
 
 /// Extracts and returns the named fields from the input, if possible

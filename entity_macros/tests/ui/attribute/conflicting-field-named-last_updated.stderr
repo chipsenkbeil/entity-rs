@@ -1,5 +1,5 @@
-error: Field named last_updated reserved for ent
- --> $DIR/conflicting-field-named-last_updated.rs:6:5
+error: Conflicting field with same name
+ --> $DIR/conflicting-field-named-last_updated.rs:7:5
   |
-6 |     #[ent(field)]
-  |     ^
+7 |     last_updated: usize,
+  |     ^^^^^^^^^^^^
