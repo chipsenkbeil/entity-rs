@@ -61,7 +61,10 @@ impl TryFrom<&DeriveInput> for EntInfo {
 
     fn try_from(input: &DeriveInput) -> Result<Self, Self::Error> {
         let span = input.span();
+        let ent_attrs = utils::attrs_into_attr_map(&input.attrs, "ent").unwrap_or_default();
         let named_fields = &utils::get_named_fields(input)?.named;
+
+        let is_strict = ent_attrs.get("strict").copied().unwrap_or_default();
 
         let mut id = None;
         let mut database = None;
@@ -76,8 +79,9 @@ impl TryFrom<&DeriveInput> for EntInfo {
             let ty = f.ty.clone();
 
             // Find the attribute that is ent(...), which is required on each
-            // field within a struct when deriving ent
-            let ent_attr_meta = f
+            // field within a struct when deriving ent if strict is enabled,
+            // otherwise we default to a field is if defined via #[ent(field)]
+            let maybe_ent_attr_meta = f
                 .attrs
                 .iter()
                 .find_map(|attr| {
@@ -87,7 +91,24 @@ impl TryFrom<&DeriveInput> for EntInfo {
                         None
                     }
                 })
-                .transpose()?
+                .transpose()?;
+
+            // If we are not in strict mode, we treat any struct field without
+            // an ent(...) attribute as a plain field as if it was defined
+            // via #[ent(field)]
+            if !is_strict && maybe_ent_attr_meta.is_none() {
+                fields.push(EntField {
+                    name,
+                    ty,
+                    indexed: false,
+                    mutable: false,
+                });
+                continue;
+            }
+
+            // If we have reached here, we assume that either we contain
+            // metadata or we are in strict mode and will fail
+            let ent_attr_meta = maybe_ent_attr_meta
                 .ok_or_else(|| syn::Error::new(span, "Missing ent(...) attribute"))?;
 
             // Grab the inner contents of ent(...) as additional meta

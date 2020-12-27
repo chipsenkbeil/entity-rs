@@ -4,7 +4,6 @@ use std::convert::TryFrom;
 #[test]
 fn produces_method_to_filter_by_id() {
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -53,7 +52,6 @@ fn produces_method_to_filter_by_id() {
 #[test]
 fn produces_methods_to_filter_by_created_timestamp() {
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -111,7 +109,6 @@ fn produces_methods_to_filter_by_created_timestamp() {
 #[test]
 fn produces_methods_to_filter_by_last_updated_timestamp() {
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -181,7 +178,6 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
 #[test]
 fn produces_method_to_filter_by_field() {
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -235,7 +231,6 @@ fn produces_method_to_filter_by_field() {
 #[test]
 fn supports_generic_fields() {
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt<T>
     where
         T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + 'static,
@@ -292,7 +287,6 @@ fn supports_generic_fields() {
 #[test]
 fn produces_method_to_filter_by_ents_connected_by_edge() {
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -348,7 +342,6 @@ fn produces_method_to_filter_by_ents_connected_by_edge() {
 #[test]
 fn produces_method_to_yield_edge_ents() {
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt1 {
         #[ent(id)]
         id: Id,
@@ -367,7 +360,6 @@ fn produces_method_to_yield_edge_ents() {
     }
 
     #[derive(Clone, Ent)]
-    #[ent(query)]
     struct TestEnt2 {
         #[ent(id)]
         id: Id,

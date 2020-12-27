@@ -5,7 +5,6 @@ use std::convert::TryFrom;
 #[test]
 fn produces_an_error_enum_for_each_struct_field() {
     #[derive(Clone, Ent)]
-    #[ent(builder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -73,7 +72,6 @@ fn produces_an_error_enum_for_each_struct_field() {
 #[test]
 fn default_returns_a_builder_with_all_fields_set_to_none() {
     #[derive(Clone, Ent)]
-    #[ent(builder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -119,7 +117,6 @@ fn default_returns_a_builder_with_all_fields_set_to_none() {
 fn build_fails_when_struct_field_is_not_set() {
     #[derive(Clone, Derivative, Ent)]
     #[derivative(Debug)]
-    #[ent(builder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -290,7 +287,6 @@ fn build_fails_when_struct_field_is_not_set() {
 fn build_succeeds_when_all_struct_fields_are_set() {
     #[derive(Clone, Derivative, Ent)]
     #[derivative(Debug)]
-    #[ent(builder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -346,7 +342,6 @@ fn build_succeeds_when_all_struct_fields_are_set() {
 #[test]
 fn supports_generic_fields() {
     #[derive(Clone, Ent)]
-    #[ent(builder)]
     struct TestEnt<T>
     where
         T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + 'static,

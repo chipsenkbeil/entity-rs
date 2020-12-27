@@ -1,8 +1,8 @@
 error[E0599]: no method named `set_my_field` found for struct `TestEnt` in the current scope
-  --> $DIR/field-without-mutable-attr-means-no-typed-setter-for-field.rs:32:9
+  --> $DIR/field-without-mutable-attr-means-no-typed-setter-for-field.rs:31:9
    |
-5  | struct TestEnt {
+4  | struct TestEnt {
    | -------------- method `set_my_field` not found for this
 ...
-32 |     ent.set_my_field(3).unwrap();
+31 |     ent.set_my_field(3).unwrap();
    |         ^^^^^^^^^^^^ help: there is an associated function with a similar name: `my_field`

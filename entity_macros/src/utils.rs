@@ -45,8 +45,10 @@ pub fn nested_meta_iter_into_attr_map<'a, I: Iterator<Item = &'a NestedMeta>>(
     it.filter_map(|m| match m {
         NestedMeta::Meta(x) => match x {
             Meta::Path(x) => x.segments.last().map(|s| s.ident.to_string()).map(|s| {
-                let is_no = s.starts_with("no_");
-                (s, !is_no)
+                match s.strip_prefix("no_") {
+                    Some(s) => (s.to_string(), false),
+                    None => (s, true),
+                }
             }),
             _ => None,
         },

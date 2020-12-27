@@ -4,14 +4,67 @@
 
 [build_img]: https://github.com/chipsenkbeil/entity-rs/workflows/CI/badge.svg
 [build_lnk]: https://github.com/chipsenkbeil/entity-rs/actions
-[crates_img]: https://img.shields.io/crates/v/entity-rs.svg
-[crates_lnk]: https://crates.io/crates/entity-rs
-[doc_img]: https://docs.rs/entity-rs/badge.svg
-[doc_lnk]: https://docs.rs/entity-rs
+[crates_img]: https://img.shields.io/crates/v/entity.svg
+[crates_lnk]: https://crates.io/crates/entity
+[doc_img]: https://docs.rs/entity/badge.svg
+[doc_lnk]: https://docs.rs/entity
 
-A simplistic framework for XXX modeled after [Facebook's social graph API, TAO](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf).
+A simplistic framework for connected data structures modeled after
+[Facebook's social graph API, TAO](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf).
 
 ## Getting Started
+
+### Installation
+
+Import **Entity** into your project by adding the following line to your
+Cargo.toml. `entity_macros` contains the macros needed to derive and/or
+transform your data to be compatible with supported databases and queries.
+
+```toml
+[dependencies]
+entity = "0.1"
+```
+
+Several features come out-of-the-box such as the inmemory database and macros
+used for more concise entity creation. See the feature flag section for more
+details.
+
+### Example
+
+```rust
+use entity::*;
+
+#[simple_ent]
+struct User {
+    name: String,
+    age: u8,
+
+    #[ent(edge(type = "User"))]
+    friends: Vec<Id>,
+}
+
+let db = InmemoryDatabase::default();
+let alice = UserBuilder::default()
+    .name("Alice")
+    .age(30)
+    .build()
+    .unwrap();
+let bob = UserBuilder::default()
+    .name("Bob")
+    .age(35)
+    .build()
+    .unwrap();
+let carol = UserBuilder::default()
+    .name("Carol")
+    .age(27)
+    .build()
+    .unwrap();
+let dan = UserBuilder::default()
+    .name("Dan")
+    .age(25)
+    .build()
+    .unwrap();
+```
 
 ### Databases
 
@@ -46,6 +99,10 @@ the [Database](https://docs.rs/entity/*/entity/trait.Database.html) trait.
 ```rust
 use entity::*;
 
+// Database must be cloneable and should not be expensive to do so. For
+// instance, a database struct could contain fields that are wrapped in
+// Arc to make them thread safe and cheap to clone as a reference is maintained
+#[derive(Clone)]
 pub struct MyDatabase;
 
 impl Database for MyDatabase {
@@ -116,14 +173,20 @@ let ent = Ent::from_collections(
 ```
 
 Normally, you would prefer to implement your own strongly-typed data structure
-instead of using the dynamic one above. To do this, you can either implement
-the [IEnt](https://docs.rs/entity/*/entity/trait.IEnt.html) trait or derive
-an implementation using the special macro available from `entity_macros` or
-via the feature `macros` on the `entity` crate. For the below example, we'll
-assume that you have added the `macros` feature.
+instead of using the dynamic one above. To do this, you have three options:
+
+1. Implement the [IEnt](https://docs.rs/entity/*/entity/trait.IEnt.html) trait
+   for your struct
+2. Derive an implementation using the special macro available from `entity_macros`
+   or via the feature `macros` on the `entity` crate
+3. Transform a struct using the `simple_ent` attribute macro available from
+   `entity_macros` or via the feature `macros` on the `entity` create
+
+For the below example, we'll assume that you have added the `macros` feature
+to the `entity` crate.
 
 ```rust
-use entity::{Ent, Id, Database};
+use entity::{Ent, Id, Database, simple_ent};
 
 // All entities must be cloneable
 #[derive(Clone, Ent)]
@@ -160,6 +223,14 @@ pub struct MyEnt {
     #[ent(edge(type = "SomeOtherEnt"))]
     other: Id,
 }
+
+// The simple_ent attribute macro will modify a struct by injecting the
+// needed fields and deriving Clone and/or Ent where needed
+#[simple_ent]
+pub struct SomeOtherEnt {
+    #[ent(field)]
+    my_field: f64,
+}
 ```
 
 ### Queries
@@ -177,8 +248,13 @@ TODO
 
 Entity provides a few feature flags:
 
-* `inmemory_db` - Enables the in-memory database for use with ent objects. Enabled by default.
-* `sled_db` - Enables the sled database for use with ent objects. Off by default.
-* `serde-1` - Enables the serde serialization module and associated
-  functionality for ents. Off by default.
-* `macros` - Enables importing macros from `entity_macros` directly from "entity".
+* **`inmemory_db`** *(enabled by default)* - Enables the in-memory database for use with ent objects.
+  This does not bring in `serde-1` by default, but including that feature will
+  also support persisting the database to the filesystem.
+* **`sled_db`** - Enables the sled database for use with ent objects. Because
+  of the nature of sled, this will also pull in `serde-1`.
+* **`serde-1`** - Provides serde serialization module and associated functionality for ents
+  through the use of [typetag](https://github.com/dtolnay/typetag). This will
+  require that all ents implement [Serialize](https://docs.serde.rs/serde/trait.Serialize.html)
+  and [Deserialize](https://docs.serde.rs/serde/trait.Deserialize.html).
+* **`macros`** *(enabled by default)* - Importing macros from `entity_macros` directly from **entity**.

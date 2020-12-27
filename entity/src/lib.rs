@@ -14,3 +14,6 @@ pub mod vendor {
     #[cfg(feature = "sled_db")]
     pub use sled;
 }
+
+#[cfg(doctest)]
+doc_comment::doctest!("../README.md", readme);

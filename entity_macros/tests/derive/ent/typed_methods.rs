@@ -4,7 +4,6 @@ use std::convert::TryFrom;
 #[test]
 fn produces_getters_for_fields_that_returns_references() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -41,7 +40,6 @@ fn produces_getters_for_fields_that_returns_references() {
 #[test]
 fn produces_setters_for_fields_marked_as_mutable() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -84,7 +82,6 @@ fn produces_setters_for_fields_marked_as_mutable() {
 #[test]
 fn produces_getters_for_edge_ids_that_returns_an_option_if_kind_is_maybe() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -116,7 +113,6 @@ fn produces_getters_for_edge_ids_that_returns_an_option_if_kind_is_maybe() {
 #[test]
 fn produces_getters_for_edge_ids_that_returns_the_id_if_kind_is_one() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -148,7 +144,6 @@ fn produces_getters_for_edge_ids_that_returns_the_id_if_kind_is_one() {
 #[test]
 fn produces_getters_for_edge_ids_that_returns_a_list_of_ids_if_kind_is_many() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -180,7 +175,6 @@ fn produces_getters_for_edge_ids_that_returns_a_list_of_ids_if_kind_is_many() {
 #[test]
 fn produces_setters_for_edge_ids_that_accepts_an_optional_id_if_kind_is_maybe() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -216,7 +210,6 @@ fn produces_setters_for_edge_ids_that_accepts_an_optional_id_if_kind_is_maybe() 
 #[test]
 fn produces_setters_for_edge_ids_that_accepts_an_id_if_kind_is_one() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -249,7 +242,6 @@ fn produces_setters_for_edge_ids_that_accepts_an_id_if_kind_is_one() {
 #[test]
 fn produces_setters_for_edge_ids_that_accepts_a_list_of_ids_if_kind_is_many() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -282,7 +274,6 @@ fn produces_setters_for_edge_ids_that_accepts_a_list_of_ids_if_kind_is_many() {
 #[test]
 fn produces_load_method_for_edge_of_kind_maybe_that_returns_an_option_of_ent() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -351,7 +342,6 @@ fn produces_load_method_for_edge_of_kind_maybe_that_returns_an_option_of_ent() {
 #[test]
 fn produces_load_method_for_edge_of_kind_one_that_returns_a_single_ent() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -419,7 +409,6 @@ fn produces_load_method_for_edge_of_kind_one_that_returns_a_single_ent() {
 #[test]
 fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -491,7 +480,6 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
 #[test]
 fn supports_generic_ent_fields() {
     #[derive(Clone, Ent)]
-    #[ent(typed_methods)]
     struct TestEnt<T>
     where
         T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + 'static,

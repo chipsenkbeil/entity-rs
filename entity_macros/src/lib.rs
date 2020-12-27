@@ -6,7 +6,7 @@ use quote::quote;
 use syn::{parse_macro_input, AttributeArgs, DeriveInput, ItemStruct};
 
 #[cfg(doctest)]
-doc_comment::doctest!("../README.md");
+doc_comment::doctest!("../README.md", readme);
 
 /// Derives the IEnt trait and additional typed functionality
 ///
@@ -119,10 +119,7 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// #[simple_ent]
 /// pub struct MyEnt {
-///     #[ent(field)]
 ///     name: String,
-///
-///     #[ent(field)]
 ///     value: u32,
 /// }
 /// ```

@@ -1,6 +1,6 @@
 [package]
 name = "entity_macros"
-description = "Macro library that provides ability to derive ent logic at compile-time."
+description = "Macro library that provides ability to generate ent logic at compile-time."
 categories = ["data-structures"]
 version = "0.1.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
