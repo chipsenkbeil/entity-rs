@@ -12,9 +12,9 @@ use heck::ShoutySnakeCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::convert::TryFrom;
-use syn::DeriveInput;
+use syn::{DeriveInput, Path};
 
-pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::Error> {
+pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn::Error> {
     let name = &input.ident;
     let vis = &input.vis;
     let generics = &input.generics;

@@ -2,10 +2,10 @@ use super::{EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
 use crate::utils;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{spanned::Spanned, Generics, Ident, Type};
+use syn::{spanned::Spanned, Generics, Ident, Path, Type};
 
 pub(crate) fn impl_ient(
-    root: &TokenStream,
+    root: &Path,
     name: &Ident,
     generics: &Generics,
     ent_info: &EntInfo,
@@ -221,7 +221,7 @@ pub(crate) fn impl_ient(
 }
 
 fn make_field_definitions(
-    root: &TokenStream,
+    root: &Path,
     fields: &[EntField],
 ) -> Result<Vec<TokenStream>, syn::Error> {
     let mut token_streams = Vec::new();
@@ -252,7 +252,7 @@ fn make_field_definitions(
     Ok(token_streams)
 }
 
-fn make_field_value_type(root: &TokenStream, r#type: &Type) -> Result<TokenStream, syn::Error> {
+fn make_field_value_type(root: &Path, r#type: &Type) -> Result<TokenStream, syn::Error> {
     Ok(match r#type {
         Type::Path(x) => {
             if let Some(seg) = x.path.segments.last() {
@@ -348,7 +348,7 @@ fn make_field_value_type(root: &TokenStream, r#type: &Type) -> Result<TokenStrea
     })
 }
 
-fn make_edge_definitions(root: &TokenStream, edges: &[EntEdge]) -> Vec<TokenStream> {
+fn make_edge_definitions(root: &Path, edges: &[EntEdge]) -> Vec<TokenStream> {
     let mut token_streams = Vec::new();
 
     for e in edges {

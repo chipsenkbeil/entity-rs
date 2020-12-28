@@ -1,14 +1,9 @@
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_quote, Expr, FieldsUnnamed, Generics, Ident, Index, LitInt};
+use syn::{parse_quote, Expr, FieldsUnnamed, Generics, Ident, Index, LitInt, Path};
 
-pub fn make(
-    root: &TokenStream,
-    name: &Ident,
-    generics: &Generics,
-    fields: &FieldsUnnamed,
-) -> TokenStream {
+pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnamed) -> TokenStream {
     let field_names: Vec<Index> = (0..fields.unnamed.len()).map(Index::from).collect();
     let temp_field_names: Vec<Ident> = (0..fields.unnamed.len())
         .map(|name| format_ident!("tmp_{}", name))

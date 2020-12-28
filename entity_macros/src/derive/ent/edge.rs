@@ -2,12 +2,12 @@ use super::{EntEdge, EntEdgeKind};
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Generics, Ident, Type};
+use syn::{Generics, Ident, Path, Type};
 
 /// Implements individual typed methods for each of the provided edges for
 /// the ent with the given name
 pub(crate) fn impl_typed_edge_methods(
-    root: &TokenStream,
+    root: &Path,
     name: &Ident,
     generics: &Generics,
     edges: &[EntEdge],
@@ -73,7 +73,7 @@ fn fn_typed_id_setter(edge: &EntEdge) -> TokenStream {
     }
 }
 
-fn fn_typed_load_edge(root: &TokenStream, edge: &EntEdge) -> TokenStream {
+fn fn_typed_load_edge(root: &Path, edge: &EntEdge) -> TokenStream {
     match edge.kind {
         EntEdgeKind::Maybe => fn_typed_load_edge_of_maybe(
             root,
@@ -97,7 +97,7 @@ fn fn_typed_load_edge(root: &TokenStream, edge: &EntEdge) -> TokenStream {
 }
 
 fn fn_typed_load_edge_of_maybe(
-    root: &TokenStream,
+    root: &Path,
     method_name: &Ident,
     edge_name: &Ident,
     edge_type: &Type,
@@ -123,7 +123,7 @@ fn fn_typed_load_edge_of_maybe(
 }
 
 fn fn_typed_load_edge_of_one(
-    root: &TokenStream,
+    root: &Path,
     method_name: &Ident,
     edge_name: &Ident,
     edge_type: &Type,
@@ -149,7 +149,7 @@ fn fn_typed_load_edge_of_one(
 }
 
 fn fn_typed_load_edge_of_many(
-    root: &TokenStream,
+    root: &Path,
     method_name: &Ident,
     edge_name: &Ident,
     edge_type: &Type,

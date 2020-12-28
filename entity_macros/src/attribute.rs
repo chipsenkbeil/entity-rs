@@ -6,11 +6,11 @@ use syn::{
     parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
-    Attribute, AttributeArgs, Field, Fields, ItemStruct, NestedMeta, Token,
+    Attribute, AttributeArgs, Field, Fields, ItemStruct, NestedMeta, Path, Token,
 };
 
 pub fn do_simple_ent(
-    root: TokenStream,
+    root: Path,
     args: AttributeArgs,
     mut item: ItemStruct,
 ) -> Result<TokenStream, syn::Error> {
@@ -33,7 +33,7 @@ pub fn do_simple_ent(
 /// This can be stopped via simple_ent(no_derive_clone) or forced via
 /// simple_ent(derive_clone)
 fn inject_derive_clone_attr(
-    _root: &TokenStream,
+    _root: &Path,
     item: &mut ItemStruct,
     info: &Info,
 ) -> Result<(), syn::Error> {
@@ -70,7 +70,7 @@ fn inject_derive_clone_attr(
 /// This can be stopped via simple_ent(no_derive_ent) or forced via
 /// simple_ent(derive_ent)
 fn inject_derive_ent_attr(
-    root: &TokenStream,
+    root: &Path,
     item: &mut ItemStruct,
     info: &Info,
 ) -> Result<(), syn::Error> {
@@ -107,7 +107,7 @@ fn inject_derive_ent_attr(
 /// This is only done if specified via simple_ent(serde) and can be prevented
 /// via simple_ent(no_serde)
 fn inject_derive_serde_attr(
-    _root: &TokenStream,
+    _root: &Path,
     item: &mut ItemStruct,
     info: &Info,
 ) -> Result<(), syn::Error> {
@@ -150,11 +150,7 @@ fn inject_derive_serde_attr(
 /// id's name and there is no marked id field.
 ///
 /// The name can be altered via simple_ent(id = "...")
-fn inject_ent_id_field(
-    root: &TokenStream,
-    item: &mut ItemStruct,
-    info: &Info,
-) -> Result<(), syn::Error> {
+fn inject_ent_id_field(root: &Path, item: &mut ItemStruct, info: &Info) -> Result<(), syn::Error> {
     match (info.has_conflicting_id_name, info.has_id_marker) {
         (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
         (_, Some(_)) => Ok(()),
@@ -192,7 +188,7 @@ fn inject_ent_id_field(
 ///
 /// The name can be altered via simple_ent(database = "...")
 fn inject_ent_database_field(
-    root: &TokenStream,
+    root: &Path,
     item: &mut ItemStruct,
     info: &Info,
 ) -> Result<(), syn::Error> {
@@ -244,7 +240,7 @@ fn inject_ent_database_field(
 ///
 /// The name can be altered via simple_ent(created = "...")
 fn inject_ent_created_field(
-    _root: &TokenStream,
+    _root: &Path,
     item: &mut ItemStruct,
     info: &Info,
 ) -> Result<(), syn::Error> {
@@ -281,7 +277,7 @@ fn inject_ent_created_field(
 ///
 /// The name can be altered via simple_ent(last_updated = "...")
 fn inject_ent_last_updated_field(
-    _root: &TokenStream,
+    _root: &Path,
     item: &mut ItemStruct,
     info: &Info,
 ) -> Result<(), syn::Error> {

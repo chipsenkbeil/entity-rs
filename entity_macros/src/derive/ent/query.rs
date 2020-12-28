@@ -2,10 +2,10 @@ use super::EntInfo;
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_quote, Expr, Generics, Ident, Type, Visibility};
+use syn::{parse_quote, Expr, Generics, Ident, Path, Type, Visibility};
 
 pub fn impl_ent_query(
-    root: &TokenStream,
+    root: &Path,
     name: &Ident,
     vis: &Visibility,
     generics: &Generics,

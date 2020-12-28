@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Generics, Ident};
+use syn::{Generics, Ident, Path};
 
-pub fn make(root: &TokenStream, name: &Ident, generics: &Generics) -> TokenStream {
+pub fn make(root: &Path, name: &Ident, generics: &Generics) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote! {

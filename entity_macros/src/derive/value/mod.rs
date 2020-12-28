@@ -3,9 +3,9 @@ mod unit;
 mod unnamed;
 
 use proc_macro2::TokenStream;
-use syn::{spanned::Spanned, Data, DeriveInput, Fields};
+use syn::{spanned::Spanned, Data, DeriveInput, Fields, Path};
 
-pub fn do_derive_value(root: TokenStream, input: DeriveInput) -> Result<TokenStream, syn::Error> {
+pub fn do_derive_value(root: Path, input: DeriveInput) -> Result<TokenStream, syn::Error> {
     let name = &input.ident;
     let generics = &input.generics;
 

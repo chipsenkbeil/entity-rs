@@ -2,10 +2,10 @@ use crate::{derive::ent::EntInfo, utils};
 use heck::CamelCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::DeriveInput;
+use syn::{DeriveInput, Path};
 
 pub fn impl_ent_builder(
-    root: &TokenStream,
+    root: &Path,
     input: &DeriveInput,
     ent_info: &EntInfo,
 ) -> Result<TokenStream, syn::Error> {

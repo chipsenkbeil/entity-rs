@@ -1,14 +1,9 @@
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Expr, FieldsNamed, Generics, Ident};
+use syn::{Expr, FieldsNamed, Generics, Ident, Path};
 
-pub fn make(
-    root: &TokenStream,
-    name: &Ident,
-    generics: &Generics,
-    fields: &FieldsNamed,
-) -> TokenStream {
+pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed) -> TokenStream {
     let field_names: Vec<Ident> = fields
         .named
         .iter()

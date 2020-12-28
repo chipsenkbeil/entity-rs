@@ -1,8 +1,20 @@
+use proc_macro2::Span;
+use proc_macro_crate::crate_name;
 use std::collections::HashMap;
 use syn::{
     parse_quote, spanned::Spanned, Attribute, Data, DeriveInput, Expr, Fields, FieldsNamed,
-    GenericArgument, Ident, Lit, Meta, NestedMeta, PathArguments, PathSegment, Type,
+    GenericArgument, Ident, Lit, Meta, NestedMeta, Path, PathArguments, PathSegment, Type,
 };
+
+/// Produces a token stream in the form of
+pub fn root() -> Result<Path, syn::Error> {
+    crate_name("entity")
+        .map(|name| {
+            let crate_ident = Ident::new(&name, Span::mixed_site());
+            parse_quote!(::#crate_ident)
+        })
+        .map_err(|msg| syn::Error::new(Span::mixed_site(), msg))
+}
 
 /// Returns true if the attribute is in the form of ent(...) where
 /// the interior is checked for an identifier of the given str
