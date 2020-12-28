@@ -128,6 +128,7 @@ pub fn impl_ent_query(
 
     Ok(quote! {
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
+        #[automatically_derived]
         #vis struct #query_name #impl_generics(
             #root::Query,
             #(#ty_phantoms),*

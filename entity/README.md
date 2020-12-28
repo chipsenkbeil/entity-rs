@@ -45,23 +45,27 @@ struct User {
 
 let db = InmemoryDatabase::default();
 let alice = UserBuilder::default()
-    .name("Alice")
+    .name(String::from("Alice"))
     .age(30)
+    .friends(Vec::new())
     .build()
     .unwrap();
 let bob = UserBuilder::default()
-    .name("Bob")
+    .name(String::from("Bob"))
     .age(35)
+    .friends(Vec::new())
     .build()
     .unwrap();
 let carol = UserBuilder::default()
-    .name("Carol")
+    .name(String::from("Carol"))
     .age(27)
+    .friends(Vec::new())
     .build()
     .unwrap();
 let dan = UserBuilder::default()
-    .name("Dan")
+    .name(String::from("Dan"))
     .age(25)
+    .friends(Vec::new())
     .build()
     .unwrap();
 ```

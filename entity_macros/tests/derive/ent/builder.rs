@@ -1,6 +1,33 @@
 use derivative::Derivative;
-use entity::{Database, Ent, Id, Value};
+use entity::{Database, Ent, Id, Value, EPHEMERAL_ID};
 use std::convert::TryFrom;
+
+#[test]
+fn default_fills_in_required_fields() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: Option<Box<dyn Database>>,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+    }
+
+    let ent = TestEntBuilder::default()
+        .build()
+        .expect("Failed to create test ent");
+
+    assert_eq!(ent.id, EPHEMERAL_ID);
+    assert!(ent.database.is_none());
+    assert!(ent.created > 0);
+    assert!(ent.last_updated > 0);
+}
 
 #[test]
 fn produces_an_error_enum_for_each_struct_field() {
@@ -34,19 +61,6 @@ fn produces_an_error_enum_for_each_struct_field() {
         edge3: Vec<Id>,
     }
 
-    assert_eq!(TestEntBuilderError::MissingId.to_string(), "Missing id");
-    assert_eq!(
-        TestEntBuilderError::MissingDatabase.to_string(),
-        "Missing database"
-    );
-    assert_eq!(
-        TestEntBuilderError::MissingCreated.to_string(),
-        "Missing created"
-    );
-    assert_eq!(
-        TestEntBuilderError::MissingLastUpdated.to_string(),
-        "Missing last_updated"
-    );
     assert_eq!(
         TestEntBuilderError::MissingField1.to_string(),
         "Missing field1"
@@ -70,7 +84,7 @@ fn produces_an_error_enum_for_each_struct_field() {
 }
 
 #[test]
-fn default_returns_a_builder_with_all_fields_set_to_none() {
+fn default_returns_a_builder_with_all_normal_fields_set_to_none() {
     #[derive(Clone, Ent)]
     struct TestEnt {
         #[ent(id)]
@@ -102,10 +116,10 @@ fn default_returns_a_builder_with_all_fields_set_to_none() {
     }
 
     let builder = TestEntBuilder::default();
-    assert_eq!(builder.id, None);
-    assert_eq!(builder.database.is_none(), true);
-    assert_eq!(builder.created, None);
-    assert_eq!(builder.last_updated, None);
+    assert_eq!(builder.id, EPHEMERAL_ID);
+    assert!(builder.database.is_none());
+    assert!(builder.created > 0);
+    assert!(builder.last_updated > 0);
     assert_eq!(builder.field1, None);
     assert_eq!(builder.field2, None);
     assert_eq!(builder.edge1, None);
@@ -149,70 +163,6 @@ fn build_fails_when_struct_field_is_not_set() {
 
     assert_eq!(
         TestEntBuilder::default()
-            .database(None)
-            .created(0)
-            .last_updated(0)
-            .field1(0)
-            .field2(String::from("test"))
-            .edge1(None)
-            .edge2(0)
-            .edge3(vec![])
-            .build()
-            .unwrap_err(),
-        TestEntBuilderError::MissingId,
-    );
-
-    assert_eq!(
-        TestEntBuilder::default()
-            .id(0)
-            .created(0)
-            .last_updated(0)
-            .field1(0)
-            .field2(String::from("test"))
-            .edge1(None)
-            .edge2(0)
-            .edge3(vec![])
-            .build()
-            .unwrap_err(),
-        TestEntBuilderError::MissingDatabase,
-    );
-
-    assert_eq!(
-        TestEntBuilder::default()
-            .id(0)
-            .database(None)
-            .last_updated(0)
-            .field1(0)
-            .field2(String::from("test"))
-            .edge1(None)
-            .edge2(0)
-            .edge3(vec![])
-            .build()
-            .unwrap_err(),
-        TestEntBuilderError::MissingCreated,
-    );
-
-    assert_eq!(
-        TestEntBuilder::default()
-            .id(0)
-            .database(None)
-            .created(0)
-            .field1(0)
-            .field2(String::from("test"))
-            .edge1(None)
-            .edge2(0)
-            .edge3(vec![])
-            .build()
-            .unwrap_err(),
-        TestEntBuilderError::MissingLastUpdated,
-    );
-
-    assert_eq!(
-        TestEntBuilder::default()
-            .id(0)
-            .database(None)
-            .created(0)
-            .last_updated(0)
             .field2(String::from("test"))
             .edge1(None)
             .edge2(0)
@@ -224,10 +174,6 @@ fn build_fails_when_struct_field_is_not_set() {
 
     assert_eq!(
         TestEntBuilder::default()
-            .id(0)
-            .database(None)
-            .created(0)
-            .last_updated(0)
             .field1(0)
             .edge1(None)
             .edge2(0)
@@ -239,10 +185,6 @@ fn build_fails_when_struct_field_is_not_set() {
 
     assert_eq!(
         TestEntBuilder::default()
-            .id(0)
-            .database(None)
-            .created(0)
-            .last_updated(0)
             .field1(0)
             .field2(String::from("test"))
             .edge2(0)
@@ -254,10 +196,6 @@ fn build_fails_when_struct_field_is_not_set() {
 
     assert_eq!(
         TestEntBuilder::default()
-            .id(0)
-            .database(None)
-            .created(0)
-            .last_updated(0)
             .field1(0)
             .field2(String::from("test"))
             .edge1(None)
@@ -269,10 +207,6 @@ fn build_fails_when_struct_field_is_not_set() {
 
     assert_eq!(
         TestEntBuilder::default()
-            .id(0)
-            .database(None)
-            .created(0)
-            .last_updated(0)
             .field1(0)
             .field2(String::from("test"))
             .edge1(None)
@@ -363,17 +297,9 @@ fn supports_generic_fields() {
     }
 
     let builder = TestEntBuilder::default();
-    assert_eq!(builder.id, None);
-    assert_eq!(builder.database.is_none(), true);
-    assert_eq!(builder.created, None);
-    assert_eq!(builder.last_updated, None);
     assert_eq!(builder.generic_field, None);
 
     let ent = builder
-        .id(0)
-        .database(None)
-        .created(0)
-        .last_updated(0)
         .generic_field(3)
         .build()
         .expect("Failed to create with generic field");

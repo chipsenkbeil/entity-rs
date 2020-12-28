@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 
 #[test]
 fn produces_getters_for_fields_that_returns_references() {
+    #[allow(dead_code)]
     #[derive(Clone, Ent)]
     struct TestEnt {
         #[ent(id)]

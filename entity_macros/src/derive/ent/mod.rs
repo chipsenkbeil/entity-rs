@@ -34,7 +34,7 @@ pub fn do_derive_ent(root: TokenStream, input: DeriveInput) -> Result<TokenStrea
     let builder_t = if !ent_attrs.get("builder").copied().unwrap_or(true) {
         quote! {}
     } else {
-        builder::impl_ent_builder(&root, &input)?
+        builder::impl_ent_builder(&root, &input, &ent_info)?
     };
 
     // Unless we have the attribute ent(no_query), we will add an additional
