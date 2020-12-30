@@ -1,4 +1,4 @@
-use entity::{Database, Ent, IEnt, Id, InmemoryDatabase, TypedPredicate as P, Value};
+use entity::{Database, Ent, Id, InmemoryDatabase, TypedPredicate as P, Value};
 use std::convert::TryFrom;
 
 #[test]
@@ -43,7 +43,7 @@ fn produces_method_to_filter_by_id() {
         .execute(&database)
         .expect("Failed to query for ents")
         .iter()
-        .map(IEnt::id)
+        .map(Ent::id)
         .collect();
     assert_eq!(results.len(), 1);
     assert!(results.contains(&2));
@@ -100,7 +100,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
         .execute(&database)
         .expect("Failed to query for ents")
         .iter()
-        .map(IEnt::id)
+        .map(Ent::id)
         .collect();
     assert_eq!(results.len(), 1);
     assert!(results.contains(&1));
@@ -169,7 +169,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
         .execute(&database)
         .expect("Failed to query for ents")
         .iter()
-        .map(IEnt::id)
+        .map(Ent::id)
         .collect();
     assert_eq!(results.len(), 1);
     assert!(results.contains(&1));
@@ -222,7 +222,7 @@ fn produces_method_to_filter_by_field() {
         .execute(&database)
         .expect("Failed to query for ents")
         .iter()
-        .map(IEnt::id)
+        .map(Ent::id)
         .collect();
     assert_eq!(results.len(), 1);
     assert!(results.contains(&1));
@@ -278,7 +278,7 @@ fn supports_generic_fields() {
         .execute(&database)
         .expect("Failed to query for ents")
         .iter()
-        .map(IEnt::id)
+        .map(Ent::id)
         .collect();
     assert_eq!(results.len(), 1);
     assert!(results.contains(&2));
@@ -333,7 +333,7 @@ fn produces_method_to_filter_by_ents_connected_by_edge() {
         .execute(&database)
         .expect("Failed to query for ents")
         .iter()
-        .map(IEnt::id)
+        .map(Ent::id)
         .collect();
     assert_eq!(results.len(), 1);
     assert!(results.contains(&1));
@@ -404,7 +404,7 @@ fn produces_method_to_yield_edge_ents() {
         .execute(&database)
         .expect("Failed to query for ents")
         .iter()
-        .map(IEnt::id)
+        .map(Ent::id)
         .collect();
     assert_eq!(results.len(), 1);
     assert!(results.contains(&2));

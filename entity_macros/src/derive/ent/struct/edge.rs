@@ -104,7 +104,7 @@ fn fn_typed_load_edge_of_maybe(
 ) -> TokenStream {
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::option::Option<#edge_type>> {
-            use #root::IEnt;
+            use #root::Ent;
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
                 ents.into_iter().filter_map(|ent|
@@ -130,7 +130,7 @@ fn fn_typed_load_edge_of_one(
 ) -> TokenStream {
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<#edge_type> {
-            use #root::IEnt;
+            use #root::Ent;
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
                 ents.into_iter().filter_map(|ent|
@@ -156,7 +156,7 @@ fn fn_typed_load_edge_of_many(
 ) -> TokenStream {
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::vec::Vec<#edge_type>> {
-            use #root::IEnt;
+            use #root::Ent;
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
                 ents.into_iter().filter_map(|ent|

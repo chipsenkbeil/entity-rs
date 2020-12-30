@@ -6,8 +6,8 @@ error[E0277]: the trait bound `T: Clone` is not satisfied
    |
   ::: $WORKSPACE/entity/src/ent/mod.rs
    |
-   | pub trait IEnt: AsAny + DynClone {
-   |                         -------- required by this bound in `IEnt`
+   | pub trait Ent: AsAny + DynClone {
+   |                         -------- required by this bound in `Ent`
    |
    = note: required because of the requirements on the impl of `Clone` for `TestEnt<T>`
    = note: required because of the requirements on the impl of `dyn_clone::DynClone` for `TestEnt<T>`

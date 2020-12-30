@@ -7,7 +7,7 @@ use syn::{parse_macro_input, AttributeArgs, DeriveInput, ItemStruct};
 #[cfg(doctest)]
 doc_comment::doctest!("../README.md", readme);
 
-/// Derives the IEnt trait and additional typed functionality
+/// Derives the Ent trait and additional typed functionality
 ///
 /// ```
 /// use entity::{Ent, Id, Database};
@@ -15,7 +15,7 @@ doc_comment::doctest!("../README.md", readme);
 /// /// Define an entity and derive all associated ent functionality
 /// ///
 /// /// The entity must also implement clone as this is a requirement of
-/// /// the IEnt trait
+/// /// the Ent trait
 /// ///
 /// /// If using serde, this struct will need to implement serialize and
 /// /// deserialize itself AND include the attribute ent(typetag)
@@ -58,13 +58,13 @@ doc_comment::doctest!("../README.md", readme);
 ///     /// An edge out to a ContentEnt that is shallowly connected, meaning
 ///     /// that when this ent is deleted, the ent connected by this edge
 ///     /// will remove this ent if it is reversely-connected
-///     #[ent(edge(shallow, type = "ContentEnt"))]
+///     #[ent(edge(policy = "shallow", type = "ContentEnt"))]
 ///     header: Id,
 ///
 ///     /// An optional edge out to a ContentEnt that is deeply connected,
 ///     /// meaning that when this ent is deleted, the ent connected by this
 ///     /// edge will also be deleted
-///     #[ent(edge(deep, type = "ContentEnt"))]
+///     #[ent(edge(policy = "deep", type = "ContentEnt"))]
 ///     subheader: Option<Id>,
 ///
 ///     /// An edge out to zero or more ContentEnt, defaulting to doing

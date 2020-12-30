@@ -1,81 +1,13 @@
-mod builder;
-mod edge;
-mod field;
-mod ient;
-mod info;
-mod query;
+mod r#enum;
+mod r#struct;
 
-pub use info::{EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
-
-use crate::utils;
-use heck::ShoutySnakeCase;
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
-use std::convert::TryFrom;
-use syn::{DeriveInput, Path};
+use syn::{spanned::Spanned, Data, DeriveInput, Path};
 
 pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn::Error> {
-    let name = &input.ident;
-    let vis = &input.vis;
-    let generics = &input.generics;
-    let const_type_name = format_ident!("{}_TYPE", name.to_string().to_shouty_snake_case());
-    let ent_info = EntInfo::try_from(&input)?;
-
-    // Define a constant with a string representing the unique type of the ent
-    let const_type_t = quote! {
-        #vis const #const_type_name: &str = concat!(module_path!(), "::", stringify!(#name));
-    };
-
-    let ent_attrs = utils::attrs_into_attr_map(&input.attrs, "ent").unwrap_or_default();
-
-    // Unless we have the attribute ent(no_builder), we will add an additional
-    // struct of <name>Builder that provides a convenient way to build
-    // an ent struct one field at a time
-    let builder_t = if !ent_attrs.get("builder").copied().unwrap_or(true) {
-        quote! {}
-    } else {
-        builder::impl_ent_builder(&root, &input, &ent_info)?
-    };
-
-    // Unless we have the attribute ent(no_query), we will add an additional
-    // struct of <name>Query that provides a convenient way to build
-    // a typed ent query
-    let query_t = if !ent_attrs.get("query").copied().unwrap_or(true) {
-        quote! {}
-    } else {
-        query::impl_ent_query(&root, name, vis, generics, &const_type_name, &ent_info)?
-    };
-
-    // Unless we have the attribute ent(no_typed_methods), we will add an additional
-    // impl that provides loading of specific edges to corresponding types
-    let typed_methods_t = if !ent_attrs.get("typed_methods").copied().unwrap_or(true) {
-        quote! {}
-    } else {
-        let edge_methods_t =
-            edge::impl_typed_edge_methods(&root, &name, generics, &ent_info.edges)?;
-        let field_methods_t = field::impl_typed_field_methods(&name, generics, &ent_info.fields);
-        quote! {
-            #edge_methods_t
-            #field_methods_t
-        }
-    };
-
-    // Implement the IEnt interface with optional typetag if we have the
-    // attribute ent(typetag)
-    let ent_t = ient::impl_ient(
-        &root,
-        name,
-        generics,
-        &ent_info,
-        &const_type_name,
-        ent_attrs.get("typetag").copied().unwrap_or_default(),
-    )?;
-
-    Ok(quote! {
-        #const_type_t
-        #ent_t
-        #typed_methods_t
-        #builder_t
-        #query_t
-    })
+    match &input.data {
+        Data::Struct(_) => r#struct::do_derive_ent(root, input),
+        Data::Enum(_) => r#enum::do_derive_ent(root, input),
+        Data::Union(_) => Err(syn::Error::new(input.span(), "Unions are not supported")),
+    }
 }

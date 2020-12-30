@@ -11,7 +11,7 @@ pub use sled_db::SledDatabase;
 
 use crate::{
     database::{Database, DatabaseResult},
-    Filter, IEnt, Id, Predicate, PrimitiveValue, Query, Value,
+    Ent, Filter, Id, Predicate, PrimitiveValue, Query, Value,
 };
 use std::collections::HashSet;
 
@@ -40,13 +40,13 @@ impl<'a, T: KeyValueDatabase> From<&'a T> for KeyValueDatabaseExecutor<'a, T> {
 }
 
 impl<'a, T: KeyValueDatabase> KeyValueDatabaseExecutor<'a, T> {
-    pub fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+    pub fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn Ent>>> {
         ids.into_iter()
             .filter_map(|id| self.0.get(id).transpose())
             .collect()
     }
 
-    pub fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+    pub fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn Ent>>> {
         let mut pipeline: Option<EntIdSet> = None;
 
         for filter in query {
@@ -175,7 +175,7 @@ fn filter_id<D: KeyValueDatabase>(db: &D, id: &Id, filter: &Filter) -> bool {
     }
 }
 
-fn with_ent<D: KeyValueDatabase, F: Fn(Box<dyn IEnt>) -> bool>(db: &D, id: &Id, f: F) -> bool {
+fn with_ent<D: KeyValueDatabase, F: Fn(Box<dyn Ent>) -> bool>(db: &D, id: &Id, f: F) -> bool {
     db.get(*id)
         .map(|maybe_ent| maybe_ent.map(f).unwrap_or_default())
         .unwrap_or_default()
@@ -184,7 +184,7 @@ fn with_ent<D: KeyValueDatabase, F: Fn(Box<dyn IEnt>) -> bool>(db: &D, id: &Id, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Edge, Ent, Field, Predicate as P, TypedPredicate as TP, Value};
+    use crate::{Edge, Field, Predicate as P, TypedPredicate as TP, UntypedEnt, Value};
     use std::collections::HashMap;
 
     macro_rules! impl_tests {
@@ -200,36 +200,33 @@ mod tests {
 
                 // 1-3 have no fields or edges
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(1, "type1", vec![], vec![])))
+                    .insert(Box::from(UntypedEnt::from_collections(1, vec![], vec![])))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(2, "type1", vec![], vec![])))
+                    .insert(Box::from(UntypedEnt::from_collections(2, vec![], vec![])))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(3, "type1", vec![], vec![])))
+                    .insert(Box::from(UntypedEnt::from_collections(3, vec![], vec![])))
                     .unwrap();
 
                 // 4-6 have value fields only
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         4,
-                        "type2",
                         vec![Field::new("a", 1), Field::new("b", 2)],
                         vec![],
                     )))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         5,
-                        "type2",
                         vec![Field::new("a", 3), Field::new("b", 4)],
                         vec![],
                     )))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         6,
-                        "type2",
                         vec![Field::new("a", 5), Field::new("b", 6)],
                         vec![],
                     )))
@@ -237,9 +234,8 @@ mod tests {
 
                 // 7-9 have collection fields only
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         7,
-                        "type3",
                         vec![Field::new(
                             "f",
                             Value::from(
@@ -252,17 +248,15 @@ mod tests {
                     )))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         8,
-                        "type3",
                         vec![Field::new("f", vec![1, 2])],
                         vec![],
                     )))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         9,
-                        "type3",
                         vec![Field::new(
                             "f",
                             Value::from(
@@ -280,9 +274,8 @@ mod tests {
 
                 // 10-12 have edges only
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         10,
-                        "type4",
                         vec![],
                         vec![
                             Edge::new("a", 1),
@@ -292,17 +285,15 @@ mod tests {
                     )))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         11,
-                        "type4",
                         vec![],
                         vec![Edge::new("a", 2), Edge::new("b", vec![1, 2, 3, 4, 5, 6])],
                     )))
                     .unwrap();
                 let _ = db
-                    .insert(Box::from(Ent::from_collections(
+                    .insert(Box::from(UntypedEnt::from_collections(
                         12,
-                        "type4",
                         vec![],
                         vec![
                             Edge::new("a", 3),
@@ -341,9 +332,9 @@ mod tests {
             fn get_all_should_return_all_ents_with_associated_ids() {
                 let db = $new_db;
 
-                let _ = db.insert(Box::from(Ent::new_untyped(1))).unwrap();
-                let _ = db.insert(Box::from(Ent::new_untyped(2))).unwrap();
-                let _ = db.insert(Box::from(Ent::new_untyped(3))).unwrap();
+                let _ = db.insert(Box::from(UntypedEnt::empty_with_id(1))).unwrap();
+                let _ = db.insert(Box::from(UntypedEnt::empty_with_id(2))).unwrap();
+                let _ = db.insert(Box::from(UntypedEnt::empty_with_id(3))).unwrap();
 
                 let results = db
                     .get_all(vec![1, 2, 3])
@@ -402,8 +393,9 @@ mod tests {
                 let db = new_test_database();
 
                 // If ent with type exists, we expect it to be available
-                let q = Query::default().where_type(TP::equals(String::from("type1")));
-                query_and_assert(&db, q, &[1, 2, 3]);
+                let ts = <UntypedEnt as crate::EntType>::type_str();
+                let q = Query::default().where_type(TP::equals(ts.to_string()));
+                query_and_assert(&db, q, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
                 // If ent with type does not exist, we expect empty
                 let q = Query::default().where_type(TP::equals(String::from("unknown")));
@@ -412,8 +404,8 @@ mod tests {
                 // If already in a pipeline, should only filter the existing ids
                 let q = Query::default()
                     .where_id(TP::equals(1) | TP::equals(2) | TP::equals(4))
-                    .where_type(TP::equals(String::from("type1")));
-                query_and_assert(&db, q, &[1, 2]);
+                    .where_type(TP::equals(ts.to_string()));
+                query_and_assert(&db, q, &[1, 2, 4]);
             }
 
             #[test]
@@ -423,7 +415,7 @@ mod tests {
                 // Re-create all ents with enough time split between them for us to
                 // properly test creation time
                 for i in 1..=12 {
-                    let ent = Ent::new_untyped(i);
+                    let ent = UntypedEnt::empty_with_id(i);
                     db.insert(Box::from(ent))
                         .expect(&format!("Failed to replace ent {}", i));
                     std::thread::sleep(std::time::Duration::from_millis(1));
@@ -451,7 +443,7 @@ mod tests {
                 for i in (1..=12).rev() {
                     use crate::DatabaseExt;
                     let mut ent = db
-                        .get_typed::<Ent>(i)
+                        .get_typed::<UntypedEnt>(i)
                         .unwrap()
                         .expect(&format!("Missing ent {}", i));
                     ent.mark_updated().unwrap();

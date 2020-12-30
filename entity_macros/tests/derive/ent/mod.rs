@@ -1,4 +1,4 @@
 mod builder;
-mod ient;
+mod ent;
 mod query;
 mod typed_methods;

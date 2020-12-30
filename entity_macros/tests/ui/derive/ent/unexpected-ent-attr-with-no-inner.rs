@@ -8,11 +8,14 @@ struct TestEnt {
     #[ent(database)]
     database: Option<Box<dyn Database>>,
 
-    #[ent]
+    #[ent(created)]
     created: u64,
 
     #[ent(last_updated)]
     last_updated: u64,
+
+    #[ent]
+    other: usize,
 }
 
 fn main() {}

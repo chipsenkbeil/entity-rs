@@ -1,4 +1,4 @@
-use entity::{Database, DatabaseError, Ent, IEnt, Id, InmemoryDatabase, Value};
+use entity::{Database, DatabaseError, Ent, Id, InmemoryDatabase, Value};
 use std::convert::TryFrom;
 
 #[test]

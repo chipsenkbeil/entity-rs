@@ -1,4 +1,4 @@
-use super::EntInfo;
+use super::Ent;
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -10,7 +10,7 @@ pub fn impl_ent_query(
     vis: &Visibility,
     generics: &Generics,
     const_type_name: &Ident,
-    ent_info: &EntInfo,
+    ent: &Ent,
 ) -> Result<TokenStream, syn::Error> {
     let query_name = format_ident!("{}Query", name);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -27,7 +27,7 @@ pub fn impl_ent_query(
 
     let mut methods: Vec<TokenStream> = Vec::new();
 
-    let method_name = format_ident!("where_{}", ent_info.id);
+    let method_name = format_ident!("where_{}", ent.id);
     methods.push(quote! {
         #[doc = "Filters to return all ents where id passes the given predicate"]
         pub fn #method_name(self, p: #root::TypedPredicate<#root::Id>) -> Self {
@@ -35,7 +35,7 @@ pub fn impl_ent_query(
         }
     });
 
-    let method_name = format_ident!("where_{}", ent_info.created);
+    let method_name = format_ident!("where_{}", ent.created);
     methods.push(quote! {
         #[doc = "Filters to return all ents where created timestamp passes the given predicate"]
         pub fn #method_name(self, p: #root::TypedPredicate<u64>) -> Self {
@@ -43,7 +43,7 @@ pub fn impl_ent_query(
         }
     });
 
-    let method_name = format_ident!("where_{}", ent_info.last_updated);
+    let method_name = format_ident!("where_{}", ent.last_updated);
     methods.push(quote! {
         #[doc = "Filters to return all ents where last updated timestamp passes the given predicate"]
         pub fn #method_name(self, p: #root::TypedPredicate<u64>) -> Self {
@@ -51,7 +51,7 @@ pub fn impl_ent_query(
         }
     });
 
-    for f in &ent_info.fields {
+    for f in &ent.fields {
         let name = &f.name;
         let ty = &f.ty;
 
@@ -78,7 +78,7 @@ pub fn impl_ent_query(
         });
     }
 
-    for e in &ent_info.edges {
+    for e in &ent.edges {
         let name = &e.name;
         let ent_ty = &e.ent_ty;
 
@@ -91,7 +91,7 @@ pub fn impl_ent_query(
         methods.push(quote! {
             #[doc = #doc_string]
             pub fn #method_name(ent: &#ent_ty) -> Self {
-                use #root::IEnt;
+                use #root::Ent;
                 use ::std::default::Default;
                 use ::std::convert::From;
                 Self::from(Self::default().0.where_edge(
@@ -117,7 +117,7 @@ pub fn impl_ent_query(
         methods.push(quote! {
             #[doc = #doc_string]
             pub fn #method_name(self) -> #edge_query_ty {
-                use #root::IEnt;
+                use #root::Ent;
                 use ::std::convert::From;
                 #edge_query_ty::from(self.0.where_into_edge(stringify!(#name)))
             }

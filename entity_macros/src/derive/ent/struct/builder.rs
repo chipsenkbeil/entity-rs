@@ -1,4 +1,4 @@
-use crate::{derive::ent::EntInfo, utils};
+use super::{utils, Ent};
 use heck::CamelCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -7,7 +7,7 @@ use syn::{DeriveInput, Path};
 pub fn impl_ent_builder(
     root: &Path,
     input: &DeriveInput,
-    ent_info: &EntInfo,
+    ent: &Ent,
 ) -> Result<TokenStream, syn::Error> {
     let ent_name = &input.ident;
     let builder_name = format_ident!("{}Builder", ent_name);
@@ -35,7 +35,7 @@ pub fn impl_ent_builder(
 
         // If our special id field, we set an automatic default of the
         // ephemeral id
-        if name == &ent_info.id {
+        if name == &ent.id {
             struct_fields.push(quote!(#name: #ty));
             struct_field_defaults.push(quote!(#root::EPHEMERAL_ID));
             build_assignments.push(quote!(#name: self.#name));
@@ -47,7 +47,7 @@ pub fn impl_ent_builder(
                 }
             });
         // If our database field, we set it to none by default
-        } else if name == &ent_info.database {
+        } else if name == &ent.database {
             struct_fields.push(quote!(#name: #ty));
             struct_field_defaults.push(quote!(::std::option::Option::None));
             build_assignments.push(quote!(#name: self.#name));
@@ -59,7 +59,7 @@ pub fn impl_ent_builder(
                 }
             });
         // If our created or last_updated field, we set it to the current time
-        } else if name == &ent_info.created || name == &ent_info.last_updated {
+        } else if name == &ent.created || name == &ent.last_updated {
             struct_fields.push(quote!(#name: #ty));
             struct_field_defaults.push(quote!(::std::time::SystemTime::now()
                 .duration_since(::std::time::UNIX_EPOCH)

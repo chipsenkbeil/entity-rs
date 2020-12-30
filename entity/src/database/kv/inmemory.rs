@@ -3,7 +3,7 @@ use crate::{
     alloc::{IdAllocator, EPHEMERAL_ID},
     database::{Database, DatabaseError, DatabaseResult},
     ent::EdgeDeletionPolicy,
-    IEnt, Id, Query,
+    Ent, Id, Query,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -26,7 +26,7 @@ use std::{
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct InmemoryDatabase {
     /// Primary ent storage
-    ents: Arc<Mutex<HashMap<Id, Box<dyn IEnt>>>>,
+    ents: Arc<Mutex<HashMap<Id, Box<dyn Ent>>>>,
 
     /// Type matching from specific ents to all ids of those ents
     ents_of_type: Arc<Mutex<HashMap<String, EntIdSet>>>,
@@ -47,15 +47,15 @@ impl Default for InmemoryDatabase {
 }
 
 impl Database for InmemoryDatabase {
-    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn Ent>>> {
         KeyValueDatabaseExecutor::from(self).get_all(ids)
     }
 
-    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn Ent>>> {
         KeyValueDatabaseExecutor::from(self).find_all(query)
     }
 
-    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>> {
+    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn Ent>>> {
         Ok(self
             .ents
             .lock()
@@ -117,7 +117,7 @@ impl Database for InmemoryDatabase {
         }
     }
 
-    fn insert(&self, mut ent: Box<dyn IEnt>) -> DatabaseResult<Id> {
+    fn insert(&self, mut ent: Box<dyn Ent>) -> DatabaseResult<Id> {
         // Get the id of the ent, swapping out the ephemeral id
         let id = ent.id();
         let id = if id == EPHEMERAL_ID {
@@ -179,13 +179,13 @@ impl KeyValueDatabase for InmemoryDatabase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Ent, Field, Value};
+    use crate::{Field, UntypedEnt, Value};
 
     #[test]
     fn insert_should_replace_ephemeral_id_with_allocator_id() {
         let db = InmemoryDatabase::default();
 
-        let ent = Ent::new_untyped(EPHEMERAL_ID);
+        let ent = UntypedEnt::empty_with_id(EPHEMERAL_ID);
         let id = db.insert(Box::from(ent)).expect("Failed to insert ent");
         assert_ne!(id, EPHEMERAL_ID);
 
@@ -197,7 +197,7 @@ mod tests {
     fn insert_should_update_the_last_updated_time_with_the_current_time() {
         let db = InmemoryDatabase::default();
 
-        let ent = Ent::new_untyped(EPHEMERAL_ID);
+        let ent = UntypedEnt::empty_with_id(EPHEMERAL_ID);
         let last_updated = ent.last_updated();
         std::thread::sleep(std::time::Duration::from_millis(10));
 
@@ -210,7 +210,7 @@ mod tests {
     fn insert_should_add_a_new_ent_using_its_id() {
         let db = InmemoryDatabase::default();
 
-        let ent = Ent::new_untyped(999);
+        let ent = UntypedEnt::empty_with_id(999);
         let id = db.insert(Box::from(ent)).expect("Failed to insert ent");
         assert_eq!(id, 999);
 
@@ -226,12 +226,7 @@ mod tests {
     fn insert_should_overwrite_an_existing_ent_with_the_same_id() {
         let db = InmemoryDatabase::default();
 
-        let ent = Ent::from_collections(
-            999,
-            Ent::default_type(),
-            vec![Field::new("field1", 3)],
-            vec![],
-        );
+        let ent = UntypedEnt::from_collections(999, vec![Field::new("field1", 3)], vec![]);
         let _ = db.insert(Box::from(ent)).expect("Failed to insert ent");
 
         let ent = db
@@ -248,7 +243,9 @@ mod tests {
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_none(), "Unexpectedly acquired ent");
 
-        let _ = db.insert(Box::from(Ent::new_untyped(999))).unwrap();
+        let _ = db
+            .insert(Box::from(UntypedEnt::empty_with_id(999)))
+            .unwrap();
 
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_some(), "Unexpectedly missing ent");
@@ -264,7 +261,9 @@ mod tests {
 
         let _ = db.remove(999).expect("Failed to remove ent");
 
-        let _ = db.insert(Box::from(Ent::new_untyped(999))).unwrap();
+        let _ = db
+            .insert(Box::from(UntypedEnt::empty_with_id(999)))
+            .unwrap();
         assert!(db.get(999).unwrap().is_some(), "Failed to set up ent");
 
         let _ = db.remove(999).expect("Failed to remove ent");

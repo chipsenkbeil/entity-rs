@@ -111,7 +111,7 @@ pub struct MyDatabase;
 
 impl Database for MyDatabase {
     /// Retrieves a copy of a single, generic ent with the corresponding id
-    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>> {
+    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn Ent>>> {
         todo!()
     }
 
@@ -128,17 +128,17 @@ impl Database for MyDatabase {
     /// inserted.
     ///
     /// The ent's id is returned after being inserted.
-    fn insert(&self, ent: Box<dyn IEnt>) -> DatabaseResult<Id> {
+    fn insert(&self, ent: Box<dyn Ent>) -> DatabaseResult<Id> {
         todo!()
     }
 
     /// Performs a retrieval of multiple ents of any type
-    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn Ent>>> {
         todo!()
     }
 
     /// Finds all generic ents that match the query
-    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>> {
+    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn Ent>>> {
         todo!()
     }
 }
@@ -148,20 +148,17 @@ impl Database for MyDatabase {
 
 At the core of **Entity** is defining your data structures. Out of the box,
 this library provides one pre-defined structure that can hold arbitrary fields
-and edges, [Ent](https://docs.rs/entity/*/entity/struct.Ent.html). This
-implements the rather lengthy [IEnt](https://docs.rs/entity/*/entity/trait.IEnt.html)
+and edges, [UntypedEnt](https://docs.rs/entity/*/entity/struct.UntypedEnt.html). This
+implements the rather lengthy [Ent](https://docs.rs/entity/*/entity/trait.Ent.html)
 trait that is the backbone of the **Entity** framework.
 
 ```rust
 use entity::*;
 
-let ent = Ent::from_collections(
+let ent = UntypedEnt::from_collections(
     // An id unique to the ent; providing 0 as the id will have it replaced
     // with a unique id upon being saved in a database
     123,
-
-    // Some type to distinguish this class of ent from another
-    "MyType",
 
     // Fields associated with the ent instance (like a struct field)
     vec![
@@ -179,7 +176,7 @@ let ent = Ent::from_collections(
 Normally, you would prefer to implement your own strongly-typed data structure
 instead of using the dynamic one above. To do this, you have three options:
 
-1. Implement the [IEnt](https://docs.rs/entity/*/entity/trait.IEnt.html) trait
+1. Implement the [Ent](https://docs.rs/entity/*/entity/trait.Ent.html) trait
    for your struct
 2. Derive an implementation using the special macro available from `entity_macros`
    or via the feature `macros` on the `entity` crate

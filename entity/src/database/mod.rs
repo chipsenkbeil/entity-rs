@@ -2,7 +2,7 @@ mod kv;
 pub use kv::*;
 
 use crate::{
-    ent::{IEnt, Query, ValueType},
+    ent::{Ent, Query, ValueType},
     Id,
 };
 use derive_more::Display;
@@ -60,7 +60,7 @@ impl std::error::Error for DatabaseError {}
 /// not cause problems.
 pub trait Database: DynClone {
     /// Retrieves a copy of a single, generic ent with the corresponding id
-    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn IEnt>>>;
+    fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn Ent>>>;
 
     /// Removes the ent with the corresponding id, triggering edge
     /// processing for all disconnected ents. Returns a boolean indicating
@@ -73,42 +73,42 @@ pub trait Database: DynClone {
     /// inserted.
     ///
     /// The ent's id is returned after being inserted.
-    fn insert(&self, ent: Box<dyn IEnt>) -> DatabaseResult<Id>;
+    fn insert(&self, ent: Box<dyn Ent>) -> DatabaseResult<Id>;
 
     /// Performs a retrieval of multiple ents of any type
-    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
+    fn get_all(&self, ids: Vec<Id>) -> DatabaseResult<Vec<Box<dyn Ent>>>;
 
     /// Finds all generic ents that match the query
-    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn IEnt>>>;
+    fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn Ent>>>;
 }
 
 dyn_clone::clone_trait_object!(Database);
 
 pub trait DatabaseExt: Database {
     /// Inserts an ent of a specific type
-    fn insert_typed<E: IEnt>(&self, ent: E) -> DatabaseResult<Id>;
+    fn insert_typed<E: Ent>(&self, ent: E) -> DatabaseResult<Id>;
 
     /// Retrieves an ent by id with a specific type
-    fn get_typed<E: IEnt>(&self, id: Id) -> DatabaseResult<Option<E>>;
+    fn get_typed<E: Ent>(&self, id: Id) -> DatabaseResult<Option<E>>;
 
     /// Retrieves ents by id with a specific type
-    fn get_all_typed<E: IEnt>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>>;
+    fn get_all_typed<E: Ent>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>>;
 
     /// Finds ents that match the specified query and are of the specified type
-    fn find_all_typed<E: IEnt>(&self, query: Query) -> DatabaseResult<Vec<E>>;
+    fn find_all_typed<E: Ent>(&self, query: Query) -> DatabaseResult<Vec<E>>;
 }
 
 impl<T: Database> DatabaseExt for T {
-    fn insert_typed<E: IEnt>(&self, ent: E) -> DatabaseResult<Id> {
+    fn insert_typed<E: Ent>(&self, ent: E) -> DatabaseResult<Id> {
         self.insert(Box::from(ent))
     }
 
-    fn get_typed<E: IEnt>(&self, id: Id) -> DatabaseResult<Option<E>> {
+    fn get_typed<E: Ent>(&self, id: Id) -> DatabaseResult<Option<E>> {
         self.get(id)
             .map(|x| x.and_then(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone)))
     }
 
-    fn get_all_typed<E: IEnt>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>> {
+    fn get_all_typed<E: Ent>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>> {
         self.get_all(ids).map(|x| {
             x.into_iter()
                 .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
@@ -116,7 +116,7 @@ impl<T: Database> DatabaseExt for T {
         })
     }
 
-    fn find_all_typed<E: IEnt>(&self, query: Query) -> DatabaseResult<Vec<E>> {
+    fn find_all_typed<E: Ent>(&self, query: Query) -> DatabaseResult<Vec<E>> {
         self.find_all(query).map(|x| {
             x.into_iter()
                 .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))

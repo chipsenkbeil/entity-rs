@@ -14,7 +14,7 @@ struct TestEnt {
     #[ent(last_updated)]
     last_updated: u64,
 
-    #[ent(edge(shallow))]
+    #[ent(edge(policy = "shallow"))]
     my_edge: Id,
 }
 

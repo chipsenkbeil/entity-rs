@@ -1,23 +1,23 @@
-use super::{EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField, EntInfo};
+use super::{Ent, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField};
 use crate::utils;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{spanned::Spanned, Generics, Ident, Path, Type};
 
-pub(crate) fn impl_ient(
+pub(crate) fn impl_ent(
     root: &Path,
     name: &Ident,
     generics: &Generics,
-    ent_info: &EntInfo,
+    ent: &Ent,
     const_type_name: &Ident,
     include_typetag: bool,
 ) -> Result<TokenStream, syn::Error> {
-    let ident_id = &ent_info.id;
-    let ident_database = &ent_info.database;
-    let ident_created = &ent_info.created;
-    let ident_last_updated = &ent_info.last_updated;
-    let fields = &ent_info.fields;
-    let edges = &ent_info.edges;
+    let ident_id = &ent.id;
+    let ident_database = &ent.database;
+    let ident_created = &ent.created;
+    let ident_last_updated = &ent.last_updated;
+    let fields = &ent.fields;
+    let edges = &ent.edges;
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -38,7 +38,7 @@ pub(crate) fn impl_ient(
     let edge_definitions = make_edge_definitions(root, edges);
 
     // If we have the attribute ent(typetag) on our struct, we will add a
-    // new attribute of #[typetag::serde] onto our impl of IEnt
+    // new attribute of #[typetag::serde] onto our impl of Ent
     let typetag_t: TokenStream = if include_typetag {
         quote! { #[::typetag::serde] }
     } else {
@@ -46,9 +46,16 @@ pub(crate) fn impl_ient(
     };
 
     Ok(quote! {
+        #[automatically_derived]
+        impl #impl_generics #root::EntType for #name #ty_generics #where_clause {
+            fn type_str() -> &'static str {
+                #const_type_name
+            }
+        }
+
         #typetag_t
         #[automatically_derived]
-        impl #impl_generics #root::IEnt for #name #ty_generics #where_clause {
+        impl #impl_generics #root::Ent for #name #ty_generics #where_clause {
             fn id(&self) -> #root::Id {
                 self.#ident_id
             }
@@ -156,8 +163,8 @@ pub(crate) fn impl_ient(
                 self.#ident_database.is_some()
             }
 
-            fn load_edge(&self, name: &str) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::IEnt>>> {
-                use #root::{Database, IEnt};
+            fn load_edge(&self, name: &str) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::Ent>>> {
+                use #root::{Database, Ent};
                 let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
                 match self.edge(name) {
                     ::std::option::Option::Some(e) => e
@@ -172,7 +179,7 @@ pub(crate) fn impl_ient(
             }
 
             fn refresh(&mut self) -> #root::DatabaseResult<()> {
-                use #root::{AsAny, Database, IEnt};
+                use #root::{AsAny, Database, Ent};
                 let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
                 let id = self.#ident_id;
                 match database.get(id)?.and_then(
@@ -200,7 +207,7 @@ pub(crate) fn impl_ient(
             }
 
             fn commit(&mut self) -> #root::DatabaseResult<()> {
-                use #root::{Database, IEnt};
+                use #root::{Database, Ent};
                 let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
                 match database.insert(::std::boxed::Box::from(self.clone())) {
                     ::std::result::Result::Ok(id) => {

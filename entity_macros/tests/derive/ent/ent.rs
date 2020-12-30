@@ -1,7 +1,7 @@
 use derivative::Derivative;
 use entity::{
     Database, DatabaseError, EdgeDefinition, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent,
-    EntMutationError, FieldAttribute, FieldDefinition, IEnt, Id, InmemoryDatabase, NumberType,
+    EntMutationError, FieldAttribute, FieldDefinition, Id, InmemoryDatabase, NumberType,
     PrimitiveValueType, Value, ValueType, EPHEMERAL_ID,
 };
 use std::convert::TryFrom;
@@ -414,37 +414,37 @@ fn edge_definitions_should_return_list_of_definitions_for_ent_edges() {
         #[ent(edge(type = "TestEnt"))]
         a: Option<Id>,
 
-        #[ent(edge(shallow, type = "TestEnt"))]
+        #[ent(edge(policy = "shallow", type = "TestEnt"))]
         b: Option<Id>,
 
-        #[ent(edge(deep, type = "TestEnt"))]
+        #[ent(edge(policy = "deep", type = "TestEnt"))]
         c: Option<Id>,
 
-        #[ent(edge(nothing, type = "TestEnt"))]
+        #[ent(edge(policy = "nothing", type = "TestEnt"))]
         d: Option<Id>,
 
         #[ent(edge(type = "TestEnt"))]
         e: Id,
 
-        #[ent(edge(shallow, type = "TestEnt"))]
+        #[ent(edge(policy = "shallow", type = "TestEnt"))]
         f: Id,
 
-        #[ent(edge(deep, type = "TestEnt"))]
+        #[ent(edge(policy = "deep", type = "TestEnt"))]
         g: Id,
 
-        #[ent(edge(nothing, type = "TestEnt"))]
+        #[ent(edge(policy = "nothing", type = "TestEnt"))]
         h: Id,
 
         #[ent(edge(type = "TestEnt"))]
         i: Vec<Id>,
 
-        #[ent(edge(shallow, type = "TestEnt"))]
+        #[ent(edge(policy = "shallow", type = "TestEnt"))]
         j: Vec<Id>,
 
-        #[ent(edge(deep, type = "TestEnt"))]
+        #[ent(edge(policy = "deep", type = "TestEnt"))]
         k: Vec<Id>,
 
-        #[ent(edge(nothing, type = "TestEnt"))]
+        #[ent(edge(policy = "nothing", type = "TestEnt"))]
         l: Vec<Id>,
     }
 
