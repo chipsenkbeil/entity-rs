@@ -122,10 +122,13 @@ fn prefill_ids<D: KeyValueDatabase>(db: &D, filter: &Filter) -> EntIdSet {
     fn from_type_predicate<D: KeyValueDatabase>(
         db: &D,
         p: &Predicate,
-        ids: EntIdSet,
+        mut ids: EntIdSet,
     ) -> Option<EntIdSet> {
         match p {
-            Predicate::Equals(Value::Text(t)) => Some(db.ids_for_type(t)),
+            Predicate::Equals(Value::Text(t)) => Some({
+                ids.extend(db.ids_for_type(t));
+                ids
+            }),
             Predicate::Or(list) => list.iter().fold(Some(ids), |ids, p| match ids {
                 Some(ids) => from_type_predicate(db, p, ids),
                 None => None,
@@ -184,8 +187,9 @@ fn with_ent<D: KeyValueDatabase, F: Fn(Box<dyn Ent>) -> bool>(db: &D, id: &Id, f
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Edge, Field, Predicate as P, TypedPredicate as TP, UntypedEnt, Value};
+    use crate::*;
     use std::collections::HashMap;
+    use {Predicate as P, TypedPredicate as TP};
 
     macro_rules! impl_tests {
         ($db_type:ty, $new_db:expr) => {
@@ -374,6 +378,10 @@ mod tests {
                 let db = new_test_database();
 
                 // If ent with id exists, we expect it to be available
+                let q = Query::default().where_id(TP::equals(1));
+                query_and_assert(&db, q, &[1]);
+
+                // If ent with either id exists, we expect it to be available
                 let q = Query::default().where_id(TP::equals(1) | TP::equals(2));
                 query_and_assert(&db, q, &[1, 2]);
 
@@ -391,11 +399,21 @@ mod tests {
             #[test]
             fn find_all_should_support_filtering_by_type() {
                 let db = new_test_database();
+                let _ = db.insert(Box::from(TestEnt::new(20))).unwrap();
+                let _ = db.insert(Box::from(TestEnt::new(21))).unwrap();
+                let _ = db.insert(Box::from(TestEnt::new(22))).unwrap();
 
                 // If ent with type exists, we expect it to be available
-                let ts = <UntypedEnt as crate::EntType>::type_str();
+                let ts = <UntypedEnt as EntType>::type_str();
                 let q = Query::default().where_type(TP::equals(ts.to_string()));
                 query_and_assert(&db, q, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+                // If ent with either type exists, we expect it to be available
+                let q = Query::default().where_type(TP::or(vec![
+                    TP::equals(<UntypedEnt as EntType>::type_str().to_string()),
+                    TP::equals(<TestEnt as EntType>::type_str().to_string()),
+                ]));
+                query_and_assert(&db, q, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 20, 21, 22]);
 
                 // If ent with type does not exist, we expect empty
                 let q = Query::default().where_type(TP::equals(String::from("unknown")));
@@ -531,5 +549,111 @@ mod tests {
             SledDatabase,
             SledDatabase::new(sled::Config::new().temporary(true).open().unwrap())
         );
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct TestEnt(Id);
+
+    impl TestEnt {
+        pub fn new(id: Id) -> Self {
+            Self(id)
+        }
+    }
+
+    impl EntType for TestEnt {
+        fn type_str() -> &'static str {
+            concat!(module_path!(), "::TestEnt")
+        }
+    }
+
+    #[cfg_attr(feature = "serde-1", typetag::serde)]
+    impl Ent for TestEnt {
+        fn id(&self) -> Id {
+            self.0
+        }
+
+        fn set_id(&mut self, id: Id) {
+            self.0 = id;
+        }
+
+        fn r#type(&self) -> &str {
+            Self::type_str()
+        }
+
+        fn created(&self) -> u64 {
+            0
+        }
+
+        fn last_updated(&self) -> u64 {
+            0
+        }
+
+        fn mark_updated(&mut self) -> Result<(), EntMutationError> {
+            Ok(())
+        }
+
+        fn field_definitions(&self) -> Vec<FieldDefinition> {
+            Vec::new()
+        }
+
+        fn field_names(&self) -> Vec<String> {
+            Vec::new()
+        }
+
+        fn field(&self, _name: &str) -> Option<Value> {
+            None
+        }
+
+        fn update_field(&mut self, name: &str, _value: Value) -> Result<Value, EntMutationError> {
+            Err(EntMutationError::NoField {
+                name: name.to_string(),
+            })
+        }
+
+        fn edge_definitions(&self) -> Vec<EdgeDefinition> {
+            Vec::new()
+        }
+
+        fn edge_names(&self) -> Vec<String> {
+            Vec::new()
+        }
+
+        fn edge(&self, _name: &str) -> Option<EdgeValue> {
+            None
+        }
+
+        fn update_edge(
+            &mut self,
+            name: &str,
+            _value: EdgeValue,
+        ) -> Result<EdgeValue, EntMutationError> {
+            Err(EntMutationError::NoEdge {
+                name: name.to_string(),
+            })
+        }
+
+        fn connect(&mut self, _database: Box<dyn Database>) {}
+
+        fn disconnect(&mut self) {}
+
+        fn is_connected(&self) -> bool {
+            false
+        }
+
+        fn load_edge(&self, _name: &str) -> DatabaseResult<Vec<Box<dyn Ent>>> {
+            Err(DatabaseError::Disconnected)
+        }
+
+        fn refresh(&mut self) -> DatabaseResult<()> {
+            Err(DatabaseError::Disconnected)
+        }
+
+        fn commit(&mut self) -> DatabaseResult<()> {
+            Err(DatabaseError::Disconnected)
+        }
+
+        fn remove(&self) -> DatabaseResult<bool> {
+            Err(DatabaseError::Disconnected)
+        }
     }
 }

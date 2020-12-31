@@ -1013,13 +1013,10 @@ fn remove_should_delete_ent_from_database() {
         last_updated: 0,
     };
 
-    assert!(matches!(
-        ent.clone().remove(),
-        Err(DatabaseError::Disconnected)
-    ));
+    assert!(matches!(ent.remove(), Err(DatabaseError::Disconnected)));
 
     ent.connect(Box::from(database.clone()));
-    assert_eq!(ent.clone().remove().expect("Failed to remove ent"), false);
+    assert_eq!(ent.remove().expect("Failed to remove ent"), false);
     assert_eq!(
         database.get(999).expect("Failed to get ent").is_none(),
         true,

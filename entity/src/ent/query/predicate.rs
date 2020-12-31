@@ -56,6 +56,18 @@ pub enum Predicate {
     ///     Predicate::Never,
     /// ]);
     /// assert_eq!(p.check(&v), false);
+    ///
+    /// let p = Predicate::And(vec![
+    ///     Predicate::Never,
+    ///     Predicate::GreaterThan(Value::from(122)),
+    /// ]);
+    /// assert_eq!(p.check(&v), false);
+    ///
+    /// let p = Predicate::And(vec![
+    ///     Predicate::Never,
+    ///     Predicate::Never,
+    /// ]);
+    /// assert_eq!(p.check(&v), false);
     /// ```
     And(Vec<Predicate>),
 
@@ -572,14 +584,20 @@ pub enum Predicate {
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::Or(vec![
-    ///     Predicate::Equals(Value::from(122)),
+    ///     Predicate::Equals(Value::from(123)),
+    ///     Predicate::Never,
+    /// ]);
+    /// assert_eq!(p.check(&v), true);
+    ///
+    /// let p = Predicate::Or(vec![
+    ///     Predicate::Never,
     ///     Predicate::Equals(Value::from(123)),
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::Or(vec![
-    ///     Predicate::Equals(Value::from(122)),
-    ///     Predicate::Equals(Value::from(124)),
+    ///     Predicate::Never,
+    ///     Predicate::Never,
     /// ]);
     /// assert_eq!(p.check(&v), false);
     /// ```
@@ -955,8 +973,14 @@ pub enum Predicate {
     /// let v = Value::from(123);
     ///
     /// let p = Predicate::Xor(vec![
-    ///     Predicate::Equals(Value::from(122)),
+    ///     Predicate::Never,
     ///     Predicate::Equals(Value::from(123)),
+    /// ]);
+    /// assert_eq!(p.check(&v), true);
+    ///
+    /// let p = Predicate::Xor(vec![
+    ///     Predicate::Equals(Value::from(123)),
+    ///     Predicate::Never,
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
@@ -967,8 +991,8 @@ pub enum Predicate {
     /// assert_eq!(p.check(&v), false);
     ///
     /// let p = Predicate::Xor(vec![
-    ///     Predicate::Equals(Value::from(122)),
-    ///     Predicate::Equals(Value::from(124)),
+    ///     Predicate::Never,
+    ///     Predicate::Never,
     /// ]);
     /// assert_eq!(p.check(&v), false);
     /// ```

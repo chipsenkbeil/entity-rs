@@ -195,7 +195,7 @@ pub trait Ent: AsAny + DynClone {
     /// Removes self from database, returning true if successful
     ///
     /// Requires ent to be connected to a database
-    fn remove(self) -> DatabaseResult<bool>;
+    fn remove(&self) -> DatabaseResult<bool>;
 }
 
 /// Blanket implementation for all ents that enables them to be converted
@@ -781,7 +781,7 @@ impl Ent for UntypedEnt {
     /// Removes self from database, returning true if successful
     ///
     /// Requires ent to be connected to a database
-    fn remove(self) -> DatabaseResult<bool> {
+    fn remove(&self) -> DatabaseResult<bool> {
         let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
         database.remove(self.id)
     }

@@ -218,7 +218,7 @@ pub(crate) fn impl_ent(
                 }
             }
 
-            fn remove(self) -> #root::DatabaseResult<bool> {
+            fn remove(&self) -> #root::DatabaseResult<bool> {
                 use #root::Database;
                 let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
                 database.remove(self.#ident_id)
