@@ -212,6 +212,28 @@ impl<T: Ent> AsAny for T {
 
 dyn_clone::clone_trait_object!(Ent);
 
+/// Implementation for a generic trait object of [`Ent`] that provides
+/// methods to downcast into a concrete type
+impl dyn Ent {
+    /// Attempts to convert this dynamic Ent ref into a concrete Ent ref
+    /// by downcasting
+    pub fn as_ent<E: Ent>(&self) -> Option<&E> {
+        self.as_any().downcast_ref::<E>()
+    }
+
+    /// Attempts to convert this dynamic Ent mutable ref into a concrete Ent
+    /// mutable ref by downcasting
+    pub fn as_mut_ent<E: Ent>(&mut self) -> Option<&mut E> {
+        self.as_mut_any().downcast_mut::<E>()
+    }
+
+    /// Attempts to convert this dynamic Ent ref into a concrete ent by
+    /// downcasting and then cloning
+    pub fn to_ent<E: Ent>(&self) -> Option<E> {
+        self.as_ent().map(dyn_clone::clone)
+    }
+}
+
 pub trait EntExt: Ent {
     /// Loads ents of a specified type from a named edge
     fn load_edge_typed<E: Ent>(&self, name: &str) -> DatabaseResult<Vec<E>>;

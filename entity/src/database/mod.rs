@@ -104,23 +104,16 @@ impl<T: Database> DatabaseExt for T {
     }
 
     fn get_typed<E: Ent>(&self, id: Id) -> DatabaseResult<Option<E>> {
-        self.get(id)
-            .map(|x| x.and_then(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone)))
+        self.get(id).map(|x| x.and_then(|ent| ent.to_ent::<E>()))
     }
 
     fn get_all_typed<E: Ent>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>> {
-        self.get_all(ids).map(|x| {
-            x.into_iter()
-                .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
-                .collect()
-        })
+        self.get_all(ids)
+            .map(|x| x.into_iter().filter_map(|ent| ent.to_ent::<E>()).collect())
     }
 
     fn find_all_typed<E: Ent>(&self, query: Query) -> DatabaseResult<Vec<E>> {
-        self.find_all(query).map(|x| {
-            x.into_iter()
-                .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
-                .collect()
-        })
+        self.find_all(query)
+            .map(|x| x.into_iter().filter_map(|ent| ent.to_ent::<E>()).collect())
     }
 }
