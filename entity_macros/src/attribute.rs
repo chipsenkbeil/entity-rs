@@ -338,7 +338,7 @@ struct Info {
 }
 
 impl Info {
-    pub fn from(args: &AttributeArgs, input: &ItemStruct) -> Result<Self, syn::Error> {
+    pub fn from(args: &[NestedMeta], input: &ItemStruct) -> Result<Self, syn::Error> {
         let mut args_attrs = utils::nested_meta_iter_into_named_attr_map(args.iter());
         let ent_attrs = utils::attrs_into_attr_map(&input.attrs, "ent").unwrap_or_default();
         let derive_attrs = utils::attrs_into_attr_map(&input.attrs, "derive").unwrap_or_default();
