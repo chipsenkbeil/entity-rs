@@ -2,7 +2,7 @@ mod attribute;
 mod derive;
 mod utils;
 
-use syn::{parse_macro_input, AttributeArgs, DeriveInput, ItemStruct};
+use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
 
 #[cfg(doctest)]
 doc_comment::doctest!("../README.md", readme);
@@ -130,10 +130,10 @@ pub fn simple_ent(
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
-    let input = parse_macro_input!(input as ItemStruct);
+    let item = parse_macro_input!(input as Item);
 
     let expanded = utils::root()
-        .and_then(|root| attribute::do_simple_ent(root, args, input))
+        .and_then(|root| attribute::do_simple_ent(root, args, item))
         .unwrap_or_else(|x| x.to_compile_error());
 
     proc_macro::TokenStream::from(expanded)

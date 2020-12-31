@@ -6,25 +6,40 @@ use syn::{
     parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
-    Attribute, AttributeArgs, Field, Fields, ItemStruct, NestedMeta, Path, Token,
+    Attribute, AttributeArgs, Field, Fields, Item, ItemStruct, NestedMeta, Path, Token,
 };
 
 pub fn do_simple_ent(
     root: Path,
     args: AttributeArgs,
-    mut item: ItemStruct,
+    item: Item,
 ) -> Result<TokenStream, syn::Error> {
-    let info = Info::from(&args, &item)?;
+    match item {
+        Item::Enum(mut x) => {
+            let attr_info = AttrInfo::from(&args, &x.attrs);
 
-    inject_derive_clone_attr(&root, &mut item, &info)?;
-    inject_derive_ent_attr(&root, &mut item, &info)?;
-    inject_derive_serde_attr(&root, &mut item, &info)?;
-    inject_ent_id_field(&root, &mut item, &info)?;
-    inject_ent_database_field(&root, &mut item, &info)?;
-    inject_ent_created_field(&root, &mut item, &info)?;
-    inject_ent_last_updated_field(&root, &mut item, &info)?;
+            inject_derive_clone_attr(&root, &mut x.attrs, &attr_info)?;
+            inject_derive_ent_attr(&root, &mut x.attrs, &attr_info)?;
+            inject_derive_serde_attr(&root, &mut x.attrs, &attr_info)?;
 
-    Ok(quote! { #item })
+            Ok(quote! { #x })
+        }
+        Item::Struct(mut x) => {
+            let attr_info = AttrInfo::from(&args, &x.attrs);
+            let struct_info = StructInfo::from(&args, &x)?;
+
+            inject_derive_clone_attr(&root, &mut x.attrs, &attr_info)?;
+            inject_derive_ent_attr(&root, &mut x.attrs, &attr_info)?;
+            inject_derive_serde_attr(&root, &mut x.attrs, &attr_info)?;
+            inject_ent_id_field(&root, &mut x, &attr_info, &struct_info)?;
+            inject_ent_database_field(&root, &mut x, &attr_info, &struct_info)?;
+            inject_ent_created_field(&root, &mut x, &attr_info, &struct_info)?;
+            inject_ent_last_updated_field(&root, &mut x, &attr_info, &struct_info)?;
+
+            Ok(quote! { #x })
+        }
+        x => Err(syn::Error::new(x.span(), "Unsupported item")),
+    }
 }
 
 /// Will add derive(Clone) to the struct if it is not already there, adding
@@ -34,11 +49,11 @@ pub fn do_simple_ent(
 /// simple_ent(derive_clone)
 fn inject_derive_clone_attr(
     _root: &Path,
-    item: &mut ItemStruct,
-    info: &Info,
+    attrs: &mut Vec<Attribute>,
+    info: &AttrInfo,
 ) -> Result<(), syn::Error> {
     if (!info.is_deriving_clone || info.args_derive_clone) && !info.args_no_derive_clone {
-        let maybe_attr = item.attrs.iter_mut().find(|a| {
+        let maybe_attr = attrs.iter_mut().find(|a| {
             a.path
                 .segments
                 .last()
@@ -55,9 +70,10 @@ fn inject_derive_clone_attr(
 
         // Otherwise, we need to create the derive from scratch
         } else {
-            let mut attrs: ParsableOuterAttributes = parse_quote!(#[derive(::std::clone::Clone)]);
-            let derive_attr = attrs.attributes.pop().unwrap();
-            item.attrs.push(derive_attr);
+            let mut tmp_attrs: ParsableOuterAttributes =
+                parse_quote!(#[derive(::std::clone::Clone)]);
+            let derive_attr = tmp_attrs.attributes.pop().unwrap();
+            attrs.push(derive_attr);
         }
     }
 
@@ -71,11 +87,11 @@ fn inject_derive_clone_attr(
 /// simple_ent(derive_ent)
 fn inject_derive_ent_attr(
     root: &Path,
-    item: &mut ItemStruct,
-    info: &Info,
+    attrs: &mut Vec<Attribute>,
+    info: &AttrInfo,
 ) -> Result<(), syn::Error> {
     if (!info.is_deriving_ent || info.args_derive_ent) && !info.args_no_derive_ent {
-        let maybe_attr = item.attrs.iter_mut().find(|a| {
+        let maybe_attr = attrs.iter_mut().find(|a| {
             a.path
                 .segments
                 .last()
@@ -92,9 +108,9 @@ fn inject_derive_ent_attr(
 
         // Otherwise, we need to create the derive from scratch
         } else {
-            let mut attrs: ParsableOuterAttributes = parse_quote!(#[derive(#root::Ent)]);
-            let derive_attr = attrs.attributes.pop().unwrap();
-            item.attrs.push(derive_attr);
+            let mut tmp_attrs: ParsableOuterAttributes = parse_quote!(#[derive(#root::Ent)]);
+            let derive_attr = tmp_attrs.attributes.pop().unwrap();
+            attrs.push(derive_attr);
         }
     }
 
@@ -108,11 +124,11 @@ fn inject_derive_ent_attr(
 /// via simple_ent(no_serde)
 fn inject_derive_serde_attr(
     _root: &Path,
-    item: &mut ItemStruct,
-    info: &Info,
+    attrs: &mut Vec<Attribute>,
+    info: &AttrInfo,
 ) -> Result<(), syn::Error> {
     if info.args_serde && !info.args_no_serde {
-        let maybe_attr = item.attrs.iter_mut().find(|a| {
+        let maybe_attr = attrs.iter_mut().find(|a| {
             a.path
                 .segments
                 .last()
@@ -135,9 +151,36 @@ fn inject_derive_serde_attr(
 
         // Otherwise, we need to create the derive from scratch
         } else {
-            let mut attrs: ParsableOuterAttributes = parse_quote!(#[derive(#new_attr)]);
-            let derive_attr = attrs.attributes.pop().unwrap();
-            item.attrs.push(derive_attr);
+            let mut tmp_attrs: ParsableOuterAttributes = parse_quote!(#[derive(#new_attr)]);
+            let derive_attr = tmp_attrs.attributes.pop().unwrap();
+            attrs.push(derive_attr);
+        }
+
+        // Detect typetag and include it within ent(...) if missing
+        if !info.has_ent_typetag_attr {
+            let maybe_attr = attrs.iter_mut().find(|a| {
+                a.path
+                    .segments
+                    .last()
+                    .filter(|s| s.ident == "ent")
+                    .is_some()
+            });
+
+            let new_attr = quote!(typetag);
+
+            // If we already have an ent(...), we want to insert ourselves into it
+            if let Some(attr) = maybe_attr {
+                let mut args =
+                    attr.parse_args_with(Punctuated::<NestedMeta, Token![,]>::parse_terminated)?;
+                args.push(parse_quote!(#new_attr));
+                attr.tokens = quote!((#args));
+
+            // Otherwise, we need to create the ent(...) from scratch
+            } else {
+                let mut tmp_attrs: ParsableOuterAttributes = parse_quote!(#[ent(#new_attr)]);
+                let derive_attr = tmp_attrs.attributes.pop().unwrap();
+                attrs.push(derive_attr);
+            }
         }
     }
 
@@ -150,14 +193,22 @@ fn inject_derive_serde_attr(
 /// id's name and there is no marked id field.
 ///
 /// The name can be altered via simple_ent(id = "...")
-fn inject_ent_id_field(root: &Path, item: &mut ItemStruct, info: &Info) -> Result<(), syn::Error> {
-    match (info.has_conflicting_id_name, info.has_id_marker) {
+fn inject_ent_id_field(
+    root: &Path,
+    item: &mut ItemStruct,
+    attr_info: &AttrInfo,
+    struct_info: &StructInfo,
+) -> Result<(), syn::Error> {
+    match (
+        struct_info.has_conflicting_id_name,
+        struct_info.has_id_marker,
+    ) {
         (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
                 Fields::Named(x) => {
-                    let name = format_ident!("{}", info.target_id_field_name);
+                    let name = format_ident!("{}", attr_info.target_id_field_name);
                     let named_field: ParsableNamedField = parse_quote! {
                         #[ent(id)]
                         #name: #root::Id
@@ -190,24 +241,28 @@ fn inject_ent_id_field(root: &Path, item: &mut ItemStruct, info: &Info) -> Resul
 fn inject_ent_database_field(
     root: &Path,
     item: &mut ItemStruct,
-    info: &Info,
+    attr_info: &AttrInfo,
+    struct_info: &StructInfo,
 ) -> Result<(), syn::Error> {
-    match (info.has_conflicting_database_name, info.has_database_marker) {
+    match (
+        struct_info.has_conflicting_database_name,
+        struct_info.has_database_marker,
+    ) {
         (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
                 Fields::Named(x) => {
-                    let name = format_ident!("{}", info.target_database_field_name);
+                    let name = format_ident!("{}", attr_info.target_database_field_name);
 
                     // If we are deriving serde, we need to mark the database
                     // as skippable as it cannot be serialized. This can
                     // be forced to be included via simple_ent(serde) or
                     // forced excluded via simple_ent(no_serde)
-                    let skip_attr = if (info.is_deriving_serialize
-                        || info.is_deriving_deserialize
-                        || info.args_serde)
-                        && !info.args_no_serde
+                    let skip_attr = if (attr_info.is_deriving_serialize
+                        || attr_info.is_deriving_deserialize
+                        || attr_info.args_serde)
+                        && !attr_info.args_no_serde
                     {
                         quote! { #[serde(skip)] }
                     } else {
@@ -242,15 +297,19 @@ fn inject_ent_database_field(
 fn inject_ent_created_field(
     _root: &Path,
     item: &mut ItemStruct,
-    info: &Info,
+    attr_info: &AttrInfo,
+    struct_info: &StructInfo,
 ) -> Result<(), syn::Error> {
-    match (info.has_conflicting_created_name, info.has_created_marker) {
+    match (
+        struct_info.has_conflicting_created_name,
+        struct_info.has_created_marker,
+    ) {
         (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
                 Fields::Named(x) => {
-                    let name = format_ident!("{}", info.target_created_field_name);
+                    let name = format_ident!("{}", attr_info.target_created_field_name);
                     let named_field: ParsableNamedField = parse_quote! {
                         #[ent(created)]
                         #name: u64
@@ -279,18 +338,19 @@ fn inject_ent_created_field(
 fn inject_ent_last_updated_field(
     _root: &Path,
     item: &mut ItemStruct,
-    info: &Info,
+    attr_info: &AttrInfo,
+    struct_info: &StructInfo,
 ) -> Result<(), syn::Error> {
     match (
-        info.has_conflicting_last_updated_name,
-        info.has_last_updated_marker,
+        struct_info.has_conflicting_last_updated_name,
+        struct_info.has_last_updated_marker,
     ) {
         (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
                 Fields::Named(x) => {
-                    let name = format_ident!("{}", info.target_last_updated_field_name);
+                    let name = format_ident!("{}", attr_info.target_last_updated_field_name);
                     let named_field: ParsableNamedField = parse_quote! {
                         #[ent(last_updated)]
                         #name: u64
@@ -309,46 +369,40 @@ fn inject_ent_last_updated_field(
     }
 }
 
-/// Information collected from examining the item struct and our attribute args
+/// Information collected from examining our attribute args
 #[derive(Default, Debug)]
-struct Info {
+struct AttrInfo {
     is_deriving_clone: bool,
     is_deriving_ent: bool,
     is_deriving_serialize: bool,
     is_deriving_deserialize: bool,
     has_ent_typetag_attr: bool,
-    has_id_marker: Option<Span>,
-    has_database_marker: Option<Span>,
-    has_created_marker: Option<Span>,
-    has_last_updated_marker: Option<Span>,
-    has_conflicting_id_name: Option<Span>,
-    has_conflicting_database_name: Option<Span>,
-    has_conflicting_created_name: Option<Span>,
-    has_conflicting_last_updated_name: Option<Span>,
-    target_id_field_name: String,
-    target_database_field_name: String,
-    target_created_field_name: String,
-    target_last_updated_field_name: String,
     args_no_serde: bool,
     args_serde: bool,
     args_no_derive_ent: bool,
     args_derive_ent: bool,
     args_no_derive_clone: bool,
     args_derive_clone: bool,
+    target_id_field_name: String,
+    target_database_field_name: String,
+    target_created_field_name: String,
+    target_last_updated_field_name: String,
 }
 
-impl Info {
-    pub fn from(args: &[NestedMeta], input: &ItemStruct) -> Result<Self, syn::Error> {
+impl AttrInfo {
+    pub fn from(args: &[NestedMeta], attrs: &[Attribute]) -> Self {
         let mut args_attrs = utils::nested_meta_iter_into_named_attr_map(args.iter());
-        let ent_attrs = utils::attrs_into_attr_map(&input.attrs, "ent").unwrap_or_default();
-        let derive_attrs = utils::attrs_into_attr_map(&input.attrs, "derive").unwrap_or_default();
+        let ent_attrs = utils::attrs_into_attr_map(attrs, "ent").unwrap_or_default();
+        let derive_attrs = utils::attrs_into_attr_map(attrs, "derive").unwrap_or_default();
 
-        let mut info = Info::default();
+        let mut info = AttrInfo::default();
+
         info.is_deriving_clone = derive_attrs.get("Clone").copied().unwrap_or_default();
         info.is_deriving_ent = derive_attrs.get("Ent").copied().unwrap_or_default();
         info.is_deriving_serialize = derive_attrs.get("Serialize").copied().unwrap_or_default();
         info.is_deriving_deserialize = derive_attrs.get("Deserialize").copied().unwrap_or_default();
         info.has_ent_typetag_attr = ent_attrs.get("typetag").copied().unwrap_or_default();
+
         info.target_id_field_name = args_attrs
             .remove("id")
             .flatten()
@@ -365,6 +419,7 @@ impl Info {
             .remove("last_updated")
             .flatten()
             .unwrap_or_else(|| String::from("last_updated"));
+
         info.args_no_serde = args_attrs.contains_key("no_serde");
         info.args_serde = args_attrs.contains_key("serde");
         info.args_no_derive_ent = args_attrs.contains_key("no_derive_ent");
@@ -372,19 +427,41 @@ impl Info {
         info.args_no_derive_clone = args_attrs.contains_key("no_derive_clone");
         info.args_derive_clone = args_attrs.contains_key("derive_clone");
 
+        info
+    }
+}
+
+/// Information collected from examining the item struct and our attribute args
+#[derive(Default, Debug)]
+struct StructInfo {
+    has_id_marker: Option<Span>,
+    has_database_marker: Option<Span>,
+    has_created_marker: Option<Span>,
+    has_last_updated_marker: Option<Span>,
+    has_conflicting_id_name: Option<Span>,
+    has_conflicting_database_name: Option<Span>,
+    has_conflicting_created_name: Option<Span>,
+    has_conflicting_last_updated_name: Option<Span>,
+}
+
+impl StructInfo {
+    pub fn from(args: &[NestedMeta], input: &ItemStruct) -> Result<Self, syn::Error> {
+        let attr_info = AttrInfo::from(args, &input.attrs);
+        let mut info = StructInfo::default();
+
         match &input.fields {
             Fields::Named(x) => {
                 for f in x.named.iter() {
                     let name = f.ident.as_ref().unwrap().to_string();
 
                     // Check if the field has a conflicting name
-                    if name == info.target_id_field_name {
+                    if name == attr_info.target_id_field_name {
                         info.has_conflicting_id_name = Some(f.ident.span());
-                    } else if name == info.target_database_field_name {
+                    } else if name == attr_info.target_database_field_name {
                         info.has_conflicting_database_name = Some(f.ident.span());
-                    } else if name == info.target_created_field_name {
+                    } else if name == attr_info.target_created_field_name {
                         info.has_conflicting_created_name = Some(f.ident.span());
-                    } else if name == info.target_last_updated_field_name {
+                    } else if name == attr_info.target_last_updated_field_name {
                         info.has_conflicting_last_updated_name = Some(f.ident.span());
                     }
 
