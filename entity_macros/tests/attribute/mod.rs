@@ -1,1 +1,2 @@
-mod simple_ent;
+mod r#enum;
+mod r#struct;
