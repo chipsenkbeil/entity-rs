@@ -1,5 +1,5 @@
 error: Already have a database elsewhere
   --> $DIR/duplicate-database.rs:12:5
    |
-12 |     database2: Option<Box<dyn Database>>,
+12 |     database2: WeakDatabaseRc,
    |     ^^^^^^^^^

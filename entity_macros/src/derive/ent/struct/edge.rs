@@ -106,11 +106,8 @@ fn fn_typed_load_edge_of_maybe(
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::option::Option<#edge_type>> {
             use #root::Ent;
             let ents = self.load_edge(stringify!(#edge_name))?;
-            let typed_ents: ::std::vec::Vec<#edge_type> =
-                ents.into_iter().filter_map(|ent|
-                    ent.as_any().downcast_ref::<#edge_type>()
-                        .map(::std::clone::Clone::clone)
-                ).collect();
+            let typed_ents: ::std::vec::Vec<#edge_type> = ents.into_iter()
+                .filter_map(|ent| ent.to_ent::<#edge_type>()).collect();
             if typed_ents.len() > 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
                     name: stringify!(#edge_name).to_string(),
@@ -133,10 +130,7 @@ fn fn_typed_load_edge_of_one(
             use #root::Ent;
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
-                ents.into_iter().filter_map(|ent|
-                    ent.as_any().downcast_ref::<#edge_type>()
-                        .map(::std::clone::Clone::clone)
-                ).collect();
+                ents.into_iter().filter_map(|ent| ent.to_ent::<#edge_type>()).collect();
             if typed_ents.len() != 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
                     name: stringify!(#edge_name).to_string(),
@@ -159,10 +153,7 @@ fn fn_typed_load_edge_of_many(
             use #root::Ent;
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
-                ents.into_iter().filter_map(|ent|
-                    ent.as_any().downcast_ref::<#edge_type>()
-                        .map(::std::clone::Clone::clone)
-                ).collect();
+                ents.into_iter().filter_map(|ent| ent.to_ent::<#edge_type>()).collect();
             ::std::result::Result::Ok(typed_ents)
         }
     }

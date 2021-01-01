@@ -1,4 +1,4 @@
-use entity::{Database, Ent, Id};
+use entity::{Ent, Id, WeakDatabaseRc};
 
 #[derive(Clone, Ent)]
 enum TestEnt {
@@ -7,7 +7,7 @@ enum TestEnt {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,

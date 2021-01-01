@@ -1,4 +1,4 @@
-use entity::{Database, Ent, Id, InmemoryDatabase, TypedPredicate as P, Value};
+use entity::{Database, Ent, Id, InmemoryDatabase, TypedPredicate as P, Value, WeakDatabaseRc};
 use std::convert::TryFrom;
 
 #[test]
@@ -9,7 +9,7 @@ fn produces_method_to_filter_by_id() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -23,7 +23,7 @@ fn produces_method_to_filter_by_id() {
     database
         .insert(Box::from(TestEnt {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
         }))
@@ -32,7 +32,7 @@ fn produces_method_to_filter_by_id() {
     database
         .insert(Box::from(TestEnt {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
         }))
@@ -57,7 +57,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -71,7 +71,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
     database
         .insert(Box::from(TestEnt {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 100,
             last_updated: 0,
         }))
@@ -80,7 +80,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
     database
         .insert(Box::from(TestEnt {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 200,
             last_updated: 0,
         }))
@@ -89,7 +89,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
     database
         .insert(Box::from(TestEnt {
             id: 3,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 300,
             last_updated: 0,
         }))
@@ -114,7 +114,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -128,7 +128,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
     database
         .insert(Box::from(TestEnt {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
         }))
@@ -141,7 +141,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
     database
         .insert(Box::from(TestEnt {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
         }))
@@ -154,7 +154,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
     database
         .insert(Box::from(TestEnt {
             id: 3,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
         }))
@@ -183,7 +183,7 @@ fn produces_method_to_filter_by_field() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -200,7 +200,7 @@ fn produces_method_to_filter_by_field() {
     database
         .insert(Box::from(TestEnt {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             value: 100,
@@ -210,7 +210,7 @@ fn produces_method_to_filter_by_field() {
     database
         .insert(Box::from(TestEnt {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             value: 200,
@@ -239,7 +239,7 @@ fn supports_generic_fields() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -256,7 +256,7 @@ fn supports_generic_fields() {
     database
         .insert(Box::from(TestEnt {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             value: 100,
@@ -266,7 +266,7 @@ fn supports_generic_fields() {
     database
         .insert(Box::from(TestEnt {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             value: 200,
@@ -292,7 +292,7 @@ fn produces_method_to_filter_by_ents_connected_by_edge() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -309,7 +309,7 @@ fn produces_method_to_filter_by_ents_connected_by_edge() {
     database
         .insert(Box::from(TestEnt {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             other: 2,
@@ -319,7 +319,7 @@ fn produces_method_to_filter_by_ents_connected_by_edge() {
     database
         .insert(Box::from(TestEnt {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             other: 1,
@@ -347,7 +347,7 @@ fn produces_method_to_yield_edge_ents() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -365,7 +365,7 @@ fn produces_method_to_yield_edge_ents() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -382,7 +382,7 @@ fn produces_method_to_yield_edge_ents() {
     database
         .insert(Box::from(TestEnt1 {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             other: 2,
@@ -392,7 +392,7 @@ fn produces_method_to_yield_edge_ents() {
     database
         .insert(Box::from(TestEnt2 {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             other: 1,

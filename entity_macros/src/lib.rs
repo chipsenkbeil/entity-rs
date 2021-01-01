@@ -7,7 +7,7 @@ use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
 /// Derives the Ent trait and additional typed functionality
 ///
 /// ```
-/// use entity::{Ent, Id, Database};
+/// use entity::{Ent, Id, WeakDatabaseRc};
 ///
 /// /// Define an entity and derive all associated ent functionality
 /// ///
@@ -30,7 +30,7 @@ use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
 ///     /// as it will not be serialized and, when deserializing, will be
 ///     /// filled in with the database automatically
 ///     #[ent(database)]
-///     database: Option<Box<dyn Database>>,
+///     database: WeakDatabaseRc,
 ///
 ///     /// Required and can only be specified once to indicate the struct
 ///     /// field that contains the timestamp of when the ent was created
@@ -76,7 +76,7 @@ use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
 ///     id: Id,
 ///
 ///     #[ent(database)]
-///     database: Option<Box<dyn Database>>,
+///     database: WeakDatabaseRc,
 ///
 ///     #[ent(created)]
 ///     created: u64,

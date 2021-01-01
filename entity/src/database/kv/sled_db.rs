@@ -141,12 +141,7 @@ impl Database for SledDatabase {
             })?;
 
         maybe_ivec
-            .map(|ivec| {
-                bincode::deserialize(ivec.as_ref()).map(|mut ent: Box<dyn Ent>| {
-                    ent.connect(Box::from(self.clone()));
-                    ent
-                })
-            })
+            .map(|ivec| bincode::deserialize(ivec.as_ref()))
             .transpose()
             .map_err(|e| DatabaseError::CorruptedEnt {
                 id,
@@ -409,8 +404,8 @@ mod tests {
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_some(), "Unexpectedly missing ent");
         assert!(
-            result.unwrap().is_connected(),
-            "Ent not connected to database"
+            !result.unwrap().is_connected(),
+            "Ent unexpectedly connected to database"
         );
     }
 

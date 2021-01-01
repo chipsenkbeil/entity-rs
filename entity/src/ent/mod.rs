@@ -10,7 +10,7 @@ pub use field::*;
 pub use query::*;
 pub use value::*;
 
-use crate::{Database, DatabaseError, DatabaseResult, Id, EPHEMERAL_ID};
+use crate::{DatabaseError, DatabaseResult, Id, WeakDatabaseRc, EPHEMERAL_ID};
 use derive_more::{Display, Error};
 use dyn_clone::DynClone;
 use std::{
@@ -167,7 +167,7 @@ pub trait Ent: AsAny + DynClone {
 
     /// Connects ent to the given database so all future
     /// database-related operations will be performed against this database
-    fn connect(&mut self, database: Box<dyn Database>);
+    fn connect(&mut self, database: WeakDatabaseRc);
 
     /// Disconnects ent from any associated database. All future database
     /// operations will fail with a disconnected database error
@@ -243,7 +243,7 @@ impl<T: Ent> EntExt for T {
     fn load_edge_typed<E: Ent>(&self, name: &str) -> DatabaseResult<Vec<E>> {
         self.load_edge(name).map(|ents| {
             ents.into_iter()
-                .filter_map(|ent| ent.as_any().downcast_ref::<E>().map(dyn_clone::clone))
+                .filter_map(|ent| ent.to_ent::<E>())
                 .collect()
         })
     }
@@ -258,7 +258,7 @@ impl<T: Ent> EntExt for T {
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct UntypedEnt {
     #[cfg_attr(feature = "serde-1", serde(skip))]
-    database: Option<Box<dyn Database>>,
+    database: WeakDatabaseRc,
     id: Id,
     fields: HashMap<String, Field>,
     edges: HashMap<String, Edge>,
@@ -296,7 +296,7 @@ impl UntypedEnt {
     /// Creates a new ent using the given id, field map, and edge map
     pub fn new(id: Id, fields: HashMap<String, Field>, edges: HashMap<String, Edge>) -> Self {
         Self {
-            database: None,
+            database: WeakDatabaseRc::new(),
             id,
             fields,
             edges,
@@ -703,26 +703,27 @@ impl Ent for UntypedEnt {
 
     /// Connects ent to the given boxed database trait object so all future
     /// database-related operations will be performed against this database
-    fn connect(&mut self, database: Box<dyn Database>) {
-        self.database = Some(database);
+    fn connect(&mut self, database: WeakDatabaseRc) {
+        self.database = database;
     }
 
     /// Disconnects ent from the given database. All future database-related
     /// operations will fail with a disconnected database error
     fn disconnect(&mut self) {
-        self.database = None;
+        self.database = WeakDatabaseRc::new();
     }
 
     /// Returns true if ent is currently connected to a database
     fn is_connected(&self) -> bool {
-        self.database.is_some()
+        WeakDatabaseRc::strong_count(&self.database) > 0
     }
 
     /// Loads the ents connected by the edge with the given name
     ///
     /// Requires ent to be connected to a database
     fn load_edge(&self, name: &str) -> DatabaseResult<Vec<Box<dyn Ent>>> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        let database =
+            WeakDatabaseRc::upgrade(&self.database).ok_or(DatabaseError::Disconnected)?;
         match self.edge(name) {
             Some(e) => e
                 .to_ids()
@@ -739,7 +740,8 @@ impl Ent for UntypedEnt {
     ///
     /// Requires ent to be connected to a database
     fn refresh(&mut self) -> DatabaseResult<()> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        let database =
+            WeakDatabaseRc::upgrade(&self.database).ok_or(DatabaseError::Disconnected)?;
         let id = self.id;
         match database.get(id)? {
             Some(x) => {
@@ -768,8 +770,9 @@ impl Ent for UntypedEnt {
     ///
     /// Requires ent to be connected to a database
     fn commit(&mut self) -> DatabaseResult<()> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
-        match database.insert(Box::from(self.clone())) {
+        let database =
+            WeakDatabaseRc::upgrade(&self.database).ok_or(DatabaseError::Disconnected)?;
+        match database.insert(Box::new(Self::clone(&self))) {
             Ok(id) => {
                 self.set_id(id);
                 Ok(())
@@ -782,7 +785,8 @@ impl Ent for UntypedEnt {
     ///
     /// Requires ent to be connected to a database
     fn remove(&self) -> DatabaseResult<bool> {
-        let database = self.database.as_ref().ok_or(DatabaseError::Disconnected)?;
+        let database =
+            WeakDatabaseRc::upgrade(&self.database).ok_or(DatabaseError::Disconnected)?;
         database.remove(self.id)
     }
 }

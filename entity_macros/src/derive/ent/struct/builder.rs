@@ -46,10 +46,10 @@ pub fn impl_ent_builder(
                     self
                 }
             });
-        // If our database field, we set it to none by default
+        // If our database field, we set it to an empty ref by default
         } else if name == &ent.database {
             struct_fields.push(quote!(#name: #ty));
-            struct_field_defaults.push(quote!(::std::option::Option::None));
+            struct_field_defaults.push(quote!(#root::WeakDatabaseRc::new()));
             build_assignments.push(quote!(#name: self.#name));
 
             struct_setters.push(quote! {

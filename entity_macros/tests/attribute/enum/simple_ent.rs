@@ -19,7 +19,7 @@ fn adds_derive_clone_ent_when_missing() {
 
     let ent = TestEntEnum::One(TestEnt1 {
         id: 123,
-        database: None,
+        database: entity::WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
         field1: true,
@@ -43,7 +43,7 @@ fn fills_in_derive_clone_when_missing() {
 
     let ent = TestEntEnum::One(TestEnt1 {
         id: 123,
-        database: None,
+        database: entity::WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
         field1: true,
@@ -67,7 +67,7 @@ fn fills_in_derive_ent_when_missing() {
 
     let ent = TestEntEnum::One(TestEnt1 {
         id: 123,
-        database: None,
+        database: entity::WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
         field1: true,

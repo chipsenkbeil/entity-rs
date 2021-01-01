@@ -1,9 +1,5 @@
 use derivative::Derivative;
-use entity::{
-    Database, DatabaseError, EdgeDefinition, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent,
-    EntMutationError, FieldAttribute, FieldDefinition, Id, InmemoryDatabase, NumberType,
-    PrimitiveValueType, Value, ValueType, EPHEMERAL_ID,
-};
+use entity::*;
 use std::convert::TryFrom;
 
 #[test]
@@ -19,7 +15,7 @@ fn supports_generic_fields() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -33,7 +29,7 @@ fn supports_generic_fields() {
 
     let ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 123,
         last_updated: 456,
         generic_field: 0.5,
@@ -49,7 +45,7 @@ fn id_should_return_copy_of_marked_id_field() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -60,7 +56,7 @@ fn id_should_return_copy_of_marked_id_field() {
 
     let ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
     };
@@ -76,7 +72,7 @@ fn set_id_should_update_the_marked_id_field() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -87,7 +83,7 @@ fn set_id_should_update_the_marked_id_field() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
     };
@@ -104,7 +100,7 @@ fn r#type_should_return_a_generated_type_using_module_path_and_ent_name() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -115,7 +111,7 @@ fn r#type_should_return_a_generated_type_using_module_path_and_ent_name() {
 
     let ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
     };
@@ -132,7 +128,7 @@ fn created_should_return_copy_of_marked_created_field() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -143,7 +139,7 @@ fn created_should_return_copy_of_marked_created_field() {
 
     let ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 999,
         last_updated: 0,
     };
@@ -159,7 +155,7 @@ fn last_updated_should_return_copy_of_marked_last_updated_field() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -170,7 +166,7 @@ fn last_updated_should_return_copy_of_marked_last_updated_field() {
 
     let ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 999,
     };
@@ -189,7 +185,7 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -215,7 +211,7 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
 
     let ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         a: 123,
@@ -264,7 +260,7 @@ fn field_should_return_abstract_value_if_exists() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -290,7 +286,7 @@ fn field_should_return_abstract_value_if_exists() {
 
     let ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         a: 123,
@@ -319,7 +315,7 @@ fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() 
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -345,7 +341,7 @@ fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() 
 
     let mut ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         a: 123,
@@ -405,7 +401,7 @@ fn edge_definitions_should_return_list_of_definitions_for_ent_edges() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -452,7 +448,7 @@ fn edge_definitions_should_return_list_of_definitions_for_ent_edges() {
 
     let ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         a: None,
@@ -544,7 +540,7 @@ fn edge_should_return_abstract_value_if_exists() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -567,7 +563,7 @@ fn edge_should_return_abstract_value_if_exists() {
 
     let ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         a: None,
@@ -591,7 +587,7 @@ fn update_edge_should_change_the_edge_with_given_name_if_it_exists_to_value() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -614,7 +610,7 @@ fn update_edge_should_change_the_edge_with_given_name_if_it_exists_to_value() {
 
     let mut ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         a: None,
@@ -666,7 +662,7 @@ fn connect_should_replace_database_with_provided_one() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -677,13 +673,17 @@ fn connect_should_replace_database_with_provided_one() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
     };
 
-    ent.connect(Box::from(InmemoryDatabase::default()));
-    assert!(ent.database.is_some());
+    let database = DatabaseRc::new(Box::new(InmemoryDatabase::default()));
+    ent.connect(DatabaseRc::downgrade(&database));
+    assert!(!WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
 }
 
 #[test]
@@ -694,7 +694,7 @@ fn disconnect_should_remove_any_associated_database() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -703,15 +703,19 @@ fn disconnect_should_remove_any_associated_database() {
         last_updated: u64,
     }
 
+    let db = DatabaseRc::new(Box::from(InmemoryDatabase::default()));
     let mut ent = TestEnt {
         id: 999,
-        database: Some(Box::from(InmemoryDatabase::default())),
+        database: DatabaseRc::downgrade(&db),
         created: 0,
         last_updated: 0,
     };
 
     ent.disconnect();
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
 }
 
 #[test]
@@ -722,7 +726,7 @@ fn is_connected_should_return_true_if_database_is_contained_within_ent() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -733,13 +737,14 @@ fn is_connected_should_return_true_if_database_is_contained_within_ent() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
     };
 
+    let db = DatabaseRc::new(Box::from(InmemoryDatabase::default()));
     assert_eq!(ent.is_connected(), false);
-    ent.database = Some(Box::from(InmemoryDatabase::default()));
+    ent.database = DatabaseRc::downgrade(&db);
     assert_eq!(ent.is_connected(), true);
 }
 
@@ -754,7 +759,7 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
         #[derivative(Debug = "ignore")]
         #[derivative(PartialEq = "ignore")]
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -776,11 +781,11 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
         value: String,
     }
 
-    let database = Box::from(InmemoryDatabase::default());
+    let database = DatabaseRc::new(Box::from(InmemoryDatabase::default()));
 
     let mut ent1 = TestEnt {
         id: 1,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         parent: None,
@@ -791,7 +796,7 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
 
     let mut ent2 = TestEnt {
         id: 2,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         parent: Some(1),
@@ -802,7 +807,7 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
 
     let mut ent3 = TestEnt {
         id: 3,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         parent: Some(1),
@@ -828,9 +833,9 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
         Err(DatabaseError::Disconnected)
     ));
 
-    ent1.connect(database.clone());
-    ent2.connect(database.clone());
-    ent3.connect(database);
+    ent1.connect(DatabaseRc::downgrade(&database));
+    ent2.connect(DatabaseRc::downgrade(&database));
+    ent3.connect(DatabaseRc::downgrade(&database));
 
     ent1.commit().expect("Failed to save Ent1");
     ent2.commit().expect("Failed to save Ent2");
@@ -895,7 +900,7 @@ fn refresh_should_update_ent_inplace_with_database_value() {
         #[derivative(Debug = "ignore")]
         #[derivative(PartialEq = "ignore")]
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -912,7 +917,7 @@ fn refresh_should_update_ent_inplace_with_database_value() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         value: String::from("test"),
@@ -924,7 +929,7 @@ fn refresh_should_update_ent_inplace_with_database_value() {
     database
         .insert(Box::from(TestEnt {
             id: 999,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 3,
             // NOTE: This will get replaced by the database
             last_updated: 0,
@@ -932,10 +937,14 @@ fn refresh_should_update_ent_inplace_with_database_value() {
         }))
         .expect("Failed to add ent to database");
 
-    ent.connect(Box::from(database));
+    let database = DatabaseRc::new(Box::new(database));
+    ent.connect(DatabaseRc::downgrade(&database));
     ent.refresh().expect("Failed to refresh ent");
     assert_eq!(ent.id, 999);
-    assert_eq!(ent.database.is_some(), true);
+    assert!(
+        !WeakDatabaseRc::ptr_eq(&ent.database, &WeakDatabaseRc::new()),
+        "Non-assigned weak database ref found"
+    );
     assert_eq!(ent.created, 3);
     assert!(ent.last_updated > 0);
     assert_eq!(ent.value, "different");
@@ -952,7 +961,7 @@ fn commit_should_save_ent_to_database_and_update_id_if_it_was_changed() {
         #[derivative(Debug = "ignore")]
         #[derivative(PartialEq = "ignore")]
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -966,14 +975,15 @@ fn commit_should_save_ent_to_database_and_update_id_if_it_was_changed() {
 
     let mut ent = TestEnt {
         id: EPHEMERAL_ID,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
     };
 
     assert!(matches!(ent.commit(), Err(DatabaseError::Disconnected)));
 
-    ent.connect(Box::from(database.clone()));
+    let database = DatabaseRc::new(Box::new(database));
+    ent.connect(DatabaseRc::downgrade(&database));
     ent.commit().expect("Failed to commit ent");
     assert_ne!(ent.id, EPHEMERAL_ID, "Ephemeral id was not changed in ent");
     assert_eq!(
@@ -996,7 +1006,7 @@ fn remove_should_delete_ent_from_database() {
         #[derivative(Debug = "ignore")]
         #[derivative(PartialEq = "ignore")]
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -1010,14 +1020,15 @@ fn remove_should_delete_ent_from_database() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
     };
 
     assert!(matches!(ent.remove(), Err(DatabaseError::Disconnected)));
 
-    ent.connect(Box::from(database.clone()));
+    let database = DatabaseRc::new(Box::new(database));
+    ent.connect(DatabaseRc::downgrade(&database));
     assert_eq!(ent.remove().expect("Failed to remove ent"), false);
     assert_eq!(
         database.get(999).expect("Failed to get ent").is_none(),

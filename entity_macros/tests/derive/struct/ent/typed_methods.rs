@@ -1,4 +1,4 @@
-use entity::{Database, DatabaseError, Ent, Id, InmemoryDatabase, Value};
+use entity::{DatabaseError, DatabaseRc, Ent, Id, InmemoryDatabase, Value, WeakDatabaseRc};
 use std::convert::TryFrom;
 
 #[test]
@@ -9,7 +9,7 @@ fn produces_getters_for_fields_that_returns_references() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -26,7 +26,7 @@ fn produces_getters_for_fields_that_returns_references() {
 
     let ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_field1: 123,
@@ -45,7 +45,7 @@ fn produces_setters_for_fields_marked_as_mutable() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -62,7 +62,7 @@ fn produces_setters_for_fields_marked_as_mutable() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_field1: 123,
@@ -87,7 +87,7 @@ fn produces_getters_for_edge_ids_that_returns_an_option_if_kind_is_maybe() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -101,7 +101,7 @@ fn produces_getters_for_edge_ids_that_returns_an_option_if_kind_is_maybe() {
 
     let ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: Some(123),
@@ -118,7 +118,7 @@ fn produces_getters_for_edge_ids_that_returns_the_id_if_kind_is_one() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -132,7 +132,7 @@ fn produces_getters_for_edge_ids_that_returns_the_id_if_kind_is_one() {
 
     let ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: 123,
@@ -149,7 +149,7 @@ fn produces_getters_for_edge_ids_that_returns_a_list_of_ids_if_kind_is_many() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -163,7 +163,7 @@ fn produces_getters_for_edge_ids_that_returns_a_list_of_ids_if_kind_is_many() {
 
     let ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: vec![123, 456],
@@ -180,7 +180,7 @@ fn produces_setters_for_edge_ids_that_accepts_an_optional_id_if_kind_is_maybe() 
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -194,7 +194,7 @@ fn produces_setters_for_edge_ids_that_accepts_an_optional_id_if_kind_is_maybe() 
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: Some(123),
@@ -215,7 +215,7 @@ fn produces_setters_for_edge_ids_that_accepts_an_id_if_kind_is_one() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -229,7 +229,7 @@ fn produces_setters_for_edge_ids_that_accepts_an_id_if_kind_is_one() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: 123,
@@ -247,7 +247,7 @@ fn produces_setters_for_edge_ids_that_accepts_a_list_of_ids_if_kind_is_many() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -261,7 +261,7 @@ fn produces_setters_for_edge_ids_that_accepts_a_list_of_ids_if_kind_is_many() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: vec![123, 456],
@@ -279,7 +279,7 @@ fn produces_load_method_for_edge_of_kind_maybe_that_returns_an_option_of_ent() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -293,7 +293,7 @@ fn produces_load_method_for_edge_of_kind_maybe_that_returns_an_option_of_ent() {
 
     let mut ent1 = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: Some(1000),
@@ -301,7 +301,7 @@ fn produces_load_method_for_edge_of_kind_maybe_that_returns_an_option_of_ent() {
 
     let mut ent2 = TestEnt {
         id: 1000,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: None,
@@ -316,9 +316,9 @@ fn produces_load_method_for_edge_of_kind_maybe_that_returns_an_option_of_ent() {
         Err(DatabaseError::Disconnected)
     ));
 
-    let database = InmemoryDatabase::default();
-    ent1.connect(Box::from(database.clone()));
-    ent2.connect(Box::from(database));
+    let database = DatabaseRc::new(Box::new(InmemoryDatabase::default()));
+    ent1.connect(DatabaseRc::downgrade(&database));
+    ent2.connect(DatabaseRc::downgrade(&database));
 
     ent1.clone().commit().expect("Failed to save ent1");
     ent2.clone().commit().expect("Failed to save ent2");
@@ -347,7 +347,7 @@ fn produces_load_method_for_edge_of_kind_one_that_returns_a_single_ent() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -361,7 +361,7 @@ fn produces_load_method_for_edge_of_kind_one_that_returns_a_single_ent() {
 
     let mut ent1 = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: 1000,
@@ -369,7 +369,7 @@ fn produces_load_method_for_edge_of_kind_one_that_returns_a_single_ent() {
 
     let mut ent2 = TestEnt {
         id: 1000,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: 999,
@@ -384,9 +384,9 @@ fn produces_load_method_for_edge_of_kind_one_that_returns_a_single_ent() {
         Err(DatabaseError::Disconnected)
     ));
 
-    let database = InmemoryDatabase::default();
-    ent1.connect(Box::from(database.clone()));
-    ent2.connect(Box::from(database));
+    let database = DatabaseRc::new(Box::new(InmemoryDatabase::default()));
+    ent1.connect(DatabaseRc::downgrade(&database));
+    ent2.connect(DatabaseRc::downgrade(&database));
 
     ent1.clone().commit().expect("Failed to save ent1");
     ent2.clone().commit().expect("Failed to save ent2");
@@ -414,7 +414,7 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -428,7 +428,7 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
 
     let mut ent1 = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: vec![1000, 1001],
@@ -436,7 +436,7 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
 
     let mut ent2 = TestEnt {
         id: 1000,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 0,
         last_updated: 0,
         my_edge: vec![999, 1000],
@@ -451,9 +451,9 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
         Err(DatabaseError::Disconnected)
     ));
 
-    let database = InmemoryDatabase::default();
-    ent1.connect(Box::from(database.clone()));
-    ent2.connect(Box::from(database));
+    let database = DatabaseRc::new(Box::new(InmemoryDatabase::default()));
+    ent1.connect(DatabaseRc::downgrade(&database));
+    ent2.connect(DatabaseRc::downgrade(&database));
 
     ent1.clone().commit().expect("Failed to save ent1");
     ent2.clone().commit().expect("Failed to save ent2");
@@ -490,7 +490,7 @@ fn supports_generic_ent_fields() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -504,7 +504,7 @@ fn supports_generic_ent_fields() {
 
     let mut ent = TestEnt {
         id: 999,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 123,
         last_updated: 456,
         generic_field: 0.5,

@@ -229,7 +229,7 @@ fn inject_ent_id_field(
 }
 
 /// Will add a named field to the struct in the form of
-/// `database: Option<Box<dyn entity::Database>>` that has `#[ent(database)]`
+/// `database: WeakDatabaseRc` that has `#[ent(database)]`
 /// included. This is only done if another field is not already marked as the
 /// database. Will fail if a field already exists with the database's name and
 /// there is no marked database field.
@@ -273,7 +273,7 @@ fn inject_ent_database_field(
                     let named_field: ParsableNamedField = parse_quote! {
                         #skip_attr
                         #[ent(database)]
-                        #name: ::std::option::Option<::std::boxed::Box<dyn #root::Database>>
+                        #name: #root::WeakDatabaseRc
                     };
 
                     x.named.push(named_field.field);

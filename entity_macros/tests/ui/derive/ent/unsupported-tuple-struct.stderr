@@ -3,7 +3,7 @@ error: Unsupported shape `tuple`
   |
 4 | / struct TestEnt(
 5 | |     #[ent(id)] Id,
-6 | |     #[ent(database)] Option<Box<dyn Database>>,
+6 | |     #[ent(database)] WeakDatabaseRc,
 7 | |     #[ent(created)] u64,
 8 | |     #[ent(last_updated)] u64,
 9 | | );

@@ -1,4 +1,4 @@
-use entity::{Database, Ent, Id};
+use entity::{Ent, Id, WeakDatabaseRc};
 
 #[derive(Clone, Ent)]
 struct TestEnt<'a> {
@@ -6,7 +6,7 @@ struct TestEnt<'a> {
     id: Id,
 
     #[ent(database)]
-    database: Option<Box<dyn Database>>,
+    database: WeakDatabaseRc,
 
     #[ent(created)]
     created: u64,

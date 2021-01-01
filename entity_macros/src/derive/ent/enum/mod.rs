@@ -117,7 +117,6 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
             }
         }
 
-
         #[automatically_derived]
         impl #impl_generics #query_name #ty_generics #where_clause {
             #[doc = "Filters to return all ents where id passes the given predicate"]
@@ -256,7 +255,7 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 }
             }
 
-            fn connect(&mut self, database: ::std::boxed::Box<dyn #root::Database>) {
+            fn connect(&mut self, database: #root::WeakDatabaseRc) {
                 match self {
                     #(Self::#variant_names(x) => x.connect(database)),*
                 }

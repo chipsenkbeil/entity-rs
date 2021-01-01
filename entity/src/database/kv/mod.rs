@@ -638,7 +638,7 @@ mod tests {
             })
         }
 
-        fn connect(&mut self, _database: Box<dyn Database>) {}
+        fn connect(&mut self, _database: WeakDatabaseRc) {}
 
         fn disconnect(&mut self) {}
 

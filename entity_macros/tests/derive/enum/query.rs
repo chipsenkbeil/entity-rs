@@ -1,5 +1,5 @@
 use derivative::Derivative;
-use entity::{Database, Ent, Id, InmemoryDatabase, TypedPredicate as P, Value};
+use entity::{Database, Ent, Id, InmemoryDatabase, TypedPredicate as P, Value, WeakDatabaseRc};
 use std::convert::TryFrom;
 
 #[derive(Clone, Derivative, Ent)]
@@ -10,7 +10,7 @@ struct TestEnt1 {
 
     #[derivative(Debug = "ignore")]
     #[ent(database)]
-    database: Option<Box<dyn Database>>,
+    database: WeakDatabaseRc,
 
     #[ent(created)]
     created: u64,
@@ -33,7 +33,7 @@ struct TestEnt2 {
 
     #[derivative(Debug = "ignore")]
     #[ent(database)]
-    database: Option<Box<dyn Database>>,
+    database: WeakDatabaseRc,
 
     #[ent(created)]
     created: u64,
@@ -67,7 +67,7 @@ fn produces_method_to_filter_by_id() {
     database
         .insert(Box::from(TestEnt1 {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             field1: 999,
@@ -78,7 +78,7 @@ fn produces_method_to_filter_by_id() {
     database
         .insert(Box::from(TestEnt2 {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             field1: 1000,
@@ -106,7 +106,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
     database
         .insert(Box::from(TestEnt1 {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 100,
             last_updated: 0,
             field1: 999,
@@ -117,7 +117,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
     database
         .insert(Box::from(TestEnt2 {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 200,
             last_updated: 0,
             field1: 1000,
@@ -145,7 +145,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
     database
         .insert(Box::from(TestEnt1 {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             field1: 999,
@@ -160,7 +160,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
     database
         .insert(Box::from(TestEnt2 {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             field1: 1000,
@@ -192,7 +192,7 @@ fn produces_method_to_filter_by_field() {
     database
         .insert(Box::from(TestEnt1 {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             field1: 999,
@@ -203,7 +203,7 @@ fn produces_method_to_filter_by_field() {
     database
         .insert(Box::from(TestEnt2 {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             field1: 1000,
@@ -235,7 +235,7 @@ fn supports_generic_fields() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -260,7 +260,7 @@ fn supports_generic_fields() {
     database
         .insert(Box::from(GenericTestEnt {
             id: 1,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             value: 100usize,
@@ -270,7 +270,7 @@ fn supports_generic_fields() {
     database
         .insert(Box::from(GenericTestEnt {
             id: 2,
-            database: None,
+            database: WeakDatabaseRc::new(),
             created: 0,
             last_updated: 0,
             value: 200usize,

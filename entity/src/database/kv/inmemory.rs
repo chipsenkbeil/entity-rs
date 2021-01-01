@@ -7,41 +7,31 @@ use crate::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
+    sync::Mutex,
 };
 
 /// Represents an in-memory database that performs synchronous insertion,
 /// retrieval, and removal. If the feature `serde` is enabled, this database
 /// can be serialized and deserialized.
-///
-/// This database maintains a thread-safe reference-counted mutex around
-/// a hashmap representing the global storage. Clones on this database will
-/// result in incrementing the reference counter.
-///
-/// When deserializing the database, any existing reference counter is
-/// not persisted, so this can and will duplicate data and fragment users
-/// of the database. Best practice is to load the database only when first
-/// launching an application!
-#[derive(Clone)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct InmemoryDatabase {
     /// Primary ent storage
-    ents: Arc<Mutex<HashMap<Id, Box<dyn Ent>>>>,
+    ents: Mutex<HashMap<Id, Box<dyn Ent>>>,
 
     /// Type matching from specific ents to all ids of those ents
-    ents_of_type: Arc<Mutex<HashMap<String, EntIdSet>>>,
+    ents_of_type: Mutex<HashMap<String, EntIdSet>>,
 
     /// Id allocator for ents
-    alloc: Arc<Mutex<IdAllocator>>,
+    alloc: Mutex<IdAllocator>,
 }
 
 impl Default for InmemoryDatabase {
     /// Creates a new, empty database entry
     fn default() -> Self {
         Self {
-            ents: Arc::new(Mutex::new(HashMap::new())),
-            ents_of_type: Arc::new(Mutex::new(HashMap::new())),
-            alloc: Arc::new(Mutex::new(IdAllocator::new())),
+            ents: Mutex::new(HashMap::new()),
+            ents_of_type: Mutex::new(HashMap::new()),
+            alloc: Mutex::new(IdAllocator::new()),
         }
     }
 }
@@ -61,11 +51,7 @@ impl Database for InmemoryDatabase {
             .lock()
             .unwrap()
             .get(&id)
-            .map(|ent| dyn_clone::clone_box(ent.as_ref()))
-            .map(|mut ent| {
-                ent.connect(Box::from(self.clone()));
-                ent
-            }))
+            .map(|ent| dyn_clone::clone_box(ent.as_ref())))
     }
 
     fn remove(&self, id: Id) -> DatabaseResult<bool> {
@@ -250,8 +236,8 @@ mod tests {
         let result = db.get(999).expect("Failed to get ent");
         assert!(result.is_some(), "Unexpectedly missing ent");
         assert!(
-            result.unwrap().is_connected(),
-            "Ent not connected to database"
+            !result.unwrap().is_connected(),
+            "Ent unexpectedly connected to database"
         );
     }
 

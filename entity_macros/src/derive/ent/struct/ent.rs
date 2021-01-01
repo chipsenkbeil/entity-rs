@@ -93,7 +93,7 @@ pub(crate) fn impl_ent(
                 match name {
                     #(
                         stringify!(#field_names) => ::std::option::Option::Some(
-                            self.#field_names.clone().into()
+                            ::std::clone::Clone::clone(&self.#field_names).into()
                         ),
                     )*
                     _ => ::std::option::Option::None,
@@ -126,7 +126,7 @@ pub(crate) fn impl_ent(
                 match name {
                     #(
                         stringify!(#edge_names) => ::std::option::Option::Some(
-                            self.#edge_names.clone().into()
+                            ::std::clone::Clone::clone(&self.#edge_names).into()
                         ),
                     )*
                     _ => ::std::option::Option::None,
@@ -152,21 +152,23 @@ pub(crate) fn impl_ent(
                 }
             }
 
-            fn connect(&mut self, database: ::std::boxed::Box<dyn #root::Database>) {
-                self.#ident_database = ::std::option::Option::Some(database);
+            fn connect(&mut self, database: #root::WeakDatabaseRc) {
+                self.#ident_database = database;
             }
 
             fn disconnect(&mut self) {
-                self.#ident_database = ::std::option::Option::None;
+                self.#ident_database = #root::WeakDatabaseRc::new();
             }
 
             fn is_connected(&self) -> bool {
-                self.#ident_database.is_some()
+                #root::WeakDatabaseRc::strong_count(&self.#ident_database) > 0
             }
 
             fn load_edge(&self, name: &str) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::Ent>>> {
                 use #root::{Database, Ent};
-                let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
+                let database = #root::WeakDatabaseRc::upgrade(
+                    &self.#ident_database
+                ).ok_or(#root::DatabaseError::Disconnected)?;
                 match self.edge(name) {
                     ::std::option::Option::Some(e) => e
                         .to_ids()
@@ -181,12 +183,12 @@ pub(crate) fn impl_ent(
 
             fn refresh(&mut self) -> #root::DatabaseResult<()> {
                 use #root::{AsAny, Database, Ent};
-                let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
+                let database = #root::WeakDatabaseRc::upgrade(
+                    &self.#ident_database
+                ).ok_or(#root::DatabaseError::Disconnected)?;
                 let id = self.#ident_id;
                 match database.get(id)?.and_then(
-                    |ent| ent.as_any()
-                        .downcast_ref::<#name #ty_generics>()
-                        .map(::std::clone::Clone::clone)
+                    |ent| ent.to_ent::<#name #ty_generics>()
                 ) {
                     ::std::option::Option::Some(x) => {
                         self.#ident_id = x.id();
@@ -209,8 +211,13 @@ pub(crate) fn impl_ent(
 
             fn commit(&mut self) -> #root::DatabaseResult<()> {
                 use #root::{Database, Ent};
-                let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
-                match database.insert(::std::boxed::Box::from(self.clone())) {
+                use ::std::ops::Deref;
+                let database = #root::WeakDatabaseRc::upgrade(
+                    &self.#ident_database
+                ).ok_or(#root::DatabaseError::Disconnected)?;
+                match database.insert(::std::boxed::Box::new(
+                    ::std::clone::Clone::clone(<&mut Self>::deref(&self))
+                )) {
                     ::std::result::Result::Ok(id) => {
                         self.set_id(id);
                         ::std::result::Result::Ok(())
@@ -221,7 +228,9 @@ pub(crate) fn impl_ent(
 
             fn remove(&self) -> #root::DatabaseResult<bool> {
                 use #root::Database;
-                let database = self.#ident_database.as_ref().ok_or(#root::DatabaseError::Disconnected)?;
+                let database = #root::WeakDatabaseRc::upgrade(
+                    &self.#ident_database
+                ).ok_or(#root::DatabaseError::Disconnected)?;
                 database.remove(self.#ident_id)
             }
         }

@@ -1,5 +1,5 @@
 use derivative::Derivative;
-use entity::{Database, Ent, Id, Value, EPHEMERAL_ID};
+use entity::{Ent, Id, Value, WeakDatabaseRc, EPHEMERAL_ID};
 use std::convert::TryFrom;
 
 #[test]
@@ -10,7 +10,7 @@ fn default_fills_in_required_fields() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -24,7 +24,10 @@ fn default_fills_in_required_fields() {
         .expect("Failed to create test ent");
 
     assert_eq!(ent.id, EPHEMERAL_ID);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert!(ent.created > 0);
     assert!(ent.last_updated > 0);
 }
@@ -37,7 +40,7 @@ fn produces_an_error_enum_for_each_struct_field() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -91,7 +94,7 @@ fn default_returns_a_builder_with_all_normal_fields_set_to_none() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -117,7 +120,10 @@ fn default_returns_a_builder_with_all_normal_fields_set_to_none() {
 
     let builder = TestEntBuilder::default();
     assert_eq!(builder.id, EPHEMERAL_ID);
-    assert!(builder.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &builder.database,
+        &WeakDatabaseRc::new()
+    ));
     assert!(builder.created > 0);
     assert!(builder.last_updated > 0);
     assert_eq!(builder.field1, None);
@@ -137,7 +143,7 @@ fn build_fails_when_struct_field_is_not_set() {
 
         #[derivative(Debug = "ignore")]
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -227,7 +233,7 @@ fn build_succeeds_when_all_struct_fields_are_set() {
 
         #[derivative(Debug = "ignore")]
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -253,7 +259,7 @@ fn build_succeeds_when_all_struct_fields_are_set() {
 
     let ent = TestEntBuilder::default()
         .id(1)
-        .database(None)
+        .database(WeakDatabaseRc::new())
         .created(2)
         .last_updated(3)
         .field1(4)
@@ -284,7 +290,7 @@ fn supports_generic_fields() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,

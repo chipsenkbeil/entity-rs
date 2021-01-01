@@ -6,7 +6,13 @@ use crate::{
     Id,
 };
 use derive_more::Display;
-use dyn_clone::DynClone;
+use std::sync::{Arc, Weak};
+
+/// Represents a thread-safe reference to a boxed database trait object
+pub type DatabaseRc = Arc<Box<dyn Database>>;
+
+/// Represents a weak thread-safe reference to a boxed database trait object
+pub type WeakDatabaseRc = Weak<Box<dyn Database>>;
 
 /// Alias to a result that can contain a database error
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -54,12 +60,14 @@ pub enum DatabaseError {
 impl std::error::Error for DatabaseError {}
 
 /// Represents a synchronous database, which performs blocking CRUD
-/// operations using ents. All operations only require a reference to the
-/// database and it is up to each implementation to provide proper
-/// locking and safeguards to ensure that multi-threaded access does
-/// not cause problems.
-pub trait Database: DynClone {
+/// operations using ents. Given that many database implementations handle
+/// interior mutability themselves, the API of this trait does not provide
+/// any mut guarantees itself.
+pub trait Database {
     /// Retrieves a copy of a single, generic ent with the corresponding id
+    ///
+    /// This should not connect the ent back to the database upon return as
+    /// that decision should be made outside of the database itself.
     fn get(&self, id: Id) -> DatabaseResult<Option<Box<dyn Ent>>>;
 
     /// Removes the ent with the corresponding id, triggering edge
@@ -81,8 +89,6 @@ pub trait Database: DynClone {
     /// Finds all generic ents that match the query
     fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn Ent>>>;
 }
-
-dyn_clone::clone_trait_object!(Database);
 
 pub trait DatabaseExt: Database {
     /// Inserts an ent of a specific type

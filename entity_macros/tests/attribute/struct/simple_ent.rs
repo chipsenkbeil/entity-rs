@@ -1,4 +1,4 @@
-use entity::{simple_ent, Database, Ent, Id};
+use entity::{simple_ent, Ent, Id, WeakDatabaseRc};
 
 #[test]
 fn adds_derive_clone_ent_when_missing() {
@@ -8,7 +8,7 @@ fn adds_derive_clone_ent_when_missing() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -19,13 +19,16 @@ fn adds_derive_clone_ent_when_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -39,7 +42,7 @@ fn fills_in_derive_clone_when_missing() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -50,13 +53,16 @@ fn fills_in_derive_clone_when_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -70,7 +76,7 @@ fn fills_in_derive_ent_when_missing() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -81,13 +87,16 @@ fn fills_in_derive_ent_when_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -101,7 +110,7 @@ fn fills_in_ent_created_field_when_missing() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(last_updated)]
         last_updated: u64,
@@ -109,13 +118,16 @@ fn fills_in_ent_created_field_when_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -137,13 +149,16 @@ fn fills_in_ent_database_field_when_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -154,7 +169,7 @@ fn fills_in_ent_id_field_when_missing() {
     #[derive(Clone, Ent)]
     struct SimpleEnt {
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -165,13 +180,16 @@ fn fills_in_ent_id_field_when_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -185,7 +203,7 @@ fn fills_in_ent_last_updated_field_when_missing() {
         id: Id,
 
         #[ent(database)]
-        database: Option<Box<dyn Database>>,
+        database: WeakDatabaseRc,
 
         #[ent(created)]
         created: u64,
@@ -193,13 +211,16 @@ fn fills_in_ent_last_updated_field_when_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -211,13 +232,16 @@ fn fills_in_everything_missing() {
 
     let ent = SimpleEnt {
         id: 123,
-        database: None,
+        database: WeakDatabaseRc::new(),
         created: 456,
         last_updated: 789,
     };
 
     assert_eq!(ent.id, 123);
-    assert!(ent.database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.created, 456);
     assert_eq!(ent.last_updated, 789);
 }
@@ -234,13 +258,16 @@ fn supports_renaming_ent_fields() {
 
     let ent = SimpleEnt {
         my_id: 123,
-        my_database: None,
+        my_database: WeakDatabaseRc::new(),
         my_created: 456,
         my_last_updated: 789,
     };
 
     assert_eq!(ent.my_id, 123);
-    assert!(ent.my_database.is_none());
+    assert!(WeakDatabaseRc::ptr_eq(
+        &ent.my_database,
+        &WeakDatabaseRc::new()
+    ));
     assert_eq!(ent.my_created, 456);
     assert_eq!(ent.my_last_updated, 789);
 }
