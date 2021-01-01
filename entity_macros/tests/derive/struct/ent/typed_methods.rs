@@ -479,6 +479,8 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
 
 #[test]
 fn supports_generic_ent_fields() {
+    #![allow(clippy::float_cmp)]
+
     #[derive(Clone, Ent)]
     struct TestEnt<T>
     where

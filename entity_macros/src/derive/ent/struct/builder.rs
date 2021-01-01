@@ -119,6 +119,7 @@ pub fn impl_ent_builder(
             ::std::cmp::Eq,
         )]
         #[automatically_derived]
+        #[allow(clippy::enum_variant_names)]
         #vis enum #builder_error_name {
             #(#error_variants),*
         }

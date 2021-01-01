@@ -8,6 +8,8 @@ use std::convert::TryFrom;
 
 #[test]
 fn supports_generic_fields() {
+    #![allow(clippy::float_cmp)]
+
     #[derive(Clone, Ent)]
     struct TestEnt<T>
     where
@@ -930,7 +932,7 @@ fn refresh_should_update_ent_inplace_with_database_value() {
         }))
         .expect("Failed to add ent to database");
 
-    ent.connect(Box::from(database.clone()));
+    ent.connect(Box::from(database));
     ent.refresh().expect("Failed to refresh ent");
     assert_eq!(ent.id, 999);
     assert_eq!(ent.database.is_some(), true);

@@ -417,6 +417,7 @@ impl PartialOrd for Number {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
     use super::*;
 
     macro_rules! check {
