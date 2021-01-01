@@ -1,5 +1,11 @@
 error: Unsupported shape `named`
- --> $DIR/unsupported-enum-with-named-fields.rs:4:1
-  |
-4 | enum TestEnt {
-  | ^^^^
+  --> $DIR/unsupported-enum-with-named-fields.rs:4:1
+   |
+4  | / enum TestEnt {
+5  | |     Variant {
+6  | |         #[ent(id)]
+7  | |         id: Id,
+...  |
+17 | |     },
+18 | | }
+   | |_^

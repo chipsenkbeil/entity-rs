@@ -1,5 +1,11 @@
 error: Unexpected meta-item format `word` at my_edge/edge/type
- --> $DIR/missing-type-value-for-edge-attr.rs:4:1
-  |
-4 | struct TestEnt {
-  | ^^^^^^
+  --> $DIR/missing-type-value-for-edge-attr.rs:4:1
+   |
+4  | / struct TestEnt {
+5  | |     #[ent(id)]
+6  | |     id: Id,
+7  | |
+...  |
+18 | |     my_edge: Id,
+19 | | }
+   | |_^

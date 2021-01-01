@@ -391,6 +391,7 @@ struct AttrInfo {
 }
 
 impl AttrInfo {
+    #[allow(clippy::field_reassign_with_default)]
     pub fn from(args: &[NestedMeta], attrs: &[Attribute]) -> Self {
         let mut args_attrs = utils::nested_meta_iter_into_named_attr_map(args.iter());
         let ent_attrs = utils::attrs_into_attr_map(attrs, "ent").unwrap_or_default();

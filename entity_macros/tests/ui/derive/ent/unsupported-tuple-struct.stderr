@@ -1,5 +1,10 @@
 error: Unsupported shape `tuple`
  --> $DIR/unsupported-tuple-struct.rs:4:1
   |
-4 | struct TestEnt(
-  | ^^^^^^
+4 | / struct TestEnt(
+5 | |     #[ent(id)] Id,
+6 | |     #[ent(database)] Option<Box<dyn Database>>,
+7 | |     #[ent(created)] u64,
+8 | |     #[ent(last_updated)] u64,
+9 | | );
+  | |__^

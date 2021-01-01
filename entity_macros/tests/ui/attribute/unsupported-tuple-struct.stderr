@@ -1,5 +1,6 @@
 error: Tuple struct not supported
  --> $DIR/unsupported-tuple-struct.rs:4:1
   |
-4 | #[derive(Clone, Ent)]
-  | ^^^^^^^^^^^^^^^^^^^^^
+4 | / #[derive(Clone, Ent)]
+5 | | pub struct SimpleEnt(#[ent(field)] String, #[ent(field)] u32);
+  | |______________________________________________________________^

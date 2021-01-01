@@ -1,5 +1,11 @@
 error: Lit is not supported at my_field/field
- --> $DIR/unexpected-inner-lit-attr-for-ent-field.rs:4:1
-  |
-4 | struct TestEnt {
-  | ^^^^^^
+  --> $DIR/unexpected-inner-lit-attr-for-ent-field.rs:4:1
+   |
+4  | / struct TestEnt {
+5  | |     #[ent(id)]
+6  | |     id: Id,
+7  | |
+...  |
+18 | |     my_field: u32,
+19 | | }
+   | |_^

@@ -1,5 +1,11 @@
 error: No id field provided
- --> $DIR/missing-id.rs:4:1
-  |
-4 | struct TestEnt {
-  | ^^^^^^
+  --> $DIR/missing-id.rs:4:1
+   |
+4  | / struct TestEnt {
+5  | |     #[ent(database)]
+6  | |     database: Option<Box<dyn Database>>,
+7  | |
+...  |
+12 | |     last_updated: u64,
+13 | | }
+   | |_^

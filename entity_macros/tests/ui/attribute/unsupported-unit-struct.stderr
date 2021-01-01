@@ -1,5 +1,6 @@
 error: Unit struct not supported
  --> $DIR/unsupported-unit-struct.rs:4:1
   |
-4 | #[derive(Clone, Ent)]
-  | ^^^^^^^^^^^^^^^^^^^^^
+4 | / #[derive(Clone, Ent)]
+5 | | pub struct SimpleEnt;
+  | |_____________________^

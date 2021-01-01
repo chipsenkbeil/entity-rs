@@ -2,7 +2,7 @@ error: &'a T and &'a mut T are not supported as field types
   --> $DIR/unsupported-field-type-of-mut-reference.rs:18:15
    |
 18 |     my_field: &'a mut u32,
-   |               ^
+   |               ^^^^^^^^^^^
 
 error[E0277]: the trait bound `&mut u32: Clone` is not satisfied
   --> $DIR/unsupported-field-type-of-mut-reference.rs:18:5
