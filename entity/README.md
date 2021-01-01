@@ -12,6 +12,8 @@
 [crates_lnk]: https://crates.io/crates/entity
 [doc_img]: https://docs.rs/entity/badge.svg
 [doc_lnk]: https://docs.rs/entity
+[entity: rustc 1.45+]: https://img.shields.io/badge/entity-rustc_1.45+-lightgray.svg
+[entity_macros: rustc 1.45+]: https://img.shields.io/badge/entity_macros-rustc_1.45+-lightgray.svg
 [Rust 1.45]: https://blog.rust-lang.org/2020/07/16/Rust-1.45.0.html
 
 A simplistic framework for connected data structures modeled after
