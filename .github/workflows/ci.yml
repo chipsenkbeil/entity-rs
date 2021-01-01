@@ -27,16 +27,10 @@ jobs:
           - { rust: 1.45.0, os: windows-latest }
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-      - uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: ${{ matrix.rust }}
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v1
       - name: Check Cargo availability
         run: cargo --version
       - run: cargo test --verbose --workspace
@@ -50,16 +44,11 @@ jobs:
       RUSTFLAGS: -Dwarnings
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-lint-cargo-${{ hashFiles('**/Cargo.toml') }}
-      - uses: hecrj/setup-rust-action@v1
-        with:
+          toolchain: stable
           components: clippy
+      - uses: Swatinem/rust-cache@v1
       - name: Check Cargo availability
         run: cargo --version
       - run: cargo clippy --workspace --all-targets --verbose
@@ -71,16 +60,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-rustfmt-cargo-${{ hashFiles('**/Cargo.toml') }}
-      - uses: hecrj/setup-rust-action@v1
-        with:
+          toolchain: stable
           components: rustfmt
+      - uses: Swatinem/rust-cache@v1
       - name: Check Cargo availability
         run: cargo --version
       - run: cargo fmt --all -- --check
