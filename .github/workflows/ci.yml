@@ -40,7 +40,8 @@ jobs:
       - name: Check Cargo availability
         run: cargo --version
       - run: cargo test --verbose --workspace
-      - run: cargo test --verbose --workspace --all-features
+      - run: cargo test --verbose --manifest-path entity/Cargo.toml --no-default-features
+      - run: cargo test --verbose -p entity --all-features
 
   clippy:
     name: Lint with clippy
