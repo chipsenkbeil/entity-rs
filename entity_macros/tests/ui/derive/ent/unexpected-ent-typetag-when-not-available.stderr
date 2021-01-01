@@ -1,7 +1,0 @@
-error: Could not find `typetag` in `dependencies` or `dev-dependencies` in `$WORKSPACE/target/tests/entity_macros/Cargo.toml`!
- --> $DIR/unexpected-ent-typetag-when-not-available.rs:3:17
-  |
-3 | #[derive(Clone, Ent)]
-  |                 ^^^
-  |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
