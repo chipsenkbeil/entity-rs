@@ -186,6 +186,11 @@ fn with_ent<D: KeyValueDatabase, F: Fn(Box<dyn Ent>) -> bool>(db: &D, id: &Id, f
 
 #[cfg(test)]
 mod tests {
+    #![cfg_attr(
+        not(any(feature = "inmemory_db", feature = "sled_db")),
+        allow(dead_code, unused_imports, unused_macros)
+    )]
+
     use super::*;
     use crate::*;
     use std::collections::HashMap;
