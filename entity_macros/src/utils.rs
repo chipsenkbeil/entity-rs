@@ -6,9 +6,29 @@ use syn::{
     GenericArgument, Ident, Lit, Meta, NestedMeta, Path, PathArguments, PathSegment, Type,
 };
 
-/// Produces a token stream in the form of
-pub fn root() -> Result<Path, syn::Error> {
+/// Produces a token stream in the form of `::entity` or renamed version
+pub fn entity_crate() -> Result<Path, syn::Error> {
     crate_name("entity")
+        .map(|name| {
+            let crate_ident = Ident::new(&name, Span::mixed_site());
+            parse_quote!(::#crate_ident)
+        })
+        .map_err(|msg| syn::Error::new(Span::mixed_site(), msg))
+}
+
+/// Produces a token stream in the form of `::serde` or renamed version
+pub fn serde_crate() -> Result<Path, syn::Error> {
+    crate_name("serde")
+        .map(|name| {
+            let crate_ident = Ident::new(&name, Span::mixed_site());
+            parse_quote!(::#crate_ident)
+        })
+        .map_err(|msg| syn::Error::new(Span::mixed_site(), msg))
+}
+
+/// Produces a token stream in the form of `::typetag` or renamed version
+pub fn typetag_crate() -> Result<Path, syn::Error> {
+    crate_name("typetag")
         .map(|name| {
             let crate_ident = Ident::new(&name, Span::mixed_site());
             parse_quote!(::#crate_ident)

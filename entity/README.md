@@ -1,6 +1,10 @@
 # entity-rs: Library & macros for entity data structures
 
-[![Build Status][build_img]][build_lnk] [![Crates.io][crates_img]][crates_lnk] [![Docs.rs][doc_img]][doc_lnk]
+[![Build Status][build_img]][build_lnk]
+[![Crates.io][crates_img]][crates_lnk]
+[![Docs.rs][doc_img]][doc_lnk]
+[![entity: rustc 1.45+]][Rust 1.45]
+[![entity_macros: rustc 1.45+]][Rust 1.45]
 
 [build_img]: https://github.com/chipsenkbeil/entity-rs/workflows/CI/badge.svg
 [build_lnk]: https://github.com/chipsenkbeil/entity-rs/actions
@@ -8,9 +12,13 @@
 [crates_lnk]: https://crates.io/crates/entity
 [doc_img]: https://docs.rs/entity/badge.svg
 [doc_lnk]: https://docs.rs/entity
+[Rust 1.45]: https://blog.rust-lang.org/2020/07/16/Rust-1.45.0.html
 
 A simplistic framework for connected data structures modeled after
 [Facebook's social graph API, TAO](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf).
+
+Requires Rust 1.45+. Without `entity_macros`, may compile and run for
+older versions of Rust.
 
 ## Getting Started
 
@@ -50,24 +58,6 @@ let alice = UserBuilder::default()
     .friends(Vec::new())
     .build()
     .unwrap();
-let bob = UserBuilder::default()
-    .name(String::from("Bob"))
-    .age(35)
-    .friends(Vec::new())
-    .build()
-    .unwrap();
-let carol = UserBuilder::default()
-    .name(String::from("Carol"))
-    .age(27)
-    .friends(Vec::new())
-    .build()
-    .unwrap();
-let dan = UserBuilder::default()
-    .name(String::from("Dan"))
-    .age(25)
-    .friends(Vec::new())
-    .build()
-    .unwrap();
 ```
 
 ### Databases
@@ -88,7 +78,7 @@ let db = InmemoryDatabase::default();
 Additionally, **Entity** can support [sled](https://github.com/spacejam/sled)
 for a lightweight, transactional database by adding the feature `sled_db`.
 
-```rust
+```rust,no_run
 use entity::*;
 
 let db = SledDatabase::new(

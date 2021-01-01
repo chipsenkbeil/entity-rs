@@ -1,5 +1,6 @@
 mod data;
 
+use crate::utils;
 use darling::FromDeriveInput;
 use data::Ent;
 use heck::ShoutySnakeCase;
@@ -17,7 +18,7 @@ pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn:
     } else {
         impl_query(&root, &ent)?
     };
-    let ent_t = impl_ent(&root, &ent, &const_type_name);
+    let ent_t = impl_ent(&root, &ent, &const_type_name)?;
 
     Ok(quote! {
         #const_t
@@ -160,7 +161,7 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
     })
 }
 
-fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> TokenStream {
+fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStream, syn::Error> {
     let name = &ent.ident;
     let generics = &ent.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -168,12 +169,13 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> TokenStream {
     let variant_names: Vec<&Ident> = enum_variants.iter().map(|v| &v.ident).collect();
 
     let typetag_t = if ent.typetag {
-        quote! { #[::typetag::serde] }
+        let typetag_root = utils::typetag_crate()?;
+        quote! { #[#typetag_root::serde] }
     } else {
         quote! {}
     };
 
-    quote! {
+    Ok(quote! {
         #[automatically_derived]
         impl #impl_generics #root::EntType for #name #ty_generics #where_clause {
             fn type_str() -> &'static str {
@@ -296,5 +298,5 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> TokenStream {
                 }
             }
         }
-    }
+    })
 }

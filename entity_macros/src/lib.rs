@@ -4,9 +4,6 @@ mod utils;
 
 use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
 
-#[cfg(doctest)]
-doc_comment::doctest!("../README.md", readme);
-
 /// Derives the Ent trait and additional typed functionality
 ///
 /// ```
@@ -95,7 +92,7 @@ doc_comment::doctest!("../README.md", readme);
 pub fn derive_ent(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let expanded = utils::root()
+    let expanded = utils::entity_crate()
         .and_then(|root| derive::do_derive_ent(root, input))
         .unwrap_or_else(|x| x.to_compile_error());
 
@@ -106,7 +103,7 @@ pub fn derive_ent(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let expanded = utils::root()
+    let expanded = utils::entity_crate()
         .and_then(|root| derive::do_derive_value(root, input))
         .unwrap_or_else(|x| x.to_compile_error());
 
@@ -132,7 +129,7 @@ pub fn simple_ent(
     let args = parse_macro_input!(args as AttributeArgs);
     let item = parse_macro_input!(input as Item);
 
-    let expanded = utils::root()
+    let expanded = utils::entity_crate()
         .and_then(|root| attribute::do_simple_ent(root, args, item))
         .unwrap_or_else(|x| x.to_compile_error());
 

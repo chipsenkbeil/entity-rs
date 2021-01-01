@@ -40,7 +40,8 @@ pub(crate) fn impl_ent(
     // If we have the attribute ent(typetag) on our struct, we will add a
     // new attribute of #[typetag::serde] onto our impl of Ent
     let typetag_t: TokenStream = if include_typetag {
-        quote! { #[::typetag::serde] }
+        let typetag_root = utils::typetag_crate()?;
+        quote! { #[#typetag_root::serde] }
     } else {
         quote! {}
     };

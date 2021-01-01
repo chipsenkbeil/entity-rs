@@ -135,10 +135,11 @@ fn inject_derive_serde_attr(
                 .filter(|s| s.ident == "derive")
                 .is_some()
         });
+        let serde_root = utils::serde_crate()?;
         let new_attr = match (info.is_deriving_serialize, info.is_deriving_deserialize) {
-            (true, true) => quote!(::serde::Serialize, ::serde::Deserialize),
-            (true, false) => quote!(::serde::Serialize),
-            (false, true) => quote!(::serde::Deserialize),
+            (true, true) => quote!(#serde_root::Serialize, #serde_root::Deserialize),
+            (true, false) => quote!(#serde_root::Serialize),
+            (false, true) => quote!(#serde_root::Deserialize),
             (false, false) => return Ok(()),
         };
 

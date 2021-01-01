@@ -23,6 +23,5 @@ syn = { version = "1.0.53", features = ["full"] }
 
 [dev-dependencies]
 derivative = "2.1.1"
-doc-comment = "0.3.3"
 entity = { version = "0.1.0", path = "../entity", features = ["macros"] }
 trybuild = "1.0.35"
