@@ -552,6 +552,7 @@ mod tests {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
     struct TestEnt(Id);
 
     impl TestEnt {
