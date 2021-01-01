@@ -1,5 +1,0 @@
-error: Not enough items within ent(...)
-  --> $DIR/empty-ent-attr.rs:11:5
-   |
-11 |     #[ent()]
-   |     ^

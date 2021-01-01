@@ -1,5 +1,5 @@
-error: Unexpected ent attribute
-  --> $DIR/unexpected-ent-attr.rs:11:11
-   |
-11 |     #[ent(something)]
-   |           ^^^^^^^^^
+error: Unknown field: `something` at other
+ --> $DIR/unexpected-ent-attr.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

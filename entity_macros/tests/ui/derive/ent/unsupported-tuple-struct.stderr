@@ -1,4 +1,4 @@
-error: Expected named fields
+error: Unsupported shape `tuple`
  --> $DIR/unsupported-tuple-struct.rs:4:1
   |
 4 | struct TestEnt(

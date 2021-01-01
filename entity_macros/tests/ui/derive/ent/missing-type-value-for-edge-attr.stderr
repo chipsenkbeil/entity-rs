@@ -1,5 +1,5 @@
-error: Edge type must have type specified
-  --> $DIR/missing-type-value-for-edge-attr.rs:17:16
-   |
-17 |     #[ent(edge(type))]
-   |                ^^^^
+error: Unexpected meta-item format `word` at my_edge/edge/type
+ --> $DIR/missing-type-value-for-edge-attr.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

@@ -1,5 +1,5 @@
-error: Too many items within ent(...)
-  --> $DIR/too-many-attr-inside-ent-attr.rs:11:5
-   |
-11 |     #[ent(created, created)]
-   |     ^
+error: Duplicate field `created` at created
+ --> $DIR/too-many-attr-inside-ent-attr.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

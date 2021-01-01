@@ -1,5 +1,5 @@
-error: Missing edge type
-  --> $DIR/missing-type-for-edge-attr-with-other-attrs.rs:17:11
-   |
-17 |     #[ent(edge(shallow))]
-   |           ^^^^
+error: Missing field `type` at my_edge/edge
+ --> $DIR/missing-type-for-edge-attr-with-other-attrs.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

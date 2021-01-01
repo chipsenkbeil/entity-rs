@@ -1,5 +1,0 @@
-error: Expected struct
- --> $DIR/unsupported-enum.rs:4:1
-  |
-4 | enum TestEnt {
-  | ^^^^

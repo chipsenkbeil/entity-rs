@@ -1,5 +1,5 @@
 error: Already have a database elsewhere
-  --> $DIR/duplicate-database.rs:11:11
+  --> $DIR/duplicate-database.rs:12:5
    |
-11 |     #[ent(database)]
-   |           ^^^^^^^^
+12 |     database2: Option<Box<dyn Database>>,
+   |     ^^^^^^^^^

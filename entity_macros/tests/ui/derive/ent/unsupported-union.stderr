@@ -1,4 +1,4 @@
-error: Expected struct
+error: Unions are not supported
  --> $DIR/unsupported-union.rs:4:1
   |
 4 | union TestEnt {

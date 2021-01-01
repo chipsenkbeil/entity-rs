@@ -1,5 +1,5 @@
-error: Unexpected edge type assignment
-  --> $DIR/unexpected-ent-edge-type-assignment.rs:17:23
-   |
-17 |     #[ent(edge(type = 3))]
-   |                       ^
+error: Unexpected literal type `int` at my_edge/edge/type
+ --> $DIR/unexpected-ent-edge-type-assignment.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

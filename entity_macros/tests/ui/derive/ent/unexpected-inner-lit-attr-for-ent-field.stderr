@@ -1,5 +1,5 @@
-error: Unexpected literal attribute
-  --> $DIR/unexpected-inner-lit-attr-for-ent-field.rs:17:17
-   |
-17 |     #[ent(field("something"))]
-   |                 ^^^^^^^^^^^
+error: Lit is not supported at my_field/field
+ --> $DIR/unexpected-inner-lit-attr-for-ent-field.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

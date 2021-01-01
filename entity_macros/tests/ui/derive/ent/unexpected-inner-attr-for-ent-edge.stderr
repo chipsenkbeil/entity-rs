@@ -1,5 +1,5 @@
-error: Unexpected edge attribute
-  --> $DIR/unexpected-inner-attr-for-ent-edge.rs:17:34
-   |
-17 |     #[ent(edge(type = "TestEnt", something))]
-   |                                  ^^^^^^^^^
+error: Unknown field: `something` at my_edge/edge
+ --> $DIR/unexpected-inner-attr-for-ent-edge.rs:4:1
+  |
+4 | struct TestEnt {
+  | ^^^^^^

@@ -1,5 +1,5 @@
 error: Already have an id elsewhere
- --> $DIR/duplicate-id.rs:8:11
+ --> $DIR/duplicate-id.rs:9:5
   |
-8 |     #[ent(id)]
-  |           ^^
+9 |     id2: Id,
+  |     ^^^
