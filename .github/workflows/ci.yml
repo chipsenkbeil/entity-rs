@@ -54,16 +54,19 @@ jobs:
       - name: Run clippy --workspace --all-targets --verbose
         uses: actions-rs/clippy-check@v1
         with:
+          name: clippy --workspace --all-targets --verbose
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --workspace --all-targets --verbose
       - name: Run clippy --manifest-path entity/Cargo.toml --all-targets --no-default-features
         uses: actions-rs/clippy-check@v1
         with:
+          name: clippy --manifest-path entity/Cargo.toml --all-targets --no-default-features
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --manifest-path entity/Cargo.toml --all-targets --no-default-features
       - name: Run clippy -p entity --all-targets --all-features
         uses: actions-rs/clippy-check@v1
         with:
+          name: clippy -p entity --all-targets --all-features
           token: ${{ secrets.GITHUB_TOKEN }}
           args: -p entity --all-targets --all-features
 
