@@ -5,7 +5,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-entity = { version = "0.1.0", path = "../../entity", features = ["sled_db"] }
+entity = { version = "0.1.0", path = "../../entity", features = ["global", "sled_db"] }
 serde = { version = "1.0", features = ["derive"] }
 sled = { version = "0.34.6" }
 typetag = { version = "0.1.6" }

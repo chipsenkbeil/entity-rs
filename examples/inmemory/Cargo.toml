@@ -1,0 +1,8 @@
+[package]
+name = "inmemory-example"
+version = "0.0.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+entity = { version = "0.1.0", path = "../../entity", features = ["global", "inmemory_db"] }
