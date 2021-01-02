@@ -16,8 +16,7 @@
 [entity_macros: rustc 1.45+]: https://img.shields.io/badge/entity_macros-rustc_1.45+-lightgray.svg
 [Rust 1.45]: https://blog.rust-lang.org/2020/07/16/Rust-1.45.0.html
 
-A simplistic framework for connected data structures modeled after
-[Facebook's social graph API, TAO](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf).
+A simplistic framework based on [TAO, Facebook's distributed database for Social Graph](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf).
 
 Requires Rust 1.45+. Without `entity_macros`, may compile and run for
 older versions of Rust.
