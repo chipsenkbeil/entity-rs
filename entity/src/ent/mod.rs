@@ -80,7 +80,7 @@ pub trait EntType {
 ///
 /// Based on https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf
 #[cfg_attr(feature = "serde-1", typetag::serde(tag = "type"))]
-pub trait Ent: AsAny + DynClone {
+pub trait Ent: AsAny + DynClone + Send + Sync {
     /// Represents the unique id associated with each entity instance
     fn id(&self) -> Id;
 

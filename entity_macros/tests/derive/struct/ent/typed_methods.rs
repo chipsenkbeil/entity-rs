@@ -484,7 +484,7 @@ fn supports_generic_ent_fields() {
     #[derive(Clone, Ent)]
     struct TestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + 'static,
+        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,

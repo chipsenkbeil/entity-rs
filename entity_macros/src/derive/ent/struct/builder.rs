@@ -15,6 +15,7 @@ pub fn impl_ent_builder(
 
     let vis = &input.vis;
     let named_fields = &utils::get_named_fields(input)?.named;
+    let ent_database_field_name = &ent.database;
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
@@ -131,6 +132,14 @@ pub fn impl_ent_builder(
         }
 
         impl ::std::error::Error for #builder_error_name {}
+
+        impl #impl_generics #ent_name #ty_generics #where_clause {
+            /// Begin building a new ent, initialized using the global database
+            /// if it is available
+            pub fn build() -> #builder_name #ty_generics #where_clause {
+                #builder_name::default().#ent_database_field_name(#root::global::db())
+            }
+        }
 
         #[automatically_derived]
         #vis struct #builder_name #ty_generics #where_clause {

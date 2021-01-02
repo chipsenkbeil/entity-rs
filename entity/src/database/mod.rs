@@ -63,7 +63,7 @@ impl std::error::Error for DatabaseError {}
 /// operations using ents. Given that many database implementations handle
 /// interior mutability themselves, the API of this trait does not provide
 /// any mut guarantees itself.
-pub trait Database {
+pub trait Database: Send + Sync {
     /// Retrieves a copy of a single, generic ent with the corresponding id
     ///
     /// This should not connect the ent back to the database upon return as

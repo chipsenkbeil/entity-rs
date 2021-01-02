@@ -3,3 +3,4 @@ members = [
     "entity",
     "entity_macros",
 ]
+exclude = ["examples"]

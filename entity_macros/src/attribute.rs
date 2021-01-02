@@ -6,7 +6,7 @@ use syn::{
     parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
-    Attribute, AttributeArgs, Field, Fields, Item, ItemStruct, NestedMeta, Path, Token,
+    Attribute, AttributeArgs, Field, Fields, Ident, Item, ItemStruct, NestedMeta, Path, Token,
 };
 
 pub fn do_simple_ent(
@@ -36,9 +36,43 @@ pub fn do_simple_ent(
             inject_ent_created_field(&root, &mut x, &attr_info, &struct_info)?;
             inject_ent_last_updated_field(&root, &mut x, &attr_info, &struct_info)?;
 
-            Ok(quote! { #x })
+            // If flagged to implement a custom debug, do so
+            let debug_t = if attr_info.args_debug {
+                impl_debug(&x, &attr_info.target_database_field_name)
+            } else {
+                quote!()
+            };
+
+            Ok(quote! {
+                #x
+                #debug_t
+            })
         }
         x => Err(syn::Error::new(x.span(), "Unsupported item")),
+    }
+}
+
+fn impl_debug(item: &ItemStruct, database_field_name: &str) -> TokenStream {
+    let name = &item.ident;
+    let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
+    let debug_fields = match &item.fields {
+        Fields::Named(x) => x
+            .named
+            .iter()
+            .filter_map(|f| f.ident.as_ref())
+            .filter(|i| i != &database_field_name)
+            .collect::<Vec<&Ident>>(),
+        _ => unreachable!(),
+    };
+
+    quote! {
+        impl #impl_generics ::std::fmt::Debug for #name #ty_generics #where_clause {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                f.debug_struct(stringify!(#name))
+                    #(.field(stringify!(#debug_fields), &self.#debug_fields))*
+                    .finish()
+            }
+        }
     }
 }
 
@@ -136,25 +170,34 @@ fn inject_derive_serde_attr(
                 .is_some()
         });
         let serde_root = utils::serde_crate()?;
-        let new_attr = match (info.is_deriving_serialize, info.is_deriving_deserialize) {
-            (true, true) => quote!(#serde_root::Serialize, #serde_root::Deserialize),
-            (true, false) => quote!(#serde_root::Serialize),
-            (false, true) => quote!(#serde_root::Deserialize),
-            (false, false) => return Ok(()),
-        };
 
-        // If we already have a derive, we want to insert ourselves into it
-        if let Some(attr) = maybe_attr {
-            let mut args =
-                attr.parse_args_with(Punctuated::<NestedMeta, Token![,]>::parse_terminated)?;
-            args.push(parse_quote!(#new_attr));
-            attr.tokens = quote!((#args));
+        if !info.is_deriving_serialize || !info.is_deriving_deserialize {
+            let new_attrs = match (info.is_deriving_serialize, info.is_deriving_deserialize) {
+                (false, false) => vec![
+                    quote!(#serde_root::Serialize),
+                    quote!(#serde_root::Deserialize),
+                ],
+                (false, true) => vec![quote!(#serde_root::Serialize)],
+                (true, false) => vec![quote!(#serde_root::Deserialize)],
+                (true, true) => unreachable!(),
+            };
 
-        // Otherwise, we need to create the derive from scratch
-        } else {
-            let mut tmp_attrs: ParsableOuterAttributes = parse_quote!(#[derive(#new_attr)]);
-            let derive_attr = tmp_attrs.attributes.pop().unwrap();
-            attrs.push(derive_attr);
+            // If we already have a derive, we want to insert ourselves into it
+            if let Some(attr) = maybe_attr {
+                let mut args =
+                    attr.parse_args_with(Punctuated::<NestedMeta, Token![,]>::parse_terminated)?;
+                for new_attr in new_attrs {
+                    args.push(parse_quote!(#new_attr));
+                }
+                attr.tokens = quote!((#args));
+
+            // Otherwise, we need to create the derive from scratch
+            } else {
+                let mut tmp_attrs: ParsableOuterAttributes =
+                    parse_quote!(#[derive(#(#new_attrs),*)]);
+                let derive_attr = tmp_attrs.attributes.pop().unwrap();
+                attrs.push(derive_attr);
+            }
         }
 
         // Detect typetag and include it within ent(...) if missing
@@ -179,8 +222,8 @@ fn inject_derive_serde_attr(
             // Otherwise, we need to create the ent(...) from scratch
             } else {
                 let mut tmp_attrs: ParsableOuterAttributes = parse_quote!(#[ent(#new_attr)]);
-                let derive_attr = tmp_attrs.attributes.pop().unwrap();
-                attrs.push(derive_attr);
+                let ent_attr = tmp_attrs.attributes.pop().unwrap();
+                attrs.push(ent_attr);
             }
         }
     }
@@ -384,6 +427,7 @@ struct AttrInfo {
     args_derive_ent: bool,
     args_no_derive_clone: bool,
     args_derive_clone: bool,
+    args_debug: bool,
     target_id_field_name: String,
     target_database_field_name: String,
     target_created_field_name: String,
@@ -428,6 +472,7 @@ impl AttrInfo {
         info.args_derive_ent = args_attrs.contains_key("derive_ent");
         info.args_no_derive_clone = args_attrs.contains_key("no_derive_clone");
         info.args_derive_clone = args_attrs.contains_key("derive_clone");
+        info.args_debug = args_attrs.contains_key("debug");
 
         info
     }
