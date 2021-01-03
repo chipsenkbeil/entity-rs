@@ -53,9 +53,66 @@ pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn:
     } else {
         let edge_methods_t = edge::impl_typed_edge_methods(&root, &name, generics, &ent.edges)?;
         let field_methods_t = field::impl_typed_field_methods(&name, generics, &ent.fields);
+
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+        let misc_t = quote! {
+            impl #impl_generics #name #ty_generics #where_clause {
+                /// Retrieves the ent instance with the specified id from
+                /// the global database, returning none if ent not found
+                pub fn load(id: #root::Id) -> #root::DatabaseResult<::std::option::Option<Self>> {
+                    Self::load_from_db(#root::global::db(), id)
+                }
+
+                /// Retrieves the ent instance with the specified id from
+                /// the global database, converting none into a missing ent error
+                pub fn load_strict(id: #root::Id) -> #root::DatabaseResult<Self> {
+                    Self::load_from_db_strict(#root::global::db(), id)
+                }
+
+                /// Retrieves the ent instance with the specified id from the
+                /// provided database, returning none if ent not found
+                pub fn load_from_db(
+                    db: #root::WeakDatabaseRc,
+                    id: #root::Id,
+                ) -> #root::DatabaseResult<::std::option::Option<Self>> {
+                    let database = #root::WeakDatabaseRc::upgrade(&db)
+                        .ok_or(#root::DatabaseError::Disconnected)?;
+                    let maybe_ent = #root::Database::get(
+                        ::std::convert::AsRef::<#root::Database>::as_ref(
+                            ::std::convert::AsRef::<
+                                ::std::boxed::Box<dyn #root::Database>
+                            >::as_ref(&database),
+                        ),
+                        id,
+                    )?;
+
+                    let maybe_typed_ent = maybe_ent.and_then(|ent| ent.to_ent::<Self>());
+
+                    ::std::result::Result::Ok(maybe_typed_ent)
+                }
+
+                /// Retrieves the ent instance with the specified id from the
+                /// provided database, converting none into a missing ent error
+                pub fn load_from_db_strict(
+                    db: #root::WeakDatabaseRc,
+                    id: #root::Id,
+                ) -> #root::DatabaseResult<Self> {
+                    let maybe_ent = Self::load_from_db(db, id)?;
+
+                    match maybe_ent {
+                        ::std::option::Option::Some(ent) =>
+                            ::std::result::Result::Ok(ent),
+                        ::std::option::Option::None =>
+                            ::std::result::Result::Err(#root::DatabaseError::MissingEnt { id }),
+                    }
+                }
+            }
+        };
+
         quote! {
             #edge_methods_t
             #field_methods_t
+            #misc_t
         }
     };
 

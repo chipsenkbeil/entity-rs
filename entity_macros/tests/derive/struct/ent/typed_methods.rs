@@ -748,3 +748,45 @@ fn supports_generic_ent_fields() {
     assert_eq!(ent.set_generic_field(99.9), 0.5);
     assert_eq!(ent.generic_field, 99.9);
 }
+
+#[test]
+fn produces_load_methods_that_pull_an_ent_out_of_a_database() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+    }
+
+    entity::global::set_db(InmemoryDatabase::default());
+
+    let _ = TestEnt::build()
+        .id(123)
+        .finish_and_commit()
+        .unwrap()
+        .unwrap();
+
+    assert!(TestEnt::load(123).unwrap().is_some());
+    assert!(TestEnt::load_strict(123).is_ok());
+    assert!(TestEnt::load_from_db(entity::global::db(), 123)
+        .unwrap()
+        .is_some());
+    assert!(TestEnt::load_from_db_strict(entity::global::db(), 123).is_ok());
+
+    assert!(TestEnt::load(999).unwrap().is_none());
+    assert!(TestEnt::load_strict(999).is_err());
+    assert!(TestEnt::load_from_db(entity::global::db(), 999)
+        .unwrap()
+        .is_none());
+    assert!(TestEnt::load_from_db_strict(entity::global::db(), 999).is_err());
+
+    entity::global::destroy_db();
+}
