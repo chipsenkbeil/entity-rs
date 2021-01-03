@@ -219,13 +219,13 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
         impl #impl_generics #root::Ent for #name #ty_generics #where_clause {
             fn id(&self) -> #root::Id {
                 match self {
-                    #(Self::#variant_names(x) => x.id()),*
+                    #(Self::#variant_names(x) => #root::Ent::id(x)),*
                 }
             }
 
             fn set_id(&mut self, id: #root::Id) {
                 match self {
-                    #(Self::#variant_names(x) => x.set_id(id)),*
+                    #(Self::#variant_names(x) => #root::Ent::set_id(x, id)),*
                 }
             }
 
@@ -235,31 +235,31 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
 
             fn created(&self) -> ::std::primitive::u64 {
                 match self {
-                    #(Self::#variant_names(x) => x.created()),*
+                    #(Self::#variant_names(x) => #root::Ent::created(x)),*
                 }
             }
 
             fn last_updated(&self) -> ::std::primitive::u64 {
                 match self {
-                    #(Self::#variant_names(x) => x.last_updated()),*
+                    #(Self::#variant_names(x) => #root::Ent::last_updated(x)),*
                 }
             }
 
             fn mark_updated(&mut self) -> ::std::result::Result<(), #root::EntMutationError> {
                 match self {
-                    #(Self::#variant_names(x) => x.mark_updated()),*
+                    #(Self::#variant_names(x) => #root::Ent::mark_updated(x)),*
                 }
             }
 
             fn field_definitions(&self) -> ::std::vec::Vec<#root::FieldDefinition> {
                 match self {
-                    #(Self::#variant_names(x) => x.field_definitions()),*
+                    #(Self::#variant_names(x) => #root::Ent::field_definitions(x)),*
                 }
             }
 
             fn field(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::Value> {
                 match self {
-                    #(Self::#variant_names(x) => x.field(name)),*
+                    #(Self::#variant_names(x) => #root::Ent::field(x, name)),*
                 }
             }
 
@@ -269,19 +269,19 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 value: #root::Value,
             ) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
                 match self {
-                    #(Self::#variant_names(x) => x.update_field(name, value)),*
+                    #(Self::#variant_names(x) => #root::Ent::update_field(x, name, value)),*
                 }
             }
 
             fn edge_definitions(&self) -> ::std::vec::Vec<#root::EdgeDefinition> {
                 match self {
-                    #(Self::#variant_names(x) => x.edge_definitions()),*
+                    #(Self::#variant_names(x) => #root::Ent::edge_definitions(x)),*
                 }
             }
 
             fn edge(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::EdgeValue> {
                 match self {
-                    #(Self::#variant_names(x) => x.edge(name)),*
+                    #(Self::#variant_names(x) => #root::Ent::edge(x, name)),*
                 }
             }
 
@@ -291,25 +291,25 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 value: #root::EdgeValue,
             ) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
                 match self {
-                    #(Self::#variant_names(x) => x.update_edge(name, value)),*
+                    #(Self::#variant_names(x) => #root::Ent::update_edge(x, name, value)),*
                 }
             }
 
             fn connect(&mut self, database: #root::WeakDatabaseRc) {
                 match self {
-                    #(Self::#variant_names(x) => x.connect(database)),*
+                    #(Self::#variant_names(x) => #root::Ent::connect(x, database)),*
                 }
             }
 
             fn disconnect(&mut self) {
                 match self {
-                    #(Self::#variant_names(x) => x.disconnect()),*
+                    #(Self::#variant_names(x) => #root::Ent::disconnect(x)),*
                 }
             }
 
             fn is_connected(&self) -> ::std::primitive::bool {
                 match self {
-                    #(Self::#variant_names(x) => x.is_connected()),*
+                    #(Self::#variant_names(x) => #root::Ent::is_connected(x)),*
                 }
             }
 
@@ -318,25 +318,25 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 name: &::std::primitive::str,
             ) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::Ent>>> {
                 match self {
-                    #(Self::#variant_names(x) => x.load_edge(name)),*
+                    #(Self::#variant_names(x) => #root::Ent::load_edge(x, name)),*
                 }
             }
 
             fn refresh(&mut self) -> #root::DatabaseResult<()> {
                 match self {
-                    #(Self::#variant_names(x) => x.refresh()),*
+                    #(Self::#variant_names(x) => #root::Ent::refresh(x)),*
                 }
             }
 
             fn commit(&mut self) -> #root::DatabaseResult<()> {
                 match self {
-                    #(Self::#variant_names(x) => x.commit()),*
+                    #(Self::#variant_names(x) => #root::Ent::commit(x)),*
                 }
             }
 
             fn remove(&self) -> #root::DatabaseResult<::std::primitive::bool> {
                 match self {
-                    #(Self::#variant_names(x) => x.remove()),*
+                    #(Self::#variant_names(x) => #root::Ent::remove(x)),*
                 }
             }
         }

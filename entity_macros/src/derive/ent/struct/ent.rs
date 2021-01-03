@@ -204,12 +204,19 @@ pub(crate) fn impl_ent(
                 let database = #root::WeakDatabaseRc::upgrade(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
-                match self.edge(name) {
+                match #root::Ent::edge(self, name) {
                     ::std::option::Option::Some(e) =>
                         ::std::iter::Iterator::collect(
                             ::std::iter::Iterator::filter_map(
                                 ::std::iter::IntoIterator::into_iter(e.to_ids()),
-                                |id| database.get(id).transpose(),
+                                |id| #root::Database::get(
+                                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                                        ::std::convert::AsRef::<
+                                            ::std::boxed::Box<dyn #root::Database>
+                                        >::as_ref(&database),
+                                    ),
+                                    id,
+                                ).transpose(),
                             )
                         ),
                     ::std::option::Option::None => ::std::result::Result::Err(#root::DatabaseError::MissingEdge {
@@ -223,9 +230,15 @@ pub(crate) fn impl_ent(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
                 let id = self.#ident_id;
-                match database.get(id)?.and_then(
-                    |ent| ent.to_ent::<#name #ty_generics>()
-                ) {
+
+                match #root::Database::get(
+                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                        ::std::convert::AsRef::<
+                            ::std::boxed::Box<dyn #root::Database>
+                        >::as_ref(&database),
+                    ),
+                    id,
+                )?.and_then(|ent| ent.to_ent::<#name #ty_generics>()) {
                     ::std::option::Option::Some(x) => {
                         self.#ident_id = #root::Ent::id(&x);
                         self.#ident_created = #root::Ent::created(&x);
@@ -249,11 +262,20 @@ pub(crate) fn impl_ent(
                 let database = #root::WeakDatabaseRc::upgrade(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
-                match database.insert(::std::boxed::Box::new(
-                    ::std::clone::Clone::clone(::std::ops::Deref::deref(&self))
-                )) {
+                match #root::Database::insert(
+                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                        ::std::convert::AsRef::<
+                            ::std::boxed::Box<dyn #root::Database>
+                        >::as_ref(&database),
+                    ),
+                    ::std::boxed::Box::new(
+                        ::std::clone::Clone::clone(
+                            ::std::ops::Deref::deref(&self)
+                        )
+                    ),
+                ) {
                     ::std::result::Result::Ok(id) => {
-                        self.set_id(id);
+                        #root::Ent::set_id(self, id);
                         ::std::result::Result::Ok(())
                     }
                     ::std::result::Result::Err(x) => ::std::result::Result::Err(x),
@@ -264,7 +286,14 @@ pub(crate) fn impl_ent(
                 let database = #root::WeakDatabaseRc::upgrade(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
-                database.remove(self.#ident_id)
+                #root::Database::remove(
+                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                        ::std::convert::AsRef::<
+                            ::std::boxed::Box<dyn #root::Database>
+                        >::as_ref(&database),
+                    ),
+                    self.#ident_id,
+                )
             }
         }
     })
