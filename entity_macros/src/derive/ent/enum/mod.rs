@@ -34,7 +34,7 @@ fn impl_const(_root: &Path, ent: &Ent) -> (Ident, TokenStream) {
     let vis = &ent.vis;
     let const_type_name = format_ident!("{}_TYPE", name.to_string().to_shouty_snake_case());
     let const_t = quote! {
-        #vis const #const_type_name: &str = concat!(module_path!(), "::", stringify!(#name));
+        #vis const #const_type_name: &::std::primitive::str = concat!(module_path!(), "::", stringify!(#name));
     };
     (const_type_name, const_t)
 }
@@ -99,15 +99,14 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
         #[automatically_derived]
         impl #impl_generics ::std::default::Default for #query_name #ty_generics #where_clause {
             fn default() -> Self {
-                use std::convert::From;
-                Self::from(
+                <Self as ::std::convert::From<#root::Query>>::from(
                     #root::Query::default().where_type(
                         #root::TypedPredicate::or(
                             {
                                 let mut list = ::std::vec::Vec::with_capacity(#total_variants);
                                 #(
                                     list.push(#root::TypedPredicate::equals(
-                                        ::std::string::String::from(<#variant_types as #root::EntType>::type_str())
+                                        ::std::string::ToString::to_string(<#variant_types as #root::EntType>::type_str())
                                     ));
                                 )*
                                 list
@@ -126,17 +125,17 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
             }
 
             #[doc = "Filters to return all ents where created timestamp passes the given predicate"]
-            pub fn where_created(self, p: #root::TypedPredicate<u64>) -> Self {
+            pub fn where_created(self, p: #root::TypedPredicate<::std::primitive::u64>) -> Self {
                 Self(self.0.where_created(p), #(#default_phantoms),*)
             }
 
             #[doc = "Filters to return all ents where last updated timestamp passes the given predicate"]
-            pub fn where_last_updated(self, p: #root::TypedPredicate<u64>) -> Self {
+            pub fn where_last_updated(self, p: #root::TypedPredicate<::std::primitive::u64>) -> Self {
                 Self(self.0.where_last_updated(p), #(#default_phantoms),*)
             }
 
             #[doc = "Filters to return all ents where filed passes the given predicate"]
-            pub fn where_field(self, name: &str, p: #root::Predicate) -> Self {
+            pub fn where_field(self, name: &::std::primitive::str, p: #root::Predicate) -> Self {
                 Self(self.0.where_field(name, p), #(#default_phantoms),*)
             }
 
@@ -144,13 +143,16 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
             pub fn execute<__entity_D: #root::Database>(
                 self,
                 database: &__entity_D,
-            ) -> #root::DatabaseResult<Vec<#name #ty_generics>> {
-                use #root::EntWrapper;
+            ) -> #root::DatabaseResult<::std::vec::Vec<#name #ty_generics>> {
                 ::std::result::Result::Ok(
-                    database.find_all(self.0)?
-                        .into_iter()
-                        .filter_map(#name::wrap_ent)
-                        .collect()
+                    ::std::iter::Iterator::collect(
+                        ::std::iter::Iterator::filter_map(
+                            ::std::iter::IntoIterator::into_iter(
+                                database.find_all(self.0)?
+                            ),
+                            <#name #ty_generics as #root::EntWrapper>::wrap_ent,
+                        )
+                    )
                 )
             }
         }
@@ -205,7 +207,7 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
     Ok(quote! {
         #[automatically_derived]
         impl #impl_generics #root::EntType for #name #ty_generics #where_clause {
-            fn type_str() -> &'static str {
+            fn type_str() -> &'static ::std::primitive::str {
                 #const_type_name
             }
         }
@@ -225,23 +227,23 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 }
             }
 
-            fn r#type(&self) -> &str {
+            fn r#type(&self) -> &::std::primitive::str {
                 #const_type_name
             }
 
-            fn created(&self) -> u64 {
+            fn created(&self) -> ::std::primitive::u64 {
                 match self {
                     #(Self::#variant_names(x) => x.created()),*
                 }
             }
 
-            fn last_updated(&self) -> u64 {
+            fn last_updated(&self) -> ::std::primitive::u64 {
                 match self {
                     #(Self::#variant_names(x) => x.last_updated()),*
                 }
             }
 
-            fn mark_updated(&mut self) -> Result<(), #root::EntMutationError> {
+            fn mark_updated(&mut self) -> ::std::result::Result<(), #root::EntMutationError> {
                 match self {
                     #(Self::#variant_names(x) => x.mark_updated()),*
                 }
@@ -253,13 +255,17 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 }
             }
 
-            fn field(&self, name: &str) -> ::std::option::Option<#root::Value> {
+            fn field(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::Value> {
                 match self {
                     #(Self::#variant_names(x) => x.field(name)),*
                 }
             }
 
-            fn update_field(&mut self, name: &str, value: #root::Value) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
+            fn update_field(
+                &mut self,
+                name: &::std::primitive::str,
+                value: #root::Value,
+            ) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
                 match self {
                     #(Self::#variant_names(x) => x.update_field(name, value)),*
                 }
@@ -271,13 +277,17 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 }
             }
 
-            fn edge(&self, name: &str) -> ::std::option::Option<#root::EdgeValue> {
+            fn edge(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::EdgeValue> {
                 match self {
                     #(Self::#variant_names(x) => x.edge(name)),*
                 }
             }
 
-            fn update_edge(&mut self, name: &str, value: #root::EdgeValue) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
+            fn update_edge(
+                &mut self,
+                name: &::std::primitive::str,
+                value: #root::EdgeValue,
+            ) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
                 match self {
                     #(Self::#variant_names(x) => x.update_edge(name, value)),*
                 }
@@ -295,13 +305,16 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 }
             }
 
-            fn is_connected(&self) -> bool {
+            fn is_connected(&self) -> ::std::primitive::bool {
                 match self {
                     #(Self::#variant_names(x) => x.is_connected()),*
                 }
             }
 
-            fn load_edge(&self, name: &str) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::Ent>>> {
+            fn load_edge(
+                &self,
+                name: &::std::primitive::str,
+            ) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::Ent>>> {
                 match self {
                     #(Self::#variant_names(x) => x.load_edge(name)),*
                 }
@@ -319,7 +332,7 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
                 }
             }
 
-            fn remove(&self) -> #root::DatabaseResult<bool> {
+            fn remove(&self) -> #root::DatabaseResult<::std::primitive::bool> {
                 match self {
                     #(Self::#variant_names(x) => x.remove()),*
                 }

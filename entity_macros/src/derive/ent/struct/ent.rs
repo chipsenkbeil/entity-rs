@@ -65,89 +65,119 @@ pub(crate) fn impl_ent(
                 self.#ident_id = id;
             }
 
-            fn r#type(&self) -> &str {
+            fn r#type(&self) -> &::std::primitive::str {
                 #const_type_name
             }
 
-            fn created(&self) -> u64 {
+            fn created(&self) -> ::std::primitive::u64 {
                 self.#ident_created
             }
 
-            fn last_updated(&self) -> u64 {
+            fn last_updated(&self) -> ::std::primitive::u64 {
                 self.#ident_last_updated
             }
 
-            fn mark_updated(&mut self) -> Result<(), #root::EntMutationError> {
+            fn mark_updated(&mut self) -> ::std::result::Result<(), #root::EntMutationError> {
                 self.#ident_last_updated = ::std::time::SystemTime::now()
                     .duration_since(::std::time::UNIX_EPOCH)
                     .map_err(|e| #root::EntMutationError::MarkUpdatedFailed { source: e })?
-                    .as_millis() as u64;
-                Ok(())
+                    .as_millis() as ::std::primitive::u64;
+                ::std::result::Result::Ok(())
             }
 
             fn field_definitions(&self) -> ::std::vec::Vec<#root::FieldDefinition> {
-                vec![#(#field_definitions),*]
+                let mut x = ::std::vec::Vec::new();
+                #(
+                    x.push(#field_definitions);
+                )*
+                x
             }
 
-            fn field(&self, name: &str) -> ::std::option::Option<#root::Value> {
+            fn field(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::Value> {
                 match name {
                     #(
                         stringify!(#field_names) => ::std::option::Option::Some(
-                            ::std::clone::Clone::clone(&self.#field_names).into()
+                            ::std::convert::Into::<#root::Value>::into(
+                                ::std::clone::Clone::clone(&self.#field_names)
+                            )
                         ),
                     )*
                     _ => ::std::option::Option::None,
                 }
             }
 
-            fn update_field(&mut self, name: &str, value: #root::Value) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
+            fn update_field(
+                &mut self,
+                name: &::std::primitive::str,
+                value: #root::Value,
+            ) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
                 match name {
                     #(
                         stringify!(#field_names) => {
-                            let old_value = self.#field_names.clone();
+                            let old_value = ::std::clone::Clone::clone(&self.#field_names);
                             let converted: ::std::result::Result<#field_types, &'static str> = #value_to_typed_field;
                             self.#field_names = converted.map_err(
-                                |x| #root::EntMutationError::WrongValueType { description: x.to_string() }
+                                |x| #root::EntMutationError::WrongValueType {
+                                    description: ::std::string::ToString::to_string(&x)
+                                }
                             )?;
-                            ::std::result::Result::Ok(old_value.into())
+                            ::std::result::Result::Ok(
+                                ::std::convert::Into::<#root::Value>::into(
+                                    old_value
+                                )
+                            )
                         },
                     )*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoField {
-                        name: name.to_string(),
+                        name: ::std::string::ToString::to_string(name),
                     }),
                 }
             }
 
             fn edge_definitions(&self) -> ::std::vec::Vec<#root::EdgeDefinition> {
-                vec![#(#edge_definitions),*]
+                let mut x = ::std::vec::Vec::new();
+                #(
+                    x.push(#edge_definitions);
+                )*
+                x
             }
 
-            fn edge(&self, name: &str) -> ::std::option::Option<#root::EdgeValue> {
+            fn edge(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::EdgeValue> {
                 match name {
                     #(
                         stringify!(#edge_names) => ::std::option::Option::Some(
-                            ::std::clone::Clone::clone(&self.#edge_names).into()
+                            ::std::convert::Into::<#root::EdgeValue>::into(
+                                ::std::clone::Clone::clone(&self.#edge_names)
+                            )
                         ),
                     )*
                     _ => ::std::option::Option::None,
                 }
             }
 
-            fn update_edge(&mut self, name: &str, value: #root::EdgeValue) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
-                use ::std::convert::TryFrom;
-
+            fn update_edge(
+                &mut self,
+                name: &::std::primitive::str,
+                value: #root::EdgeValue,
+            ) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
                 match name {
                     #(
                         stringify!(#edge_names) => {
-                            let old_value = self.#edge_names.clone();
-                            self.#edge_names = <#edge_types>::try_from(value).map_err(
-                                |x| #root::EntMutationError::WrongEdgeValueType { description: x.to_string() }
+                            let old_value = ::std::clone::Clone::clone(&self.#edge_names);
+                            self.#edge_names = <
+                                #edge_types as ::std::convert::TryFrom<#root::EdgeValue>
+                            >::try_from(value).map_err(
+                                |x| #root::EntMutationError::WrongEdgeValueType {
+                                    description: ::std::string::ToString::to_string(&x)
+                                }
                             )?;
-                            ::std::result::Result::Ok(old_value.into())
+                            ::std::result::Result::Ok(
+                                ::std::convert::Into::<#root::EdgeValue>::into(old_value)
+                            )
                         },
                     )*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoEdge {
-                        name: name.to_string(),
+                        name: ::std::string::ToString::to_string(name),
                     }),
                 }
             }
@@ -160,29 +190,32 @@ pub(crate) fn impl_ent(
                 self.#ident_database = #root::WeakDatabaseRc::new();
             }
 
-            fn is_connected(&self) -> bool {
+            fn is_connected(&self) -> ::std::primitive::bool {
                 #root::WeakDatabaseRc::strong_count(&self.#ident_database) > 0
             }
 
-            fn load_edge(&self, name: &str) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::Ent>>> {
-                use #root::{Database, Ent};
+            fn load_edge(
+                &self,
+                name: &::std::primitive::str,
+            ) -> #root::DatabaseResult<::std::vec::Vec<::std::boxed::Box<dyn #root::Ent>>> {
                 let database = #root::WeakDatabaseRc::upgrade(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
                 match self.edge(name) {
-                    ::std::option::Option::Some(e) => e
-                        .to_ids()
-                        .into_iter()
-                        .filter_map(|id| database.get(id).transpose())
-                        .collect(),
+                    ::std::option::Option::Some(e) =>
+                        ::std::iter::Iterator::collect(
+                            ::std::iter::Iterator::filter_map(
+                                ::std::iter::IntoIterator::into_iter(e.to_ids()),
+                                |id| database.get(id).transpose(),
+                            )
+                        ),
                     ::std::option::Option::None => ::std::result::Result::Err(#root::DatabaseError::MissingEdge {
-                        name: name.to_string(),
+                        name: ::std::string::ToString::to_string(name),
                     }),
                 }
             }
 
             fn refresh(&mut self) -> #root::DatabaseResult<()> {
-                use #root::{AsAny, Database, Ent};
                 let database = #root::WeakDatabaseRc::upgrade(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
@@ -191,9 +224,9 @@ pub(crate) fn impl_ent(
                     |ent| ent.to_ent::<#name #ty_generics>()
                 ) {
                     ::std::option::Option::Some(x) => {
-                        self.#ident_id = x.id();
-                        self.#ident_created = x.created();
-                        self.#ident_last_updated = x.last_updated();
+                        self.#ident_id = #root::Ent::id(&x);
+                        self.#ident_created = #root::Ent::created(&x);
+                        self.#ident_last_updated = #root::Ent::last_updated(&x);
 
                         #(
                             self.#field_names = x.#field_names;
@@ -210,13 +243,11 @@ pub(crate) fn impl_ent(
             }
 
             fn commit(&mut self) -> #root::DatabaseResult<()> {
-                use #root::{Database, Ent};
-                use ::std::ops::Deref;
                 let database = #root::WeakDatabaseRc::upgrade(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
                 match database.insert(::std::boxed::Box::new(
-                    ::std::clone::Clone::clone(<&mut Self>::deref(&self))
+                    ::std::clone::Clone::clone(::std::ops::Deref::deref(&self))
                 )) {
                     ::std::result::Result::Ok(id) => {
                         self.set_id(id);
@@ -226,8 +257,7 @@ pub(crate) fn impl_ent(
                 }
             }
 
-            fn remove(&self) -> #root::DatabaseResult<bool> {
-                use #root::Database;
+            fn remove(&self) -> #root::DatabaseResult<::std::primitive::bool> {
                 let database = #root::WeakDatabaseRc::upgrade(
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
@@ -261,7 +291,13 @@ fn make_field_definitions(
             #root::FieldDefinition::new_with_attributes(
                 stringify!(#name),
                 #value_type,
-                vec![#(#attrs),*],
+                {
+                    let mut x = ::std::vec::Vec::new();
+                    #(
+                        x.push(#attrs);
+                    )*
+                    x
+                },
             )
         });
     }

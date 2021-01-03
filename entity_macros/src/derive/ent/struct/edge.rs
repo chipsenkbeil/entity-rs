@@ -107,23 +107,30 @@ fn fn_typed_load_edge_of_maybe(
     wrap: bool,
 ) -> TokenStream {
     let filter_map = if wrap {
-        quote!(#edge_type::wrap_ent(ent))
+        quote!(<#edge_type as #root::EntWrapper>::wrap_ent(ent))
     } else {
         quote!(ent.to_ent::<#edge_type>())
     };
 
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::option::Option<#edge_type>> {
-            use #root::{Ent, EntWrapper};
-            let ents = self.load_edge(stringify!(#edge_name))?;
-            let typed_ents: ::std::vec::Vec<#edge_type> = ents.into_iter()
-                .filter_map(|ent| #filter_map).collect();
+            let ents = #root::Ent::load_edge(self, stringify!(#edge_name))?;
+            let typed_ents: ::std::vec::Vec<#edge_type> = ::std::iter::Iterator::collect(
+                ::std::iter::Iterator::filter_map(
+                    ::std::iter::IntoIterator::into_iter(ents),
+                    |ent| #filter_map,
+                )
+            );
             if typed_ents.len() > 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
-                    name: stringify!(#edge_name).to_string(),
+                    name: ::std::string::ToString::to_string(stringify!(#edge_name)),
                 })
             } else {
-                ::std::result::Result::Ok(typed_ents.into_iter().next())
+                ::std::result::Result::Ok(
+                    ::std::iter::Iterator::next(
+                        &mut ::std::iter::IntoIterator::into_iter(typed_ents)
+                    )
+                )
             }
         }
     }
@@ -137,23 +144,31 @@ fn fn_typed_load_edge_of_one(
     wrap: bool,
 ) -> TokenStream {
     let filter_map = if wrap {
-        quote!(#edge_type::wrap_ent(ent))
+        quote!(<#edge_type as #root::EntWrapper>::wrap_ent(ent))
     } else {
         quote!(ent.to_ent::<#edge_type>())
     };
 
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<#edge_type> {
-            use #root::{Ent, EntWrapper};
-            let ents = self.load_edge(stringify!(#edge_name))?;
+            let ents = #root::Ent::load_edge(self, stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
-                ents.into_iter().filter_map(|ent| #filter_map).collect();
+                ::std::iter::Iterator::collect(
+                    ::std::iter::Iterator::filter_map(
+                        ::std::iter::IntoIterator::into_iter(ents),
+                        |ent| #filter_map,
+                    )
+                );
             if typed_ents.len() != 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
-                    name: stringify!(#edge_name).to_string(),
+                    name: ::std::string::ToString::to_string(stringify!(#edge_name)),
                 })
             } else {
-                ::std::result::Result::Ok(typed_ents.into_iter().next().unwrap())
+                ::std::result::Result::Ok(
+                    ::std::iter::Iterator::next(
+                        &mut ::std::iter::IntoIterator::into_iter(typed_ents)
+                    ).unwrap()
+                )
             }
         }
     }
@@ -167,17 +182,21 @@ fn fn_typed_load_edge_of_many(
     wrap: bool,
 ) -> TokenStream {
     let filter_map = if wrap {
-        quote!(#edge_type::wrap_ent(ent))
+        quote!(<#edge_type as #root::EntWrapper>::wrap_ent(ent))
     } else {
         quote!(ent.to_ent::<#edge_type>())
     };
 
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::vec::Vec<#edge_type>> {
-            use #root::{Ent, EntWrapper};
-            let ents = self.load_edge(stringify!(#edge_name))?;
+            let ents = #root::Ent::load_edge(self, stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
-                ents.into_iter().filter_map(|ent| #filter_map).collect();
+                ::std::iter::Iterator::collect(
+                    ::std::iter::Iterator::filter_map(
+                        ::std::iter::IntoIterator::into_iter(ents),
+                        |ent| #filter_map,
+                    )
+                );
             ::std::result::Result::Ok(typed_ents)
         }
     }

@@ -1,7 +1,7 @@
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Expr, FieldsNamed, Generics, Ident, Path};
+use syn::{Expr, FieldsNamed, Generics, Ident, Path, Type};
 
 pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed) -> TokenStream {
     let field_names: Vec<Ident> = fields
@@ -9,6 +9,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
         .iter()
         .map(|f| f.ident.as_ref().unwrap().clone())
         .collect();
+    let field_types: Vec<&Type> = fields.named.iter().map(|f| &f.ty).collect();
     let temp_field_names: Vec<Ident> = field_names
         .iter()
         .map(|name| format_ident!("tmp_{}", name))
@@ -28,8 +29,8 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                 let mut map = ::std::collections::HashMap::new();
                 #(
                     map.insert(
-                        ::std::string::String::from(stringify!(#field_names)),
-                        #root::Value::from(x.#field_names),
+                        ::std::string::ToString::to_string(stringify!(#field_names)),
+                        <#root::Value as ::std::convert::From<#field_types>>::from(x.#field_names),
                     );
                 )*
                 Self::Map(map)
@@ -38,7 +39,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
 
         #[automatically_derived]
         impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
-            type Error = &'static str;
+            type Error = &'static ::std::primitive::str;
 
             fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
                 let mut map = match value {

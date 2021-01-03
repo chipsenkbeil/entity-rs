@@ -9,13 +9,13 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics) -> TokenStream {
         #[automatically_derived]
         impl #impl_generics ::std::convert::From<#name #ty_generics> for #root::Value #where_clause {
             fn from(x: #name) -> Self {
-                Self::from(#root::PrimitiveValue::Unit)
+                <Self as ::std::convert::From<#root::PrimitiveValue>>::from(#root::PrimitiveValue::Unit)
             }
         }
 
         #[automatically_derived]
         impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
-            type Error = &'static str;
+            type Error = &'static ::std::primitive::str;
 
             fn try_from(x: #root::Value) -> ::std::result::Result<Self, Self::Error> {
                 match x {

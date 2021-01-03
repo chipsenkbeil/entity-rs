@@ -2,6 +2,7 @@
 
 mod attribute;
 mod derive;
+mod hygiene;
 
 /// Runs all ui tests - note that all tests run through trybuild must be done
 /// in one test method unless we manually run cargo test with a single thread

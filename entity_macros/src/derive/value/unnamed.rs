@@ -1,10 +1,11 @@
 use crate::utils;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_quote, Expr, FieldsUnnamed, Generics, Ident, Index, LitInt, Path};
+use syn::{parse_quote, Expr, FieldsUnnamed, Generics, Ident, Index, LitInt, Path, Type};
 
 pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnamed) -> TokenStream {
     let field_names: Vec<Index> = (0..fields.unnamed.len()).map(Index::from).collect();
+    let field_types: Vec<&Type> = fields.unnamed.iter().map(|f| &f.ty).collect();
     let temp_field_names: Vec<Ident> = (0..fields.unnamed.len())
         .map(|name| format_ident!("tmp_{}", name))
         .collect();
@@ -25,7 +26,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnam
                 let mut list = ::std::vec::Vec::new();
                 #(
                     list.push(
-                        #root::Value::from(x.#field_names),
+                        <#root::Value as ::std::convert::From<#field_types>>::from(x.#field_names),
                     );
                 )*
                 Self::List(list)
@@ -34,7 +35,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnam
 
         #[automatically_derived]
         impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
-            type Error = &'static str;
+            type Error = &'static ::std::primitive::str;
 
             fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
                 let list = match value {
@@ -51,12 +52,12 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnam
                     )),
                 };
 
-                let mut list_it = list.into_iter();
+                let mut list_it = ::std::iter::IntoIterator::into_iter(list);
 
                 ::std::result::Result::Ok(Self(
                     #(
                         {
-                            let #temp_field_names = list_it.next().unwrap();
+                            let #temp_field_names = ::std::iter::Iterator::next(&mut list_it).unwrap();
                             #converted_values?
                         }
                     ),*

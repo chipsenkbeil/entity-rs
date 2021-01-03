@@ -91,13 +91,14 @@ pub fn impl_ent_query(
         methods.push(quote! {
             #[doc = #doc_string]
             pub fn #method_name(ent: &#ent_ty) -> Self {
-                use #root::Ent;
-                use ::std::default::Default;
-                use ::std::convert::From;
-                Self::from(Self::default().0.where_edge(
-                    stringify!(#name),
-                    #root::Filter::Id(#root::TypedPredicate::equals(ent.id())),
-                ))
+                <Self as ::std::convert::From<#root::Query>>::from(
+                    <Self as ::std::default::Default>::default().0.where_edge(
+                        stringify!(#name),
+                        #root::Filter::Id(#root::TypedPredicate::equals(
+                            #root::Ent::id(ent)
+                        )),
+                    )
+                )
             }
         });
 
@@ -117,9 +118,9 @@ pub fn impl_ent_query(
         methods.push(quote! {
             #[doc = #doc_string]
             pub fn #method_name(self) -> #edge_query_ty {
-                use #root::Ent;
-                use ::std::convert::From;
-                #edge_query_ty::from(self.0.where_into_edge(stringify!(#name)))
+                <#edge_query_ty as ::std::convert::From<#root::Query>>::from(
+                    self.0.where_into_edge(stringify!(#name))
+                )
             }
         });
     }
@@ -156,11 +157,10 @@ pub fn impl_ent_query(
         impl #impl_generics ::std::default::Default for #query_name #ty_generics #where_clause {
             #[doc = #default_doc_str]
             fn default() -> Self {
-                use std::convert::From;
-                Self::from(
+                <Self as ::std::convert::From<#root::Query>>::from(
                     #root::Query::default().where_type(
                         #root::TypedPredicate::equals(
-                            ::std::string::String::from(#const_type_name)
+                            ::std::string::ToString::to_string(#const_type_name)
                         )
                     )
                 )
@@ -175,9 +175,11 @@ pub fn impl_ent_query(
             pub fn execute<__entity_D: #root::Database>(
                 self,
                 database: &__entity_D,
-            ) -> #root::DatabaseResult<Vec<#name #ty_generics>> {
-                use #root::DatabaseExt;
-                database.find_all_typed::<#name #ty_generics>(self.0)
+            ) -> #root::DatabaseResult<::std::vec::Vec<#name #ty_generics>> {
+                #root::DatabaseExt::find_all_typed::<#name #ty_generics>(
+                    database,
+                    self.0,
+                )
             }
         }
     })

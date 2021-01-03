@@ -100,7 +100,7 @@ pub fn impl_ent_builder(
         quote! {
             match self {
                 #(
-                    Self::#error_variants => write!(
+                    Self::#error_variants => ::std::write!(
                         f,
                         concat!("Missing ", stringify!(#error_variant_field_names)),
                     ),
@@ -137,7 +137,8 @@ pub fn impl_ent_builder(
             /// Begin building a new ent, initialized using the global database
             /// if it is available
             pub fn build() -> #builder_name #ty_generics #where_clause {
-                #builder_name::default().#ent_database_field_name(#root::global::db())
+                <#builder_name #ty_generics as ::std::default::Default>::default()
+                    .#ent_database_field_name(#root::global::db())
             }
         }
 
@@ -178,9 +179,8 @@ pub fn impl_ent_builder(
                 #root::DatabaseResult<#ent_name #ty_generics>,
                 #builder_error_name,
             > {
-                use #root::Ent;
                 self.finish().map(|mut ent| {
-                    if let ::std::result::Result::Err(x) = ent.commit() {
+                    if let ::std::result::Result::Err(x) = #root::Ent::commit(&mut ent) {
                         ::std::result::Result::Err(x)
                     } else {
                         ::std::result::Result::Ok(ent)
