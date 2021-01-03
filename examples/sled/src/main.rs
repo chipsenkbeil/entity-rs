@@ -26,24 +26,24 @@ fn main() {
     let db = SledDatabase::new(db);
     entity::global::set_db(db);
 
-    let mut address = Address::build()
+    let address = Address::build()
         .street("123 Some Street".to_string())
         .city("Some City".to_string())
         .zipcode("12345".to_string())
         .state("SW".to_string())
-        .build()
+        .finish_and_commit()
+        .unwrap()
         .unwrap();
 
-    address.commit().unwrap();
     println!("{:?}", address);
 
-    let mut user = User::build()
+    let user = User::build()
         .name("abc".to_string())
         .age(31)
         .address(address.id())
-        .build()
+        .finish_and_commit()
+        .unwrap()
         .unwrap();
 
-    user.commit().unwrap();
     println!("{:?}", user);
 }
