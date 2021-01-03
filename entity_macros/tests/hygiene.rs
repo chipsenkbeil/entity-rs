@@ -42,3 +42,43 @@ struct TestValue2(::std::primitive::u64);
 struct TestValue3 {
     a: ::std::primitive::u64,
 }
+
+// These traits exist to make sure we properly import using
+// ::std::primitive::<TYPE> instead of purely <TYPE>
+//
+// Only works for Rust 1.43.0+, but our requirement is 1.45.0+ for macros, so
+// this is fine.
+#[allow(non_camel_case_types)]
+trait bool {}
+#[allow(non_camel_case_types)]
+trait char {}
+#[allow(non_camel_case_types)]
+trait f32 {}
+#[allow(non_camel_case_types)]
+trait f64 {}
+#[allow(non_camel_case_types)]
+trait i128 {}
+#[allow(non_camel_case_types)]
+trait i16 {}
+#[allow(non_camel_case_types)]
+trait i32 {}
+#[allow(non_camel_case_types)]
+trait i64 {}
+#[allow(non_camel_case_types)]
+trait i8 {}
+#[allow(non_camel_case_types)]
+trait isize {}
+#[allow(non_camel_case_types)]
+trait str {}
+#[allow(non_camel_case_types)]
+trait u128 {}
+#[allow(non_camel_case_types)]
+trait u16 {}
+#[allow(non_camel_case_types)]
+trait u32 {}
+#[allow(non_camel_case_types)]
+trait u64 {}
+#[allow(non_camel_case_types)]
+trait u8 {}
+#[allow(non_camel_case_types)]
+trait usize {}

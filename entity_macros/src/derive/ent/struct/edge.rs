@@ -114,7 +114,7 @@ fn fn_typed_load_edge_of_maybe(
 
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::option::Option<#edge_type>> {
-            let ents = #root::Ent::load_edge(self, stringify!(#edge_name))?;
+            let ents = #root::Ent::load_edge(self, ::std::stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> = ::std::iter::Iterator::collect(
                 ::std::iter::Iterator::filter_map(
                     ::std::iter::IntoIterator::into_iter(ents),
@@ -123,7 +123,7 @@ fn fn_typed_load_edge_of_maybe(
             );
             if typed_ents.len() > 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
-                    name: ::std::string::ToString::to_string(stringify!(#edge_name)),
+                    name: ::std::string::ToString::to_string(::std::stringify!(#edge_name)),
                 })
             } else {
                 ::std::result::Result::Ok(
@@ -151,7 +151,7 @@ fn fn_typed_load_edge_of_one(
 
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<#edge_type> {
-            let ents = #root::Ent::load_edge(self, stringify!(#edge_name))?;
+            let ents = #root::Ent::load_edge(self, ::std::stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
                 ::std::iter::Iterator::collect(
                     ::std::iter::Iterator::filter_map(
@@ -161,7 +161,7 @@ fn fn_typed_load_edge_of_one(
                 );
             if typed_ents.len() != 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
-                    name: ::std::string::ToString::to_string(stringify!(#edge_name)),
+                    name: ::std::string::ToString::to_string(::std::stringify!(#edge_name)),
                 })
             } else {
                 ::std::result::Result::Ok(
@@ -189,7 +189,7 @@ fn fn_typed_load_edge_of_many(
 
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::vec::Vec<#edge_type>> {
-            let ents = #root::Ent::load_edge(self, stringify!(#edge_name))?;
+            let ents = #root::Ent::load_edge(self, ::std::stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
                 ::std::iter::Iterator::collect(
                     ::std::iter::Iterator::filter_map(

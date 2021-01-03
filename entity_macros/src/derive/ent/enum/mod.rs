@@ -34,7 +34,9 @@ fn impl_const(_root: &Path, ent: &Ent) -> (Ident, TokenStream) {
     let vis = &ent.vis;
     let const_type_name = format_ident!("{}_TYPE", name.to_string().to_shouty_snake_case());
     let const_t = quote! {
-        #vis const #const_type_name: &::std::primitive::str = concat!(module_path!(), "::", stringify!(#name));
+        #vis const #const_type_name: &::std::primitive::str = ::std::concat!(
+            ::std::module_path!(), "::", ::std::stringify!(#name),
+        );
     };
     (const_type_name, const_t)
 }

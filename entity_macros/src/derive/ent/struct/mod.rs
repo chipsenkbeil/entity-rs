@@ -23,7 +23,9 @@ pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn:
 
     // Define a constant with a string representing the unique type of the ent
     let const_type_t = quote! {
-        #vis const #const_type_name: &str = concat!(module_path!(), "::", stringify!(#name));
+        #vis const #const_type_name: &::std::primitive::str = ::std::concat!(
+            ::std::module_path!(), "::", ::std::stringify!(#name),
+        );
     };
 
     // Unless we have the attribute ent(no_builder), we will add an additional

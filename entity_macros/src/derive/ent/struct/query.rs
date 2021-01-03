@@ -38,7 +38,7 @@ pub fn impl_ent_query(
     let method_name = format_ident!("where_{}", ent.created);
     methods.push(quote! {
         #[doc = "Filters to return all ents where created timestamp passes the given predicate"]
-        pub fn #method_name(self, p: #root::TypedPredicate<u64>) -> Self {
+        pub fn #method_name(self, p: #root::TypedPredicate<::std::primitive::u64>) -> Self {
             Self(self.0.where_created(p), #(#default_phantoms),*)
         }
     });
@@ -46,7 +46,7 @@ pub fn impl_ent_query(
     let method_name = format_ident!("where_{}", ent.last_updated);
     methods.push(quote! {
         #[doc = "Filters to return all ents where last updated timestamp passes the given predicate"]
-        pub fn #method_name(self, p: #root::TypedPredicate<u64>) -> Self {
+        pub fn #method_name(self, p: #root::TypedPredicate<::std::primitive::u64>) -> Self {
             Self(self.0.where_last_updated(p), #(#default_phantoms),*)
         }
     });
@@ -71,7 +71,7 @@ pub fn impl_ent_query(
             #[doc = #doc_string]
             pub fn #method_name(self, p: #predicate_type) -> Self {
                 Self(
-                    self.0.where_field(stringify!(#name), p),
+                    self.0.where_field(::std::stringify!(#name), p),
                     #(#default_phantoms),*
                 )
             }
@@ -93,7 +93,7 @@ pub fn impl_ent_query(
             pub fn #method_name(ent: &#ent_ty) -> Self {
                 <Self as ::std::convert::From<#root::Query>>::from(
                     <Self as ::std::default::Default>::default().0.where_edge(
-                        stringify!(#name),
+                        ::std::stringify!(#name),
                         #root::Filter::Id(#root::TypedPredicate::equals(
                             #root::Ent::id(ent)
                         )),
@@ -119,7 +119,7 @@ pub fn impl_ent_query(
             #[doc = #doc_string]
             pub fn #method_name(self) -> #edge_query_ty {
                 <#edge_query_ty as ::std::convert::From<#root::Query>>::from(
-                    self.0.where_into_edge(stringify!(#name))
+                    self.0.where_into_edge(::std::stringify!(#name))
                 )
             }
         });

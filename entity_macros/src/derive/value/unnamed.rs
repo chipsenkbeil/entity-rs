@@ -40,15 +40,15 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnam
             fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
                 let list = match value {
                     #root::Value::List(x) if x.len() == #lit_cnt => x,
-                    #root::Value::List(_) => return ::std::result::Result::Err(concat!(
+                    #root::Value::List(_) => return ::std::result::Result::Err(::std::concat!(
                         "Only Value::List of len ",
-                        stringify!(#lit_cnt),
+                        ::std::stringify!(#lit_cnt),
                         " can be converted to ",
-                        stringify!(#name),
+                        ::std::stringify!(#name),
                     )),
-                    _ => return ::std::result::Result::Err(concat!(
+                    _ => return ::std::result::Result::Err(::std::concat!(
                         "Only Value::List can be converted to ",
-                        stringify!(#name),
+                        ::std::stringify!(#name),
                     )),
                 };
 

@@ -29,7 +29,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                 let mut map = ::std::collections::HashMap::new();
                 #(
                     map.insert(
-                        ::std::string::ToString::to_string(stringify!(#field_names)),
+                        ::std::string::ToString::to_string(::std::stringify!(#field_names)),
                         <#root::Value as ::std::convert::From<#field_types>>::from(x.#field_names),
                     );
                 )*
@@ -46,7 +46,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                     #root::Value::Map(x) => x,
                     _ => return ::std::result::Result::Err(concat!(
                         "Only Value::Map can be converted to ",
-                        stringify!(#name),
+                        ::std::stringify!(#name),
                     )),
                 };
 
@@ -54,10 +54,10 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                     #(
                         #field_names: {
                             let #temp_field_names = map.remove(
-                                stringify!(#field_names)
-                            ).ok_or(
-                                concat!("Missing field ", stringify!(#field_names))
-                            )?;
+                                ::std::stringify!(#field_names)
+                            ).ok_or(::std::concat!(
+                                "Missing field ", ::std::stringify!(#field_names)
+                            ))?;
 
                             #converted_values?
                         }

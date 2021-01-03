@@ -49,7 +49,7 @@ pub(crate) fn impl_ent(
     Ok(quote! {
         #[automatically_derived]
         impl #impl_generics #root::EntType for #name #ty_generics #where_clause {
-            fn type_str() -> &'static str {
+            fn type_str() -> &'static ::std::primitive::str {
                 #const_type_name
             }
         }
@@ -96,7 +96,7 @@ pub(crate) fn impl_ent(
             fn field(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::Value> {
                 match name {
                     #(
-                        stringify!(#field_names) => ::std::option::Option::Some(
+                        ::std::stringify!(#field_names) => ::std::option::Option::Some(
                             ::std::convert::Into::<#root::Value>::into(
                                 ::std::clone::Clone::clone(&self.#field_names)
                             )
@@ -113,9 +113,12 @@ pub(crate) fn impl_ent(
             ) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
                 match name {
                     #(
-                        stringify!(#field_names) => {
+                        ::std::stringify!(#field_names) => {
                             let old_value = ::std::clone::Clone::clone(&self.#field_names);
-                            let converted: ::std::result::Result<#field_types, &'static str> = #value_to_typed_field;
+                            let converted: ::std::result::Result<
+                                #field_types,
+                                &'static ::std::primitive::str
+                            > = #value_to_typed_field;
                             self.#field_names = converted.map_err(
                                 |x| #root::EntMutationError::WrongValueType {
                                     description: ::std::string::ToString::to_string(&x)
@@ -145,7 +148,7 @@ pub(crate) fn impl_ent(
             fn edge(&self, name: &::std::primitive::str) -> ::std::option::Option<#root::EdgeValue> {
                 match name {
                     #(
-                        stringify!(#edge_names) => ::std::option::Option::Some(
+                        ::std::stringify!(#edge_names) => ::std::option::Option::Some(
                             ::std::convert::Into::<#root::EdgeValue>::into(
                                 ::std::clone::Clone::clone(&self.#edge_names)
                             )
@@ -162,7 +165,7 @@ pub(crate) fn impl_ent(
             ) -> ::std::result::Result<#root::EdgeValue, #root::EntMutationError> {
                 match name {
                     #(
-                        stringify!(#edge_names) => {
+                        ::std::stringify!(#edge_names) => {
                             let old_value = ::std::clone::Clone::clone(&self.#edge_names);
                             self.#edge_names = <
                                 #edge_types as ::std::convert::TryFrom<#root::EdgeValue>
@@ -289,7 +292,7 @@ fn make_field_definitions(
 
         token_streams.push(quote! {
             #root::FieldDefinition::new_with_attributes(
-                stringify!(#name),
+                ::std::stringify!(#name),
                 #value_type,
                 {
                     let mut x = ::std::vec::Vec::new();
@@ -419,7 +422,7 @@ fn make_edge_definitions(root: &Path, edges: &[EntEdge]) -> Vec<TokenStream> {
 
         token_streams.push(quote! {
             #root::EdgeDefinition::new_with_deletion_policy(
-                stringify!(#name),
+                ::std::stringify!(#name),
                 #ty,
                 #deletion_policy,
             )

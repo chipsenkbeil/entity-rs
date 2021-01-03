@@ -65,7 +65,8 @@ pub fn impl_ent_builder(
             struct_field_defaults.push(quote!(::std::time::SystemTime::now()
                 .duration_since(::std::time::UNIX_EPOCH)
                 .expect("Corrupt system time")
-                .as_millis() as u64));
+                .as_millis()
+                as ::std::primitive::u64));
             build_assignments.push(quote!(#name: self.#name));
 
             struct_setters.push(quote! {
@@ -102,7 +103,7 @@ pub fn impl_ent_builder(
                 #(
                     Self::#error_variants => ::std::write!(
                         f,
-                        concat!("Missing ", stringify!(#error_variant_field_names)),
+                        concat!("Missing ", ::std::stringify!(#error_variant_field_names)),
                     ),
                 )*
             }

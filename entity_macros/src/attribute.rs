@@ -68,8 +68,8 @@ fn impl_debug(item: &ItemStruct, database_field_name: &str) -> TokenStream {
     quote! {
         impl #impl_generics ::std::fmt::Debug for #name #ty_generics #where_clause {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                f.debug_struct(stringify!(#name))
-                    #(.field(stringify!(#debug_fields), &self.#debug_fields))*
+                f.debug_struct(::std::stringify!(#name))
+                    #(.field(::std::stringify!(#debug_fields), &self.#debug_fields))*
                     .finish()
             }
         }
@@ -356,7 +356,7 @@ fn inject_ent_created_field(
                     let name = format_ident!("{}", attr_info.target_created_field_name);
                     let named_field: ParsableNamedField = parse_quote! {
                         #[ent(created)]
-                        #name: u64
+                        #name: ::std::primitive::u64
                     };
 
                     x.named.push(named_field.field);
@@ -397,7 +397,7 @@ fn inject_ent_last_updated_field(
                     let name = format_ident!("{}", attr_info.target_last_updated_field_name);
                     let named_field: ParsableNamedField = parse_quote! {
                         #[ent(last_updated)]
-                        #name: u64
+                        #name: ::std::primitive::u64
                     };
 
                     x.named.push(named_field.field);
