@@ -24,11 +24,13 @@ pub fn db() -> WeakDatabaseRc {
     x
 }
 
+/// Sets the global database to the specific database implementation
 #[inline]
 pub fn set_db<D: Database + 'static>(database: D) -> WeakDatabaseRc {
     set_db_from_box(Box::new(database))
 }
 
+/// Sets the global database to the database trait object
 #[inline]
 pub fn set_db_from_box(database: Box<dyn Database>) -> WeakDatabaseRc {
     set_db_from_rc(DatabaseRc::new(database))
@@ -43,6 +45,7 @@ pub fn set_db_from_rc(database_rc: DatabaseRc) -> WeakDatabaseRc {
     db()
 }
 
+/// Returns true if the global database has been assigned
 #[inline]
 pub fn has_db() -> bool {
     #[cfg(feature = "global")]
@@ -54,6 +57,7 @@ pub fn has_db() -> bool {
     x
 }
 
+/// Removes the global database reference
 #[inline]
 pub fn destroy_db() {
     #[cfg(feature = "global")]

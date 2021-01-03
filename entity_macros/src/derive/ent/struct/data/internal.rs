@@ -95,8 +95,8 @@ impl FromMeta for FieldAttr {
 pub struct EdgeAttr {
     #[darling(rename = "type")]
     pub r#type: String,
-    #[darling(multiple, rename = "wrap")]
-    pub wrapping_types: Vec<String>,
+    #[darling(default)]
+    pub wrap: bool,
     #[darling(default, rename = "policy")]
     pub deletion_policy: EntEdgeDeletionPolicy,
 }

@@ -161,9 +161,30 @@ pub fn impl_ent_builder(
         impl #impl_generics #builder_name #ty_generics #where_clause {
             #(#struct_setters)*
 
-            pub fn build(self) -> ::std::result::Result<#ent_name #ty_generics, #builder_error_name> {
+            /// Called when finished constructing the ent, will consume the
+            /// builder and return a new ent **without** committing it to
+            /// the database.
+            pub fn finish(self) -> ::std::result::Result<#ent_name #ty_generics, #builder_error_name> {
                 ::std::result::Result::Ok(#ent_name {
                     #(#build_assignments),*
+                })
+            }
+
+            /// Called when finished constructing the ent, will consume the
+            /// builder and return a new ent after committing it to the
+            /// associated database. If no database is connected to the ent,
+            /// this will fail.
+            pub fn finish_and_commit(self) -> ::std::result::Result<
+                #root::DatabaseResult<#ent_name #ty_generics>,
+                #builder_error_name,
+            > {
+                use #root::Ent;
+                self.finish().map(|mut ent| {
+                    if let ::std::result::Result::Err(x) = ent.commit() {
+                        ::std::result::Result::Err(x)
+                    } else {
+                        ::std::result::Result::Ok(ent)
+                    }
                 })
             }
         }

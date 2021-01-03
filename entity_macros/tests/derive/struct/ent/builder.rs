@@ -3,6 +3,42 @@ use entity::{Ent, Id, Value, WeakDatabaseRc, EPHEMERAL_ID};
 use std::convert::TryFrom;
 
 #[test]
+fn build_method_on_ent_will_populate_with_global_database() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+    }
+
+    // With no global database set
+    let builder = TestEnt::build();
+    assert!(
+        WeakDatabaseRc::ptr_eq(&builder.database, &WeakDatabaseRc::new()),
+        "Builder configured with unexpected database"
+    );
+
+    entity::global::set_db(entity::InmemoryDatabase::default());
+
+    // With global database set
+    let builder = TestEnt::build();
+    assert!(
+        !WeakDatabaseRc::ptr_eq(&builder.database, &WeakDatabaseRc::new()),
+        "Builder not configured with global database"
+    );
+
+    entity::global::destroy_db();
+}
+
+#[test]
 fn default_fills_in_required_fields() {
     #[derive(Clone, Ent)]
     struct TestEnt {
@@ -20,7 +56,7 @@ fn default_fills_in_required_fields() {
     }
 
     let ent = TestEntBuilder::default()
-        .build()
+        .finish()
         .expect("Failed to create test ent");
 
     assert_eq!(ent.id, EPHEMERAL_ID);
@@ -173,7 +209,7 @@ fn build_fails_when_struct_field_is_not_set() {
             .edge1(None)
             .edge2(0)
             .edge3(vec![])
-            .build()
+            .finish()
             .unwrap_err(),
         TestEntBuilderError::MissingField1,
     );
@@ -184,7 +220,7 @@ fn build_fails_when_struct_field_is_not_set() {
             .edge1(None)
             .edge2(0)
             .edge3(vec![])
-            .build()
+            .finish()
             .unwrap_err(),
         TestEntBuilderError::MissingField2,
     );
@@ -195,7 +231,7 @@ fn build_fails_when_struct_field_is_not_set() {
             .field2(String::from("test"))
             .edge2(0)
             .edge3(vec![])
-            .build()
+            .finish()
             .unwrap_err(),
         TestEntBuilderError::MissingEdge1,
     );
@@ -206,7 +242,7 @@ fn build_fails_when_struct_field_is_not_set() {
             .field2(String::from("test"))
             .edge1(None)
             .edge3(vec![])
-            .build()
+            .finish()
             .unwrap_err(),
         TestEntBuilderError::MissingEdge2,
     );
@@ -217,7 +253,7 @@ fn build_fails_when_struct_field_is_not_set() {
             .field2(String::from("test"))
             .edge1(None)
             .edge2(0)
-            .build()
+            .finish()
             .unwrap_err(),
         TestEntBuilderError::MissingEdge3,
     );
@@ -267,7 +303,7 @@ fn build_succeeds_when_all_struct_fields_are_set() {
         .edge1(Some(5))
         .edge2(6)
         .edge3(vec![7, 8])
-        .build()
+        .finish()
         .expect("Failed to build ent!");
     assert_eq!(ent.id, 1);
     assert_eq!(ent.created, 2);
@@ -307,7 +343,7 @@ fn supports_generic_fields() {
 
     let ent = builder
         .generic_field(3)
-        .build()
+        .finish()
         .expect("Failed to create with generic field");
     assert_eq!(ent.generic_field, 3);
 }

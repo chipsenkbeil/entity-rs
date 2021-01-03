@@ -1,5 +1,5 @@
 use entity::{DatabaseError, DatabaseRc, Ent, Id, InmemoryDatabase, Value, WeakDatabaseRc};
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 #[test]
 fn produces_getters_for_fields_that_returns_references() {
@@ -475,6 +475,240 @@ fn produces_load_method_for_edge_of_kind_many_that_returns_zero_or_more_ents() {
             .collect::<Vec<Id>>(),
         vec![999, 1000],
     );
+}
+
+#[test]
+fn produces_load_method_for_edge_with_ent_wrapper_type_if_wrapper_attr_specified() {
+    #[derive(Clone, Ent)]
+    struct TestEnt1 {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEntEnum", wrap))]
+        my_edge: Id,
+    }
+
+    #[derive(Clone, Ent)]
+    struct TestEnt2 {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEntEnum", wrap))]
+        my_edge: Id,
+    }
+
+    #[derive(Clone, Ent)]
+    struct TestEnt3 {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEntEnum", wrap))]
+        my_edge: Id,
+    }
+
+    #[derive(Clone, Ent)]
+    enum TestEntEnum {
+        One(TestEnt1),
+        Two(TestEnt2),
+    }
+
+    let database = DatabaseRc::new(Box::new(InmemoryDatabase::default()));
+
+    let mut ent1 = TestEnt1 {
+        id: 1,
+        database: DatabaseRc::downgrade(&database),
+        created: 0,
+        last_updated: 0,
+        my_edge: 2,
+    };
+    ent1.commit().unwrap();
+
+    let mut ent2 = TestEnt2 {
+        id: 2,
+        database: DatabaseRc::downgrade(&database),
+        created: 0,
+        last_updated: 0,
+        my_edge: 3,
+    };
+    ent2.commit().unwrap();
+
+    let mut ent3 = TestEnt3 {
+        id: 3,
+        database: DatabaseRc::downgrade(&database),
+        created: 0,
+        last_updated: 0,
+        my_edge: 1,
+    };
+    ent3.commit().unwrap();
+
+    assert!(matches!(ent1.load_my_edge(), Ok(TestEntEnum::Two(_))));
+    assert!(matches!(
+        ent2.load_my_edge(),
+        Err(DatabaseError::BrokenEdge { .. })
+    ));
+    assert!(matches!(ent3.load_my_edge(), Ok(TestEntEnum::One(_))));
+}
+
+#[test]
+fn supports_all_edge_kinds_for_edge_with_wrap_attr() {
+    #[derive(Clone, Ent)]
+    struct TestEnt1 {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEntEnum", wrap))]
+        other: Id,
+    }
+
+    #[derive(Clone, Ent)]
+    struct TestEnt2 {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEntEnum", wrap))]
+        other: Option<Id>,
+    }
+
+    #[derive(Clone, Ent)]
+    struct TestEnt3 {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEntEnum", wrap))]
+        others: Vec<Id>,
+    }
+
+    // Ent NOT included in enum
+    #[derive(Clone, Ent)]
+    struct TestEnt4 {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+    }
+
+    #[derive(Clone, Ent)]
+    enum TestEntEnum {
+        One(TestEnt1),
+        Two(TestEnt2),
+        Three(TestEnt3),
+    }
+
+    let db = DatabaseRc::new(Box::new(InmemoryDatabase::default()));
+    let mut ent1 = TestEnt1::build()
+        .database(DatabaseRc::downgrade(&db))
+        .other(0)
+        .finish_and_commit()
+        .unwrap()
+        .unwrap();
+    let mut ent2 = TestEnt2::build()
+        .database(DatabaseRc::downgrade(&db))
+        .other(None)
+        .finish_and_commit()
+        .unwrap()
+        .unwrap();
+    let mut ent3 = TestEnt3::build()
+        .database(DatabaseRc::downgrade(&db))
+        .others(Vec::new())
+        .finish_and_commit()
+        .unwrap()
+        .unwrap();
+
+    ent1.set_other_id(ent2.id());
+    ent1.commit().unwrap();
+
+    ent2.set_other_id(Some(ent3.id()));
+    ent2.commit().unwrap();
+
+    ent3.set_others_ids(vec![ent1.id(), ent2.id()]);
+    ent3.commit().unwrap();
+
+    let loaded_ent = ent1.load_other().unwrap();
+    assert_eq!(loaded_ent.id(), ent2.id());
+    assert!(matches!(loaded_ent, TestEntEnum::Two(_)));
+
+    let loaded_ent = ent2.load_other().unwrap().unwrap();
+    assert_eq!(loaded_ent.id(), ent3.id());
+    assert!(matches!(loaded_ent, TestEntEnum::Three(_)));
+
+    let loaded_ents = ent3
+        .load_others()
+        .unwrap()
+        .into_iter()
+        .map(|ent| {
+            let id = ent.id();
+            (id, ent)
+        })
+        .collect::<HashMap<Id, TestEntEnum>>();
+    assert!(matches!(
+        loaded_ents.get(&ent1.id()).unwrap(),
+        TestEntEnum::One(_)
+    ));
+    assert!(matches!(
+        loaded_ents.get(&ent2.id()).unwrap(),
+        TestEntEnum::Two(_)
+    ));
 }
 
 #[test]

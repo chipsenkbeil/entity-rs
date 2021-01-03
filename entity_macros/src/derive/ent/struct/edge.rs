@@ -80,18 +80,21 @@ fn fn_typed_load_edge(root: &Path, edge: &EntEdge) -> TokenStream {
             &format_ident!("load_{}", edge.name),
             &edge.name,
             &edge.ent_ty,
+            edge.wrap,
         ),
         EntEdgeKind::One => fn_typed_load_edge_of_one(
             root,
             &format_ident!("load_{}", edge.name),
             &edge.name,
             &edge.ent_ty,
+            edge.wrap,
         ),
         EntEdgeKind::Many => fn_typed_load_edge_of_many(
             root,
             &format_ident!("load_{}", edge.name),
             &edge.name,
             &edge.ent_ty,
+            edge.wrap,
         ),
     }
 }
@@ -101,13 +104,20 @@ fn fn_typed_load_edge_of_maybe(
     method_name: &Ident,
     edge_name: &Ident,
     edge_type: &Type,
+    wrap: bool,
 ) -> TokenStream {
+    let filter_map = if wrap {
+        quote!(#edge_type::wrap_ent(ent))
+    } else {
+        quote!(ent.to_ent::<#edge_type>())
+    };
+
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::option::Option<#edge_type>> {
-            use #root::Ent;
+            use #root::{Ent, EntWrapper};
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> = ents.into_iter()
-                .filter_map(|ent| ent.to_ent::<#edge_type>()).collect();
+                .filter_map(|ent| #filter_map).collect();
             if typed_ents.len() > 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
                     name: stringify!(#edge_name).to_string(),
@@ -124,13 +134,20 @@ fn fn_typed_load_edge_of_one(
     method_name: &Ident,
     edge_name: &Ident,
     edge_type: &Type,
+    wrap: bool,
 ) -> TokenStream {
+    let filter_map = if wrap {
+        quote!(#edge_type::wrap_ent(ent))
+    } else {
+        quote!(ent.to_ent::<#edge_type>())
+    };
+
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<#edge_type> {
-            use #root::Ent;
+            use #root::{Ent, EntWrapper};
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
-                ents.into_iter().filter_map(|ent| ent.to_ent::<#edge_type>()).collect();
+                ents.into_iter().filter_map(|ent| #filter_map).collect();
             if typed_ents.len() != 1 {
                 ::std::result::Result::Err(#root::DatabaseError::BrokenEdge {
                     name: stringify!(#edge_name).to_string(),
@@ -147,13 +164,20 @@ fn fn_typed_load_edge_of_many(
     method_name: &Ident,
     edge_name: &Ident,
     edge_type: &Type,
+    wrap: bool,
 ) -> TokenStream {
+    let filter_map = if wrap {
+        quote!(#edge_type::wrap_ent(ent))
+    } else {
+        quote!(ent.to_ent::<#edge_type>())
+    };
+
     quote! {
         pub fn #method_name(&self) -> #root::DatabaseResult<::std::vec::Vec<#edge_type>> {
-            use #root::Ent;
+            use #root::{Ent, EntWrapper};
             let ents = self.load_edge(stringify!(#edge_name))?;
             let typed_ents: ::std::vec::Vec<#edge_type> =
-                ents.into_iter().filter_map(|ent| ent.to_ent::<#edge_type>()).collect();
+                ents.into_iter().filter_map(|ent| #filter_map).collect();
             ::std::result::Result::Ok(typed_ents)
         }
     }

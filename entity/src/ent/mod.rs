@@ -75,6 +75,15 @@ pub trait EntType {
     fn type_str() -> &'static str;
 }
 
+/// Represents a wrapper around some set of ents that implement [`Ent`],
+/// useful for edges that can return one of many different types that are
+/// variants of an enum
+pub trait EntWrapper: Sized {
+    /// Returns Some(impl EntWrapper) if the wrapper is able to wrap around
+    /// the given [`Ent`] trait object, otherwise returns None
+    fn wrap_ent(ent: Box<dyn Ent>) -> Option<Self>;
+}
+
 /// Represents the interface for a generic entity whose fields and edges
 /// can be accessed by str name regardless of compile-time characteristics
 ///

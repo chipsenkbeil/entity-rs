@@ -23,6 +23,6 @@ syn = { version = "1.0.53", features = ["full"] }
 
 [dev-dependencies]
 derivative = "2.1.1"
-entity = { version = "0.1.0", path = "../entity", features = ["macros"] }
+entity = { version = "0.1.0", path = "../entity", default-features = false, features = ["global", "inmemory_db", "macros"] }
 rustversion = "1.0"
 trybuild = "1.0.35"

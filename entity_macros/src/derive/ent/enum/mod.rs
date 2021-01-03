@@ -18,11 +18,13 @@ pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn:
     } else {
         impl_query(&root, &ent)?
     };
+    let ent_wrapper_t = impl_ent_wrapper(&root, &ent)?;
     let ent_t = impl_ent(&root, &ent, &const_type_name)?;
 
     Ok(quote! {
         #const_t
         #query_t
+        #ent_wrapper_t
         #ent_t
     })
 }
@@ -57,7 +59,6 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
     // We want this to be the total + 1 because we will include the enum
     let enum_variants = ent.data.as_ref().take_enum().unwrap();
     let total_variants = enum_variants.len();
-    let variant_names: Vec<&Ident> = enum_variants.iter().map(|v| &v.ident).collect();
     let variant_types = enum_variants
         .into_iter()
         .map(|v| {
@@ -144,17 +145,44 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
                 self,
                 database: &__entity_D,
             ) -> #root::DatabaseResult<Vec<#name #ty_generics>> {
+                use #root::EntWrapper;
                 ::std::result::Result::Ok(
-                    database.find_all(self.0)?.into_iter().filter_map(|ent| {
-                        #(
-                            if let ::std::option::Option::Some(x) = ent.to_ent::<#variant_types>() {
-                                return ::std::option::Option::Some(#name::#variant_names(x));
-                            }
-                        )*
-
-                        ::std::option::Option::None
-                    }).collect()
+                    database.find_all(self.0)?
+                        .into_iter()
+                        .filter_map(#name::wrap_ent)
+                        .collect()
                 )
+            }
+        }
+    })
+}
+
+fn impl_ent_wrapper(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
+    let name = &ent.ident;
+    let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
+    let enum_variants = ent.data.as_ref().take_enum().unwrap();
+    let variant_names: Vec<&Ident> = enum_variants.iter().map(|v| &v.ident).collect();
+    let variant_types = enum_variants
+        .into_iter()
+        .map(|v| {
+            if v.fields.is_newtype() {
+                Ok(v.fields.iter().next().unwrap())
+            } else {
+                Err(syn::Error::new(v.ident.span(), "Variant must be newtype"))
+            }
+        })
+        .collect::<Result<Vec<&Type>, syn::Error>>()?;
+
+    Ok(quote! {
+        impl #impl_generics #root::EntWrapper for #name #ty_generics #where_clause {
+            fn wrap_ent(ent: ::std::boxed::Box<dyn #root::Ent>) -> ::std::option::Option<Self> {
+                #(
+                    if let ::std::option::Option::Some(x) = ent.to_ent::<#variant_types>() {
+                        return ::std::option::Option::Some(#name::#variant_names(x));
+                    }
+                )*
+
+                ::std::option::Option::None
             }
         }
     })

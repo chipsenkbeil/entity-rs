@@ -65,7 +65,7 @@ pub struct EntEdge {
     pub name: Ident,
     pub ty: Type,
     pub ent_ty: Type,
-    pub ent_wrap_types: Vec<Type>,
+    pub wrap: bool,
     pub kind: EntEdgeKind,
     pub deletion_policy: EntEdgeDeletionPolicy,
 }
@@ -151,11 +151,6 @@ impl TryFrom<&DeriveInput> for Ent {
                     mutable: attr.mutable,
                 });
             } else if let Some(attr) = f.edge_attr {
-                let wrapping_types = attr
-                    .wrapping_types
-                    .into_iter()
-                    .map(|t| syn::parse_str(&t))
-                    .collect::<Result<Vec<Type>, syn::Error>>()?;
                 let kind = match &ty {
                     Type::Path(x) => {
                         let segment = x
@@ -176,7 +171,7 @@ impl TryFrom<&DeriveInput> for Ent {
                     name,
                     ty,
                     ent_ty: syn::parse_str(&attr.r#type)?,
-                    ent_wrap_types: wrapping_types,
+                    wrap: attr.wrap,
                     kind,
                     deletion_policy: attr.deletion_policy,
                 });
