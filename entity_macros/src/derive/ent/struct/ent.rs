@@ -10,7 +10,6 @@ pub(crate) fn impl_ent(
     generics: &Generics,
     ent: &Ent,
     const_type_name: &Ident,
-    include_typetag: bool,
 ) -> Result<TokenStream, syn::Error> {
     let ident_id = &ent.id;
     let ident_database = &ent.database;
@@ -37,14 +36,8 @@ pub(crate) fn impl_ent(
     let field_definitions = make_field_definitions(root, fields)?;
     let edge_definitions = make_edge_definitions(root, edges);
 
-    // If we have the attribute ent(typetag) on our struct, we will add a
-    // new attribute of #[typetag::serde] onto our impl of Ent
-    let typetag_t: TokenStream = if include_typetag {
-        let typetag_root = utils::typetag_crate()?;
-        quote! { #[#typetag_root::serde] }
-    } else {
-        quote! {}
-    };
+    let typetag_root = utils::typetag_crate()?;
+    let typetag_t = quote!(#[#typetag_root::serde]);
 
     Ok(quote! {
         #[automatically_derived]

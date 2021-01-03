@@ -2,5 +2,6 @@
 members = [
     "entity",
     "entity_macros",
+    "entity_noop_macros",
 ]
 exclude = ["examples"]

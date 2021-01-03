@@ -1,6 +1,6 @@
 use entity::{simple_ent, Ent, Id, SledDatabase};
 
-#[simple_ent(serde, debug)]
+#[simple_ent(debug)]
 struct User {
     name: String,
     age: u8,
@@ -9,7 +9,7 @@ struct User {
     address: Id,
 }
 
-#[simple_ent(serde, debug)]
+#[simple_ent(debug)]
 struct Address {
     street: String,
     city: String,

@@ -161,7 +161,7 @@ fn inject_derive_serde_attr(
     attrs: &mut Vec<Attribute>,
     info: &AttrInfo,
 ) -> Result<(), syn::Error> {
-    if info.args_serde && !info.args_no_serde {
+    if !info.args_no_serde {
         let maybe_attr = attrs.iter_mut().find(|a| {
             a.path
                 .segments
@@ -197,33 +197,6 @@ fn inject_derive_serde_attr(
                     parse_quote!(#[derive(#(#new_attrs),*)]);
                 let derive_attr = tmp_attrs.attributes.pop().unwrap();
                 attrs.push(derive_attr);
-            }
-        }
-
-        // Detect typetag and include it within ent(...) if missing
-        if !info.has_ent_typetag_attr {
-            let maybe_attr = attrs.iter_mut().find(|a| {
-                a.path
-                    .segments
-                    .last()
-                    .filter(|s| s.ident == "ent")
-                    .is_some()
-            });
-
-            let new_attr = quote!(typetag);
-
-            // If we already have an ent(...), we want to insert ourselves into it
-            if let Some(attr) = maybe_attr {
-                let mut args =
-                    attr.parse_args_with(Punctuated::<NestedMeta, Token![,]>::parse_terminated)?;
-                args.push(parse_quote!(#new_attr));
-                attr.tokens = quote!((#args));
-
-            // Otherwise, we need to create the ent(...) from scratch
-            } else {
-                let mut tmp_attrs: ParsableOuterAttributes = parse_quote!(#[ent(#new_attr)]);
-                let ent_attr = tmp_attrs.attributes.pop().unwrap();
-                attrs.push(ent_attr);
             }
         }
     }
@@ -278,8 +251,7 @@ fn inject_ent_id_field(
 /// there is no marked database field.
 ///
 /// Additionally, the field will include `#[serde(skip)]` if it is detected
-/// that `serde::Serialize` or `serde::Deserialize` has been derived or if
-/// simple_ent(serde) has been specified.
+/// that `serde::Serialize` or `serde::Deserialize`.
 ///
 /// The name can be altered via simple_ent(database = "...")
 fn inject_ent_database_field(
@@ -301,13 +273,8 @@ fn inject_ent_database_field(
 
                     // If we are deriving serde, we need to mark the database
                     // as skippable as it cannot be serialized. This can
-                    // be forced to be included via simple_ent(serde) or
-                    // forced excluded via simple_ent(no_serde)
-                    let skip_attr = if (attr_info.is_deriving_serialize
-                        || attr_info.is_deriving_deserialize
-                        || attr_info.args_serde)
-                        && !attr_info.args_no_serde
-                    {
+                    // be forced excluded via simple_ent(no_serde)
+                    let skip_attr = if !attr_info.args_no_serde {
                         quote! { #[serde(skip)] }
                     } else {
                         quote! {}
@@ -420,9 +387,7 @@ struct AttrInfo {
     is_deriving_ent: bool,
     is_deriving_serialize: bool,
     is_deriving_deserialize: bool,
-    has_ent_typetag_attr: bool,
     args_no_serde: bool,
-    args_serde: bool,
     args_no_derive_ent: bool,
     args_derive_ent: bool,
     args_no_derive_clone: bool,
@@ -438,7 +403,6 @@ impl AttrInfo {
     #[allow(clippy::field_reassign_with_default)]
     pub fn from(args: &[NestedMeta], attrs: &[Attribute]) -> Self {
         let mut args_attrs = utils::nested_meta_iter_into_named_attr_map(args.iter());
-        let ent_attrs = utils::attrs_into_attr_map(attrs, "ent").unwrap_or_default();
         let derive_attrs = utils::attrs_into_attr_map(attrs, "derive").unwrap_or_default();
 
         let mut info = AttrInfo::default();
@@ -447,7 +411,6 @@ impl AttrInfo {
         info.is_deriving_ent = derive_attrs.get("Ent").copied().unwrap_or_default();
         info.is_deriving_serialize = derive_attrs.get("Serialize").copied().unwrap_or_default();
         info.is_deriving_deserialize = derive_attrs.get("Deserialize").copied().unwrap_or_default();
-        info.has_ent_typetag_attr = ent_attrs.get("typetag").copied().unwrap_or_default();
 
         info.target_id_field_name = args_attrs
             .remove("id")
@@ -467,7 +430,6 @@ impl AttrInfo {
             .unwrap_or_else(|| String::from("last_updated"));
 
         info.args_no_serde = args_attrs.contains_key("no_serde");
-        info.args_serde = args_attrs.contains_key("serde");
         info.args_no_derive_ent = args_attrs.contains_key("no_derive_ent");
         info.args_derive_ent = args_attrs.contains_key("derive_ent");
         info.args_no_derive_clone = args_attrs.contains_key("no_derive_clone");

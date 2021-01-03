@@ -199,12 +199,8 @@ fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStre
     let enum_variants = ent.data.as_ref().take_enum().unwrap();
     let variant_names: Vec<&Ident> = enum_variants.iter().map(|v| &v.ident).collect();
 
-    let typetag_t = if ent.typetag {
-        let typetag_root = utils::typetag_crate()?;
-        quote! { #[#typetag_root::serde] }
-    } else {
-        quote! {}
-    };
+    let typetag_root = utils::typetag_crate()?;
+    let typetag_t = quote!(#[#typetag_root::serde]);
 
     Ok(quote! {
         #[automatically_derived]

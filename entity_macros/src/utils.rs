@@ -18,22 +18,14 @@ pub fn entity_crate() -> Result<Path, syn::Error> {
 
 /// Produces a token stream in the form of `::serde` or renamed version
 pub fn serde_crate() -> Result<Path, syn::Error> {
-    crate_name("serde")
-        .map(|name| {
-            let crate_ident = Ident::new(&name, Span::mixed_site());
-            parse_quote!(::#crate_ident)
-        })
-        .map_err(|msg| syn::Error::new(Span::mixed_site(), msg))
+    let root = entity_crate()?;
+    Ok(parse_quote!(#root::vendor::macros::serde))
 }
 
 /// Produces a token stream in the form of `::typetag` or renamed version
 pub fn typetag_crate() -> Result<Path, syn::Error> {
-    crate_name("typetag")
-        .map(|name| {
-            let crate_ident = Ident::new(&name, Span::mixed_site());
-            parse_quote!(::#crate_ident)
-        })
-        .map_err(|msg| syn::Error::new(Span::mixed_site(), msg))
+    let root = entity_crate()?;
+    Ok(parse_quote!(#root::vendor::macros::typetag))
 }
 
 /// Returns true if the attribute is in the form of ent(...) where

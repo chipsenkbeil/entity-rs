@@ -61,14 +61,7 @@ pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn:
 
     // Implement the Ent interface with optional typetag if we have the
     // attribute ent(typetag)
-    let ent_t = ent::impl_ent(
-        &root,
-        name,
-        generics,
-        &ent,
-        &const_type_name,
-        ent.attr.typetag,
-    )?;
+    let ent_t = ent::impl_ent(&root, name, generics, &ent, &const_type_name)?;
 
     Ok(quote! {
         #const_type_t
