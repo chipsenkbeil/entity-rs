@@ -13,7 +13,9 @@ lazy_static::lazy_static! {
 /// database, destroying the database once the function completes; locks
 /// execution of this function, only allowing one call to `with_db` at a time
 pub fn with_db_from_rc<F: FnMut() -> R, R>(database: DatabaseRc, mut f: F) -> R {
+    #[cfg(feature = "global")]
     let _lock = WITH_LOCK.lock().unwrap();
+
     set_db_from_rc(database);
     let result = f();
     destroy_db();
