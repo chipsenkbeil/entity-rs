@@ -6,6 +6,34 @@ use std::sync::Mutex;
 #[cfg(feature = "global")]
 lazy_static::lazy_static! {
     static ref DATABASE: Mutex<Option<DatabaseRc>> = Mutex::new(None);
+    static ref WITH_LOCK: Mutex<()> = Mutex::new(());
+}
+
+/// Executes the given function with the provided database as the new, global
+/// database, destroying the database once the function completes; locks
+/// execution of this function, only allowing one call to `with_db` at a time
+pub fn with_db_from_rc<F: FnMut() -> R, R>(database: DatabaseRc, mut f: F) -> R {
+    let _lock = WITH_LOCK.lock().unwrap();
+    set_db_from_rc(database);
+    let result = f();
+    destroy_db();
+    result
+}
+
+/// Executes the given function with the provided database as the new, global
+/// database, destroying the database once the function completes; locks
+/// execution of this function, only allowing one call to `with_db` at a time
+#[inline]
+pub fn with_db_from_box<F: FnMut() -> R, R>(database: Box<dyn Database>, f: F) -> R {
+    with_db_from_rc(DatabaseRc::new(database), f)
+}
+
+/// Executes the given function with the provided database as the new, global
+/// database, destroying the database once the function completes; locks
+/// execution of this function, only allowing one call to `with_db` at a time
+#[inline]
+pub fn with_db<D: Database + 'static, F: FnMut() -> R, R>(database: D, f: F) -> R {
+    with_db_from_box(Box::new(database), f)
 }
 
 /// Returns a weak reference to the global database if it is set, otherwise

@@ -26,16 +26,14 @@ fn build_method_on_ent_will_populate_with_global_database() {
         "Builder configured with unexpected database"
     );
 
-    entity::global::set_db(entity::InmemoryDatabase::default());
-
-    // With global database set
-    let builder = TestEnt::build();
-    assert!(
-        !WeakDatabaseRc::ptr_eq(&builder.database, &WeakDatabaseRc::new()),
-        "Builder not configured with global database"
-    );
-
-    entity::global::destroy_db();
+    entity::global::with_db(entity::InmemoryDatabase::default(), || {
+        // With global database set
+        let builder = TestEnt::build();
+        assert!(
+            !WeakDatabaseRc::ptr_eq(&builder.database, &WeakDatabaseRc::new()),
+            "Builder not configured with global database"
+        );
+    });
 }
 
 #[test]
