@@ -11,7 +11,7 @@ pub(crate) fn impl_typed_edge_methods(
     name: &Ident,
     generics: &Generics,
     edges: &[EntEdge],
-) -> Result<TokenStream, syn::Error> {
+) -> darling::Result<TokenStream> {
     let mut edge_methods: Vec<TokenStream> = Vec::new();
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -29,7 +29,7 @@ pub(crate) fn impl_typed_edge_methods(
     })
 }
 
-fn fn_typed_id_getter(edge: &EntEdge) -> Result<TokenStream, syn::Error> {
+fn fn_typed_id_getter(edge: &EntEdge) -> darling::Result<TokenStream> {
     let name = &edge.name;
     let ty = &edge.ty;
 

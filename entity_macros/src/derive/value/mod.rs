@@ -3,9 +3,9 @@ mod unit;
 mod unnamed;
 
 use proc_macro2::TokenStream;
-use syn::{spanned::Spanned, Data, DeriveInput, Fields, Path};
+use syn::{Data, DeriveInput, Fields, Path};
 
-pub fn do_derive_value(root: Path, input: DeriveInput) -> Result<TokenStream, syn::Error> {
+pub fn do_derive_value(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
     let name = &input.ident;
     let generics = &input.generics;
 
@@ -15,7 +15,7 @@ pub fn do_derive_value(root: Path, input: DeriveInput) -> Result<TokenStream, sy
             Fields::Unnamed(x) => Ok(unnamed::make(&root, name, generics, x)),
             Fields::Unit => Ok(unit::make(&root, name, generics)),
         },
-        Data::Enum(_) => Err(syn::Error::new(input.span(), "Enums are unsupported")),
-        Data::Union(_) => Err(syn::Error::new(input.span(), "Unions are unsupported")),
+        Data::Enum(_) => Err(darling::Error::custom("Enums are unsupported").with_span(&input)),
+        Data::Union(_) => Err(darling::Error::custom("Unions are unsupported").with_span(&input)),
     }
 }

@@ -1,8 +1,7 @@
 mod internal;
 
 use darling::{FromDeriveInput, FromMeta};
-use std::convert::TryFrom;
-use syn::{spanned::Spanned, DeriveInput, Generics, Ident, Type, Visibility};
+use syn::{DeriveInput, Generics, Ident, Type, Visibility};
 
 /// Information about attributes on a struct that will represent an ent
 #[derive(Debug)]
@@ -92,12 +91,9 @@ pub enum EntEdgeKind {
     Many,
 }
 
-impl TryFrom<&DeriveInput> for Ent {
-    type Error = syn::Error;
-
-    fn try_from(input: &DeriveInput) -> Result<Self, Self::Error> {
-        let ent = internal::Ent::from_derive_input(input)
-            .map_err(|e| syn::Error::new(input.span(), e.to_string()))?;
+impl FromDeriveInput for Ent {
+    fn from_derive_input(input: &DeriveInput) -> darling::Result<Self> {
+        let ent = internal::Ent::from_derive_input(input)?;
 
         let mut id = None;
         let mut database = None;
@@ -112,34 +108,35 @@ impl TryFrom<&DeriveInput> for Ent {
 
             if f.is_ent_id_field {
                 if id.is_some() {
-                    return Err(syn::Error::new(name.span(), "Already have an id elsewhere"));
+                    return Err(
+                        darling::Error::custom("Already have an id elsewhere").with_span(&name)
+                    );
                 } else {
                     id = Some(name);
                 }
             } else if f.is_ent_database_field {
                 if database.is_some() {
-                    return Err(syn::Error::new(
-                        name.span(),
-                        "Already have a database elsewhere",
-                    ));
+                    return Err(
+                        darling::Error::custom("Already have a database elsewhere").with_span(&name)
+                    );
                 } else {
                     database = Some(name);
                 }
             } else if f.is_ent_created_field {
                 if created.is_some() {
-                    return Err(syn::Error::new(
-                        name.span(),
+                    return Err(darling::Error::custom(
                         "Already have a created timestamp elsewhere",
-                    ));
+                    )
+                    .with_span(&name));
                 } else {
                     created = Some(name);
                 }
             } else if f.is_ent_last_updated_field {
                 if last_updated.is_some() {
-                    return Err(syn::Error::new(
-                        name.span(),
+                    return Err(darling::Error::custom(
                         "Already have a last_updated timestamp elsewhere",
-                    ));
+                    )
+                    .with_span(&name));
                 } else {
                     last_updated = Some(name);
                 }
@@ -153,18 +150,16 @@ impl TryFrom<&DeriveInput> for Ent {
             } else if let Some(attr) = f.edge_attr {
                 let kind = match &ty {
                     Type::Path(x) => {
-                        let segment = x
-                            .path
-                            .segments
-                            .last()
-                            .ok_or_else(|| syn::Error::new(x.span(), "Missing edge id type"))?;
+                        let segment = x.path.segments.last().ok_or_else(|| {
+                            darling::Error::custom("Missing edge id type").with_span(x)
+                        })?;
                         match segment.ident.to_string().to_lowercase().as_str() {
                             "option" => EntEdgeKind::Maybe,
                             "vec" => EntEdgeKind::Many,
                             _ => EntEdgeKind::One,
                         }
                     }
-                    x => return Err(syn::Error::new(x.span(), "Unexpected edge id type")),
+                    x => return Err(darling::Error::custom("Unexpected edge id type").with_span(x)),
                 };
 
                 edges.push(EntEdge {
@@ -176,7 +171,7 @@ impl TryFrom<&DeriveInput> for Ent {
                     deletion_policy: attr.deletion_policy,
                 });
             } else if ent.strict {
-                return Err(syn::Error::new(name.span(), "Missing ent(...) attribute"));
+                return Err(darling::Error::custom("Missing ent(...) attribute").with_span(&name));
             } else {
                 fields.push(EntField {
                     name,
@@ -191,13 +186,17 @@ impl TryFrom<&DeriveInput> for Ent {
             ident: ent.ident,
             vis: ent.vis,
             generics: ent.generics,
-            id: id.ok_or_else(|| syn::Error::new(input.span(), "No id field provided"))?,
-            database: database
-                .ok_or_else(|| syn::Error::new(input.span(), "No database field provided"))?,
-            created: created
-                .ok_or_else(|| syn::Error::new(input.span(), "No created field provided"))?,
-            last_updated: last_updated
-                .ok_or_else(|| syn::Error::new(input.span(), "No last_updated field provided"))?,
+            id: id
+                .ok_or_else(|| darling::Error::custom("No id field provided").with_span(input))?,
+            database: database.ok_or_else(|| {
+                darling::Error::custom("No database field provided").with_span(input)
+            })?,
+            created: created.ok_or_else(|| {
+                darling::Error::custom("No created field provided").with_span(input)
+            })?,
+            last_updated: last_updated.ok_or_else(|| {
+                darling::Error::custom("No last_updated field provided").with_span(input)
+            })?,
             fields,
             edges,
             attr: EntAttr {

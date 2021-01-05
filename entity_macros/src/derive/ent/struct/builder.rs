@@ -8,7 +8,7 @@ pub fn impl_ent_builder(
     root: &Path,
     input: &DeriveInput,
     ent: &Ent,
-) -> Result<TokenStream, syn::Error> {
+) -> darling::Result<TokenStream> {
     let ent_name = &input.ident;
     let builder_name = format_ident!("{}Builder", ent_name);
     let builder_error_name = format_ident!("{}Error", builder_name);

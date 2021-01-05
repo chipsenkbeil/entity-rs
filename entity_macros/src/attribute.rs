@@ -1,4 +1,5 @@
 use crate::utils;
+use darling::util::SpannedValue;
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{
@@ -9,11 +10,7 @@ use syn::{
     Attribute, AttributeArgs, Field, Fields, Ident, Item, ItemStruct, NestedMeta, Path, Token,
 };
 
-pub fn do_simple_ent(
-    root: Path,
-    args: AttributeArgs,
-    item: Item,
-) -> Result<TokenStream, syn::Error> {
+pub fn do_simple_ent(root: Path, args: AttributeArgs, item: Item) -> darling::Result<TokenStream> {
     match item {
         Item::Enum(mut x) => {
             let attr_info = AttrInfo::from(&args, &x.attrs);
@@ -48,7 +45,7 @@ pub fn do_simple_ent(
                 #debug_t
             })
         }
-        x => Err(syn::Error::new(x.span(), "Unsupported item")),
+        x => Err(darling::Error::custom("Unsupported item").with_span(&x)),
     }
 }
 
@@ -85,7 +82,7 @@ fn inject_derive_clone_attr(
     _root: &Path,
     attrs: &mut Vec<Attribute>,
     info: &AttrInfo,
-) -> Result<(), syn::Error> {
+) -> darling::Result<()> {
     if (!info.is_deriving_clone || info.args_derive_clone) && !info.args_no_derive_clone {
         let maybe_attr = attrs.iter_mut().find(|a| {
             a.path
@@ -123,7 +120,7 @@ fn inject_derive_ent_attr(
     root: &Path,
     attrs: &mut Vec<Attribute>,
     info: &AttrInfo,
-) -> Result<(), syn::Error> {
+) -> darling::Result<()> {
     if (!info.is_deriving_ent || info.args_derive_ent) && !info.args_no_derive_ent {
         let maybe_attr = attrs.iter_mut().find(|a| {
             a.path
@@ -160,7 +157,7 @@ fn inject_derive_serde_attr(
     _root: &Path,
     attrs: &mut Vec<Attribute>,
     info: &AttrInfo,
-) -> Result<(), syn::Error> {
+) -> darling::Result<()> {
     if !info.args_no_serde {
         let maybe_attr = attrs.iter_mut().find(|a| {
             a.path
@@ -215,12 +212,13 @@ fn inject_ent_id_field(
     item: &mut ItemStruct,
     attr_info: &AttrInfo,
     struct_info: &StructInfo,
-) -> Result<(), syn::Error> {
+) -> darling::Result<()> {
     match (
         struct_info.has_conflicting_id_name,
         struct_info.has_id_marker,
     ) {
-        (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
+        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
+            .with_span(&SpannedValue::new((), span))),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
@@ -259,12 +257,13 @@ fn inject_ent_database_field(
     item: &mut ItemStruct,
     attr_info: &AttrInfo,
     struct_info: &StructInfo,
-) -> Result<(), syn::Error> {
+) -> darling::Result<()> {
     match (
         struct_info.has_conflicting_database_name,
         struct_info.has_database_marker,
     ) {
-        (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
+        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
+            .with_span(&SpannedValue::new((), span))),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
@@ -310,12 +309,13 @@ fn inject_ent_created_field(
     item: &mut ItemStruct,
     attr_info: &AttrInfo,
     struct_info: &StructInfo,
-) -> Result<(), syn::Error> {
+) -> darling::Result<()> {
     match (
         struct_info.has_conflicting_created_name,
         struct_info.has_created_marker,
     ) {
-        (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
+        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
+            .with_span(&SpannedValue::new((), span))),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
@@ -351,12 +351,13 @@ fn inject_ent_last_updated_field(
     item: &mut ItemStruct,
     attr_info: &AttrInfo,
     struct_info: &StructInfo,
-) -> Result<(), syn::Error> {
+) -> darling::Result<()> {
     match (
         struct_info.has_conflicting_last_updated_name,
         struct_info.has_last_updated_marker,
     ) {
-        (Some(span), None) => Err(syn::Error::new(span, "Conflicting field with same name")),
+        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
+            .with_span(&SpannedValue::new((), span))),
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
@@ -454,7 +455,7 @@ struct StructInfo {
 }
 
 impl StructInfo {
-    pub fn from(args: &[NestedMeta], input: &ItemStruct) -> Result<Self, syn::Error> {
+    pub fn from(args: &[NestedMeta], input: &ItemStruct) -> darling::Result<Self> {
         let attr_info = AttrInfo::from(args, &input.attrs);
         let mut info = StructInfo::default();
 
@@ -487,9 +488,11 @@ impl StructInfo {
                 }
             }
             Fields::Unnamed(_) => {
-                return Err(syn::Error::new(input.span(), "Tuple struct not supported"))
+                return Err(darling::Error::custom("Tuple struct not supported").with_span(input))
             }
-            Fields::Unit => return Err(syn::Error::new(input.span(), "Unit struct not supported")),
+            Fields::Unit => {
+                return Err(darling::Error::custom("Unit struct not supported").with_span(input))
+            }
         }
 
         Ok(info)
