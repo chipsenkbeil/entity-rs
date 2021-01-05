@@ -6,11 +6,10 @@ use data::Ent;
 use heck::ShoutySnakeCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_quote, spanned::Spanned, DeriveInput, Expr, Ident, Path, Type};
+use syn::{parse_quote, DeriveInput, Expr, Ident, Path, Type};
 
-pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn::Error> {
-    let ent = data::Ent::from_derive_input(&input)
-        .map_err(|e| syn::Error::new(input.span(), e.to_string()))?;
+pub fn do_derive_ent(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
+    let ent = data::Ent::from_derive_input(&input)?;
 
     let (const_type_name, const_t) = impl_const(&root, &ent);
     let query_t = if ent.no_query {
@@ -41,7 +40,7 @@ fn impl_const(_root: &Path, ent: &Ent) -> (Ident, TokenStream) {
     (const_type_name, const_t)
 }
 
-fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
+fn impl_query(root: &Path, ent: &Ent) -> darling::Result<TokenStream> {
     let name = &ent.ident;
     let query_name = format_ident!("{}Query", name);
     let vis = &ent.vis;
@@ -67,10 +66,10 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
             if v.fields.is_newtype() {
                 Ok(v.fields.iter().next().unwrap())
             } else {
-                Err(syn::Error::new(v.ident.span(), "Variant must be newtype"))
+                Err(darling::Error::custom("Variant must be newtype").with_span(&v.ident))
             }
         })
-        .collect::<Result<Vec<&Type>, syn::Error>>()?;
+        .collect::<Result<Vec<&Type>, darling::Error>>()?;
 
     Ok(quote! {
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
@@ -161,7 +160,7 @@ fn impl_query(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
     })
 }
 
-fn impl_ent_wrapper(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
+fn impl_ent_wrapper(root: &Path, ent: &Ent) -> darling::Result<TokenStream> {
     let name = &ent.ident;
     let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
     let enum_variants = ent.data.as_ref().take_enum().unwrap();
@@ -172,10 +171,10 @@ fn impl_ent_wrapper(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
             if v.fields.is_newtype() {
                 Ok(v.fields.iter().next().unwrap())
             } else {
-                Err(syn::Error::new(v.ident.span(), "Variant must be newtype"))
+                Err(darling::Error::custom("Variant must be newtype").with_span(&v.ident))
             }
         })
-        .collect::<Result<Vec<&Type>, syn::Error>>()?;
+        .collect::<Result<Vec<&Type>, darling::Error>>()?;
 
     Ok(quote! {
         impl #impl_generics #root::EntWrapper for #name #ty_generics #where_clause {
@@ -192,7 +191,7 @@ fn impl_ent_wrapper(root: &Path, ent: &Ent) -> Result<TokenStream, syn::Error> {
     })
 }
 
-fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> Result<TokenStream, syn::Error> {
+fn impl_ent(root: &Path, ent: &Ent, const_type_name: &Ident) -> darling::Result<TokenStream> {
     let name = &ent.ident;
     let generics = &ent.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();

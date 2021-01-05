@@ -2,7 +2,7 @@ use super::{Ent, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField};
 use crate::utils;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{spanned::Spanned, Generics, Ident, Path, Type};
+use syn::{Generics, Ident, Path, Type};
 
 pub(crate) fn impl_ent(
     root: &Path,
@@ -10,7 +10,7 @@ pub(crate) fn impl_ent(
     generics: &Generics,
     ent: &Ent,
     const_type_name: &Ident,
-) -> Result<TokenStream, syn::Error> {
+) -> darling::Result<TokenStream> {
     let ident_id = &ent.id;
     let ident_database = &ent.database;
     let ident_created = &ent.created;
@@ -292,10 +292,7 @@ pub(crate) fn impl_ent(
     })
 }
 
-fn make_field_definitions(
-    root: &Path,
-    fields: &[EntField],
-) -> Result<Vec<TokenStream>, syn::Error> {
+fn make_field_definitions(root: &Path, fields: &[EntField]) -> darling::Result<Vec<TokenStream>> {
     let mut token_streams = Vec::new();
 
     for f in fields {
@@ -330,7 +327,7 @@ fn make_field_definitions(
     Ok(token_streams)
 }
 
-fn make_field_value_type(root: &Path, r#type: &Type) -> Result<TokenStream, syn::Error> {
+fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStream> {
     Ok(match r#type {
         Type::Path(x) => {
             if let Some(seg) = x.path.segments.last() {
@@ -380,49 +377,45 @@ fn make_field_value_type(root: &Path, r#type: &Type) -> Result<TokenStream, syn:
                     _ => quote! { #root::ValueType::Custom },
                 }
             } else {
-                return Err(syn::Error::new(
-                    r#type.span(),
-                    "Missing last segment in type path",
-                ));
+                return Err(
+                    darling::Error::custom("Missing last segment in type path").with_span(r#type)
+                );
             }
         }
         Type::Array(_) => {
-            return Err(syn::Error::new(
-                r#type.span(),
-                "Arrays are not supported as field types",
-            ))
+            return Err(
+                darling::Error::custom("Arrays are not supported as field types").with_span(r#type),
+            )
         }
         Type::BareFn(_) => {
-            return Err(syn::Error::new(
-                r#type.span(),
-                "fn(...) are not supported as field types",
-            ))
+            return Err(
+                darling::Error::custom("fn(...) are not supported as field types")
+                    .with_span(r#type),
+            )
         }
         Type::Ptr(_) => {
-            return Err(syn::Error::new(
-                r#type.span(),
+            return Err(darling::Error::custom(
                 "*const T and *mut T are not supported as field types",
-            ))
+            )
+            .with_span(r#type))
         }
         Type::Reference(_) => {
-            return Err(syn::Error::new(
-                r#type.span(),
+            return Err(darling::Error::custom(
                 "&'a T and &'a mut T are not supported as field types",
-            ))
+            )
+            .with_span(r#type))
         }
         Type::Slice(_) => {
-            return Err(syn::Error::new(
-                r#type.span(),
-                "Slices are not supported as field types",
-            ))
+            return Err(
+                darling::Error::custom("Slices are not supported as field types").with_span(r#type),
+            )
         }
         Type::Tuple(_) => {
-            return Err(syn::Error::new(
-                r#type.span(),
-                "Tuples are not supported as field types",
-            ))
+            return Err(
+                darling::Error::custom("Tuples are not supported as field types").with_span(r#type),
+            )
         }
-        _ => return Err(syn::Error::new(r#type.span(), "Unexpected type format")),
+        _ => return Err(darling::Error::custom("Unexpected type format").with_span(r#type)),
     })
 }
 

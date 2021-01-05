@@ -5,21 +5,21 @@ mod ent;
 mod field;
 mod query;
 
+use darling::FromDeriveInput;
 pub use data::{Ent, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField};
 
 use crate::utils;
 use heck::ShoutySnakeCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use std::convert::TryFrom;
 use syn::{DeriveInput, Path};
 
-pub fn do_derive_ent(root: Path, input: DeriveInput) -> Result<TokenStream, syn::Error> {
+pub fn do_derive_ent(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
     let name = &input.ident;
     let vis = &input.vis;
     let generics = &input.generics;
     let const_type_name = format_ident!("{}_TYPE", name.to_string().to_shouty_snake_case());
-    let ent = Ent::try_from(&input)?;
+    let ent = Ent::from_derive_input(&input)?;
 
     // Define a constant with a string representing the unique type of the ent
     let const_type_t = quote! {

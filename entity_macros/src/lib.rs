@@ -94,7 +94,7 @@ pub fn derive_ent(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let expanded = utils::entity_crate()
         .and_then(|root| derive::do_derive_ent(root, input))
-        .unwrap_or_else(|x| x.to_compile_error());
+        .unwrap_or_else(|x| x.write_errors());
 
     proc_macro::TokenStream::from(expanded)
 }
@@ -105,7 +105,7 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let expanded = utils::entity_crate()
         .and_then(|root| derive::do_derive_value(root, input))
-        .unwrap_or_else(|x| x.to_compile_error());
+        .unwrap_or_else(|x| x.write_errors());
 
     proc_macro::TokenStream::from(expanded)
 }
@@ -131,7 +131,7 @@ pub fn simple_ent(
 
     let expanded = utils::entity_crate()
         .and_then(|root| attribute::do_simple_ent(root, args, item))
-        .unwrap_or_else(|x| x.to_compile_error());
+        .unwrap_or_else(|x| x.write_errors());
 
     proc_macro::TokenStream::from(expanded)
 }

@@ -11,7 +11,7 @@ pub fn impl_ent_query(
     generics: &Generics,
     const_type_name: &Ident,
     ent: &Ent,
-) -> Result<TokenStream, syn::Error> {
+) -> darling::Result<TokenStream> {
     let query_name = format_ident!("{}Query", name);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let ty_phantoms: Vec<Type> = generics

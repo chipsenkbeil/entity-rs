@@ -2,28 +2,28 @@ use proc_macro2::Span;
 use proc_macro_crate::crate_name;
 use std::collections::HashMap;
 use syn::{
-    parse_quote, spanned::Spanned, Attribute, Data, DeriveInput, Expr, Fields, FieldsNamed,
-    GenericArgument, Ident, Lit, Meta, NestedMeta, Path, PathArguments, PathSegment, Type,
+    parse_quote, Attribute, Data, DeriveInput, Expr, Fields, FieldsNamed, GenericArgument, Ident,
+    Lit, Meta, NestedMeta, Path, PathArguments, PathSegment, Type,
 };
 
 /// Produces a token stream in the form of `::entity` or renamed version
-pub fn entity_crate() -> Result<Path, syn::Error> {
+pub fn entity_crate() -> darling::Result<Path> {
     crate_name("entity")
         .map(|name| {
             let crate_ident = Ident::new(&name, Span::mixed_site());
             parse_quote!(::#crate_ident)
         })
-        .map_err(|msg| syn::Error::new(Span::mixed_site(), msg))
+        .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
 }
 
 /// Produces a token stream in the form of `::serde` or renamed version
-pub fn serde_crate() -> Result<Path, syn::Error> {
+pub fn serde_crate() -> darling::Result<Path> {
     let root = entity_crate()?;
     Ok(parse_quote!(#root::vendor::macros::serde))
 }
 
 /// Produces a token stream in the form of `::typetag` or renamed version
-pub fn typetag_crate() -> Result<Path, syn::Error> {
+pub fn typetag_crate() -> darling::Result<Path> {
     let root = entity_crate()?;
     Ok(parse_quote!(#root::vendor::macros::typetag))
 }
@@ -119,13 +119,13 @@ pub fn nested_meta_iter_into_named_attr_map<'a, I: Iterator<Item = &'a NestedMet
 }
 
 /// Extracts and returns the named fields from the input, if possible
-pub fn get_named_fields(input: &DeriveInput) -> Result<&FieldsNamed, syn::Error> {
+pub fn get_named_fields(input: &DeriveInput) -> darling::Result<&FieldsNamed> {
     match &input.data {
         Data::Struct(x) => match &x.fields {
             Fields::Named(x) => Ok(x),
-            _ => Err(syn::Error::new(input.span(), "Expected named fields")),
+            _ => Err(darling::Error::custom("Expected named fields").with_span(input)),
         },
-        _ => Err(syn::Error::new(input.span(), "Expected struct")),
+        _ => Err(darling::Error::custom("Expected struct").with_span(input)),
     }
 }
 
@@ -177,17 +177,17 @@ pub fn type_to_ident(input: &Type) -> Option<&Ident> {
 
 /// If given a type of Option<T>, will strip the outer type and return
 /// a reference to type of T, returning an error if anything else
-pub fn strip_option(input: &Type) -> Result<&Type, syn::Error> {
+pub fn strip_option(input: &Type) -> darling::Result<&Type> {
     strip_for_type_str(input, "Option")
 }
 
 /// If given a type of Vec<T>, will strip the outer type and return
 /// a reference to type of T, returning an error if anything else
-pub fn strip_vec(input: &Type) -> Result<&Type, syn::Error> {
+pub fn strip_vec(input: &Type) -> darling::Result<&Type> {
     strip_for_type_str(input, "Vec")
 }
 
-fn strip_for_type_str<'a, 'b>(input: &'a Type, ty_str: &'b str) -> Result<&'a Type, syn::Error> {
+fn strip_for_type_str<'a, 'b>(input: &'a Type, ty_str: &'b str) -> darling::Result<&'a Type> {
     match input {
         Type::Path(x) => match x.path.segments.last() {
             Some(x) if x.ident.to_string().to_lowercase() == ty_str.to_lowercase() => {
@@ -195,33 +195,36 @@ fn strip_for_type_str<'a, 'b>(input: &'a Type, ty_str: &'b str) -> Result<&'a Ty
                     PathArguments::AngleBracketed(x) if x.args.len() == 1 => {
                         match x.args.last().unwrap() {
                             GenericArgument::Type(x) => Ok(x),
-                            _ => Err(syn::Error::new(
-                                x.span(),
-                                format!("Unexpected type argument for {}", ty_str),
-                            )),
+                            _ => Err(darling::Error::custom(format!(
+                                "Unexpected type argument for {}",
+                                ty_str
+                            ))
+                            .with_span(x)),
                         }
                     }
-                    PathArguments::AngleBracketed(_) => Err(syn::Error::new(
-                        x.span(),
-                        format!("Unexpected number of type parameters for {}", ty_str),
-                    )),
-                    PathArguments::Parenthesized(_) => Err(syn::Error::new(
-                        x.span(),
-                        format!("Unexpected {}(...) instead of {}<...>", ty_str, ty_str),
-                    )),
-                    PathArguments::None => Err(syn::Error::new(
-                        x.span(),
-                        format!("{} missing generic parameter", ty_str),
-                    )),
+                    PathArguments::AngleBracketed(_) => Err(darling::Error::custom(format!(
+                        "Unexpected number of type parameters for {}",
+                        ty_str
+                    ))
+                    .with_span(x)),
+                    PathArguments::Parenthesized(_) => Err(darling::Error::custom(format!(
+                        "Unexpected {}(...) instead of {}<...>",
+                        ty_str, ty_str
+                    ))
+                    .with_span(x)),
+                    PathArguments::None => Err(darling::Error::custom(format!(
+                        "{} missing generic parameter",
+                        ty_str
+                    ))
+                    .with_span(x)),
                 }
             }
-            Some(x) => Err(syn::Error::new(
-                x.span(),
-                format!("Type is not {}<...>", ty_str),
-            )),
-            None => Err(syn::Error::new(x.span(), "Expected type to have a path")),
+            Some(x) => {
+                Err(darling::Error::custom(format!("Type is not {}<...>", ty_str)).with_span(x))
+            }
+            None => Err(darling::Error::custom("Expected type to have a path").with_span(x)),
         },
-        x => Err(syn::Error::new(x.span(), "Expected type to be a path")),
+        x => Err(darling::Error::custom("Expected type to be a path").with_span(x)),
     }
 }
 
@@ -231,18 +234,18 @@ pub fn get_inner_type_from_segment(
     seg: &PathSegment,
     pos: usize,
     max_supported: usize,
-) -> Result<&Type, syn::Error> {
+) -> darling::Result<&Type> {
     match &seg.arguments {
         PathArguments::AngleBracketed(x) => {
             if x.args.len() <= max_supported && x.args.len() > pos {
                 match x.args.iter().nth(pos).unwrap() {
                     GenericArgument::Type(x) => Ok(x),
-                    _ => Err(syn::Error::new(seg.span(), "Unexpected type argument")),
+                    _ => Err(darling::Error::custom("Unexpected type argument").with_span(seg)),
                 }
             } else {
-                Err(syn::Error::new(seg.span(), "Invalid total type arguments"))
+                Err(darling::Error::custom("Invalid total type arguments").with_span(seg))
             }
         }
-        _ => Err(syn::Error::new(seg.span(), "Unsupported type")),
+        _ => Err(darling::Error::custom("Unsupported type").with_span(seg)),
     }
 }
