@@ -102,44 +102,48 @@ impl FromDeriveInput for Ent {
         let mut fields = Vec::new();
         let mut edges = Vec::new();
 
+        let mut errors = vec![];
+
         for f in ent.data.take_struct().unwrap().fields {
             let name = f.ident.unwrap();
             let ty = f.ty;
 
             if f.is_ent_id_field {
                 if id.is_some() {
-                    return Err(
-                        darling::Error::custom("Already have an id elsewhere").with_span(&name)
+                    errors.push(
+                        darling::Error::custom("Already have an id elsewhere").with_span(&name),
                     );
                 } else {
                     id = Some(name);
                 }
             } else if f.is_ent_database_field {
                 if database.is_some() {
-                    return Err(darling::Error::custom("Already have a database elsewhere")
-                        .with_span(&name));
+                    errors.push(
+                        darling::Error::custom("Already have a database elsewhere")
+                            .with_span(&name),
+                    );
                 } else {
                     database = Some(name);
                 }
             } else if f.is_ent_created_field {
                 if created.is_some() {
-                    return Err(darling::Error::custom(
-                        "Already have a created timestamp elsewhere",
-                    )
-                    .with_span(&name));
+                    errors.push(
+                        darling::Error::custom("Already have a created timestamp elsewhere")
+                            .with_span(&name),
+                    );
                 } else {
                     created = Some(name);
                 }
             } else if f.is_ent_last_updated_field {
                 if last_updated.is_some() {
-                    return Err(darling::Error::custom(
-                        "Already have a last_updated timestamp elsewhere",
-                    )
-                    .with_span(&name));
+                    errors.push(
+                        darling::Error::custom("Already have a last_updated timestamp elsewhere")
+                            .with_span(&name),
+                    );
                 } else {
                     last_updated = Some(name);
                 }
-            } else if let Some(attr) = f.field_attr {
+            } else if let Some(attr) = f.field_attr.map(|a| a.unwrap_or_default()) {
                 fields.push(EntField {
                     name,
                     ty,
@@ -147,18 +151,12 @@ impl FromDeriveInput for Ent {
                     mutable: attr.mutable,
                 });
             } else if let Some(attr) = f.edge_attr {
-                let kind = match &ty {
-                    Type::Path(x) => {
-                        let segment = x.path.segments.last().ok_or_else(|| {
-                            darling::Error::custom("Missing edge id type").with_span(x)
-                        })?;
-                        match segment.ident.to_string().to_lowercase().as_str() {
-                            "option" => EntEdgeKind::Maybe,
-                            "vec" => EntEdgeKind::Many,
-                            _ => EntEdgeKind::One,
-                        }
+                let kind = match infer_edge_kind_from_ty(&ty) {
+                    Ok(k) => k,
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
                     }
-                    x => return Err(darling::Error::custom("Unexpected edge id type").with_span(x)),
                 };
 
                 edges.push(EntEdge {
@@ -170,7 +168,7 @@ impl FromDeriveInput for Ent {
                     deletion_policy: attr.deletion_policy,
                 });
             } else if ent.strict {
-                return Err(darling::Error::custom("Missing ent(...) attribute").with_span(&name));
+                errors.push(darling::Error::custom("Missing ent(...) attribute").with_span(&name));
             } else {
                 fields.push(EntField {
                     name,
@@ -181,21 +179,36 @@ impl FromDeriveInput for Ent {
             }
         }
 
+        if id.is_none() {
+            errors.push(darling::Error::custom("No id field provided").with_span(input));
+        }
+
+        if database.is_none() {
+            errors.push(darling::Error::custom("No database field provided").with_span(input));
+        }
+
+        if created.is_none() {
+            errors.push(darling::Error::custom("No created field provided").with_span(input));
+        }
+
+        if last_updated.is_none() {
+            errors.push(darling::Error::custom("No last_updated field provided").with_span(input));
+        }
+
+        if !errors.is_empty() {
+            return Err(darling::Error::multiple(errors));
+        }
+
         Ok(Ent {
             ident: ent.ident,
             vis: ent.vis,
             generics: ent.generics,
-            id: id
-                .ok_or_else(|| darling::Error::custom("No id field provided").with_span(input))?,
-            database: database.ok_or_else(|| {
-                darling::Error::custom("No database field provided").with_span(input)
-            })?,
-            created: created.ok_or_else(|| {
-                darling::Error::custom("No created field provided").with_span(input)
-            })?,
-            last_updated: last_updated.ok_or_else(|| {
-                darling::Error::custom("No last_updated field provided").with_span(input)
-            })?,
+            // These unwraps are safe because the previous is_none() checks should
+            // have caused a return before reaching this point.
+            id: id.unwrap(),
+            database: database.unwrap(),
+            created: created.unwrap(),
+            last_updated: last_updated.unwrap(),
             fields,
             edges,
             attr: EntAttr {
@@ -206,5 +219,24 @@ impl FromDeriveInput for Ent {
                 strict: ent.strict,
             },
         })
+    }
+}
+
+fn infer_edge_kind_from_ty(ty: &Type) -> darling::Result<EntEdgeKind> {
+    match &ty {
+        Type::Path(x) => {
+            let segment = match x.path.segments.last() {
+                Some(seg) => seg,
+                None => {
+                    return Err(darling::Error::custom("Missing edge id type").with_span(x));
+                }
+            };
+            Ok(match segment.ident.to_string().to_lowercase().as_str() {
+                "option" => EntEdgeKind::Maybe,
+                "vec" => EntEdgeKind::Many,
+                _ => EntEdgeKind::One,
+            })
+        }
+        x => Err(darling::Error::custom("Unexpected edge id type").with_span(x)),
     }
 }

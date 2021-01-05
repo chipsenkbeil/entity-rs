@@ -1,6 +1,6 @@
 use super::EntEdgeDeletionPolicy;
-use darling::{ast, FromDeriveInput, FromField, FromMeta};
-use syn::{spanned::Spanned, Generics, Ident, Meta, NestedMeta, Type, Visibility};
+use darling::{ast, util::Override, FromDeriveInput, FromField, FromMeta};
+use syn::{Generics, Ident, Type, Visibility};
 
 /// Information about a struct deriving ent
 #[derive(Debug, FromDeriveInput)]
@@ -37,57 +37,17 @@ pub struct EntField {
     #[darling(default, rename = "last_updated")]
     pub is_ent_last_updated_field: bool,
     #[darling(default, rename = "field")]
-    pub field_attr: Option<FieldAttr>,
+    pub field_attr: Option<Override<FieldAttr>>,
     #[darling(default, rename = "edge")]
     pub edge_attr: Option<EdgeAttr>,
 }
 
 /// Information for a field attribute on a field of a struct deriving ent
-#[derive(Debug, Default)]
+#[derive(Debug, Default, FromMeta)]
+#[darling(default)]
 pub struct FieldAttr {
     pub indexed: bool,
     pub mutable: bool,
-}
-
-impl FromMeta for FieldAttr {
-    fn from_word() -> darling::Result<Self> {
-        Ok(Self::default())
-    }
-
-    fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
-        let mut indexed = false;
-        let mut mutable = false;
-
-        for item in items {
-            match item {
-                NestedMeta::Meta(x) => match x {
-                    Meta::Path(x) => match x
-                        .segments
-                        .last()
-                        .map(|s| s.ident.to_string())
-                        .unwrap_or_default()
-                        .as_str()
-                    {
-                        "indexed" => indexed = true,
-                        "mutable" => mutable = true,
-                        x => {
-                            return Err(darling::Error::custom(format!("Unknown attribute: {}", x))
-                                .with_span(&x.span()))
-                        }
-                    },
-                    x => {
-                        return Err(darling::Error::custom("Unsupported attribute value")
-                            .with_span(&x.span()))
-                    }
-                },
-                NestedMeta::Lit(x) => {
-                    return Err(darling::Error::custom("Lit is not supported").with_span(&x.span()))
-                }
-            }
-        }
-
-        Ok(Self { indexed, mutable })
-    }
 }
 
 /// Information for an edge attribute on a field of a struct deriving ent
