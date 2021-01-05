@@ -13,10 +13,7 @@ pub fn entity_crate() -> darling::Result<Path> {
             let crate_ident = Ident::new(&name, Span::mixed_site());
             parse_quote!(::#crate_ident)
         })
-        .map_err(|msg| {
-            darling::Error::custom(msg)
-                .with_span(&darling::util::SpannedValue::new((), Span::mixed_site()))
-        })
+        .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
 }
 
 /// Produces a token stream in the form of `::serde` or renamed version

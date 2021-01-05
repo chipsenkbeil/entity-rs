@@ -1,5 +1,4 @@
 use crate::utils;
-use darling::util::SpannedValue;
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{
@@ -217,8 +216,9 @@ fn inject_ent_id_field(
         struct_info.has_conflicting_id_name,
         struct_info.has_id_marker,
     ) {
-        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
-            .with_span(&SpannedValue::new((), span))),
+        (Some(span), None) => {
+            Err(darling::Error::custom("Conflicting field with same name").with_span(&span))
+        }
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
@@ -262,8 +262,9 @@ fn inject_ent_database_field(
         struct_info.has_conflicting_database_name,
         struct_info.has_database_marker,
     ) {
-        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
-            .with_span(&SpannedValue::new((), span))),
+        (Some(span), None) => {
+            Err(darling::Error::custom("Conflicting field with same name").with_span(&span))
+        }
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
@@ -314,8 +315,9 @@ fn inject_ent_created_field(
         struct_info.has_conflicting_created_name,
         struct_info.has_created_marker,
     ) {
-        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
-            .with_span(&SpannedValue::new((), span))),
+        (Some(span), None) => {
+            Err(darling::Error::custom("Conflicting field with same name").with_span(&span))
+        }
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
@@ -356,8 +358,9 @@ fn inject_ent_last_updated_field(
         struct_info.has_conflicting_last_updated_name,
         struct_info.has_last_updated_marker,
     ) {
-        (Some(span), None) => Err(darling::Error::custom("Conflicting field with same name")
-            .with_span(&SpannedValue::new((), span))),
+        (Some(span), None) => {
+            Err(darling::Error::custom("Conflicting field with same name").with_span(&span))
+        }
         (_, Some(_)) => Ok(()),
         (None, None) => {
             match &mut item.fields {
