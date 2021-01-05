@@ -116,9 +116,8 @@ impl FromDeriveInput for Ent {
                 }
             } else if f.is_ent_database_field {
                 if database.is_some() {
-                    return Err(
-                        darling::Error::custom("Already have a database elsewhere").with_span(&name)
-                    );
+                    return Err(darling::Error::custom("Already have a database elsewhere")
+                        .with_span(&name));
                 } else {
                     database = Some(name);
                 }
