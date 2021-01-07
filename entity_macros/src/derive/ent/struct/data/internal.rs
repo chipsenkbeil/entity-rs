@@ -98,7 +98,7 @@ impl EntField {
     pub fn validate_zero_or_one_known_fields(&self) -> darling::Result<()> {
         if self.declares_multiple_known_fields() {
             let mut errors = vec![];
-            for item in vec![&self.id, &self.database, &self.created, &self.last_updated] {
+            for item in &[&self.id, &self.database, &self.created, &self.last_updated] {
                 if let Some(word) = item {
                     errors.push(darling::Error::custom("A field can only declare one of `id`, `database`, `created`, or `last_updated`").with_span(word));
                 }
