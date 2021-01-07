@@ -32,14 +32,18 @@ pub struct Ent {
 pub struct EntField {
     pub ident: Option<Ident>,
     pub ty: Type,
+    /// Location of the word `id`, if present.
     #[darling(default)]
-    pub id: Option<SpannedValue<()>>,
+    id: Option<SpannedValue<()>>,
+    /// Location of the word `database`, if present.
     #[darling(default)]
-    pub database: Option<SpannedValue<()>>,
+    database: Option<SpannedValue<()>>,
+    /// Location of the word `created`, if present.
     #[darling(default)]
-    pub created: Option<SpannedValue<()>>,
+    created: Option<SpannedValue<()>>,
+    /// Location of the word `last_updated`, if present.
     #[darling(default)]
-    pub last_updated: Option<SpannedValue<()>>,
+    last_updated: Option<SpannedValue<()>>,
     #[darling(default, rename = "field")]
     pub field_attr: Option<Override<FieldAttr>>,
     #[darling(default, rename = "edge")]
