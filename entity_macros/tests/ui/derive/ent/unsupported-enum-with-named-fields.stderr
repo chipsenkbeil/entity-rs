@@ -1,11 +1,7 @@
 error: Unsupported shape `named`
-  --> $DIR/unsupported-enum-with-named-fields.rs:4:1
-   |
-4  | / enum TestEnt {
-5  | |     Variant {
-6  | |         #[ent(id)]
-7  | |         id: Id,
-...  |
-17 | |     },
-18 | | }
-   | |_^
+ --> $DIR/unsupported-enum-with-named-fields.rs:3:17
+  |
+3 | #[derive(Clone, Ent)]
+  |                 ^^^
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

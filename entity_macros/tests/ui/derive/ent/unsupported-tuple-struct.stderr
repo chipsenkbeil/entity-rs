@@ -1,10 +1,7 @@
 error: Unsupported shape `tuple`
- --> $DIR/unsupported-tuple-struct.rs:4:1
+ --> $DIR/unsupported-tuple-struct.rs:3:17
   |
-4 | / struct TestEnt(
-5 | |     #[ent(id)] Id,
-6 | |     #[ent(database)] WeakDatabaseRc,
-7 | |     #[ent(created)] u64,
-8 | |     #[ent(last_updated)] u64,
-9 | | );
-  | |__^
+3 | #[derive(Clone, Ent)]
+  |                 ^^^
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

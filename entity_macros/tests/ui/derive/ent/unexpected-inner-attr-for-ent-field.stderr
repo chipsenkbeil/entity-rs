@@ -1,11 +1,5 @@
-error: Unknown attribute: something at my_field/field
-  --> $DIR/unexpected-inner-attr-for-ent-field.rs:4:1
+error: Unknown field: `something`
+  --> $DIR/unexpected-inner-attr-for-ent-field.rs:17:17
    |
-4  | / struct TestEnt {
-5  | |     #[ent(id)]
-6  | |     id: Id,
-7  | |
-...  |
-18 | |     my_field: u32,
-19 | | }
-   | |_^
+17 |     #[ent(field(something))]
+   |                 ^^^^^^^^^

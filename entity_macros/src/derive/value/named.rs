@@ -44,7 +44,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
             fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
                 let mut map = match value {
                     #root::Value::Map(x) => x,
-                    _ => return ::std::result::Result::Err(concat!(
+                    _ => return ::std::result::Result::Err(::std::concat!(
                         "Only Value::Map can be converted to ",
                         ::std::stringify!(#name),
                     )),
