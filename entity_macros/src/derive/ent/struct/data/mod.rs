@@ -70,7 +70,7 @@ pub struct EntEdge {
 }
 
 /// Information about an an edge's deletion policy
-#[derive(Debug, FromMeta)]
+#[derive(Debug, Clone, FromMeta)]
 pub enum EntEdgeDeletionPolicy {
     Nothing,
     Shallow,
@@ -94,6 +94,10 @@ pub enum EntEdgeKind {
 impl FromDeriveInput for Ent {
     fn from_derive_input(input: &DeriveInput) -> darling::Result<Self> {
         let ent = internal::Ent::from_derive_input(input)?;
+        let data_struct = ent
+            .data
+            .take_struct()
+            .expect("Ent only supports named structs");
 
         let mut id = None;
         let mut database = None;
@@ -104,11 +108,27 @@ impl FromDeriveInput for Ent {
 
         let mut errors = vec![];
 
-        for f in ent.data.take_struct().unwrap().fields {
-            let name = f.ident.unwrap();
-            let ty = f.ty;
+        for f in &data_struct.fields {
+            // A field without the ent attribute (or with an empty attribute) will be an error
+            // in strict mode or will be interpreted as a field in standard mode. In either case,
+            // it's necessary to know whether any meta-items were acted on to make that fall-through
+            // decision.
+            let mut acted_on_field = false;
 
-            if f.is_ent_id_field {
+            // darling should have already validated this for us
+            let name = f.ident.as_ref().expect("Ent only supports named structs");
+
+            // A field cannot be more than one ent "thing"; it doesn't make sense for any field to be
+            // both the created and last_updated values, even though they're the same data type. In the
+            // interest of giving the caller a complete error list, we note this mistake but then proceed
+            // to analyze the attribute in full anyway.
+            if let Err(e) = f.validate_zero_or_one_known_fields() {
+                errors.push(e);
+            }
+
+            if f.is_id_field() {
+                acted_on_field = true;
+
                 if id.is_some() {
                     errors.push(
                         darling::Error::custom("Already have an id elsewhere").with_span(&name),
@@ -116,7 +136,11 @@ impl FromDeriveInput for Ent {
                 } else {
                     id = Some(name);
                 }
-            } else if f.is_ent_database_field {
+            }
+
+            if f.is_database_field() {
+                acted_on_field = true;
+
                 if database.is_some() {
                     errors.push(
                         darling::Error::custom("Already have a database elsewhere")
@@ -125,7 +149,11 @@ impl FromDeriveInput for Ent {
                 } else {
                     database = Some(name);
                 }
-            } else if f.is_ent_created_field {
+            }
+
+            if f.is_created_field() {
+                acted_on_field = true;
+
                 if created.is_some() {
                     errors.push(
                         darling::Error::custom("Already have a created timestamp elsewhere")
@@ -134,7 +162,11 @@ impl FromDeriveInput for Ent {
                 } else {
                     created = Some(name);
                 }
-            } else if f.is_ent_last_updated_field {
+            }
+
+            if f.is_last_updated_field() {
+                acted_on_field = true;
+
                 if last_updated.is_some() {
                     errors.push(
                         darling::Error::custom("Already have a last_updated timestamp elsewhere")
@@ -143,15 +175,23 @@ impl FromDeriveInput for Ent {
                 } else {
                     last_updated = Some(name);
                 }
-            } else if let Some(attr) = f.field_attr.map(|a| a.unwrap_or_default()) {
+            }
+
+            if let Some(attr) = f.field_attr.clone().map(|a| a.unwrap_or_default()) {
+                acted_on_field = true;
+
                 fields.push(EntField {
-                    name,
-                    ty,
+                    name: name.clone(),
+                    ty: f.ty.clone(),
                     indexed: attr.indexed,
                     mutable: attr.mutable,
                 });
-            } else if let Some(attr) = f.edge_attr {
-                let kind = match infer_edge_kind_from_ty(&ty) {
+            }
+
+            if let Some(attr) = f.edge_attr.clone() {
+                acted_on_field = true;
+
+                let kind = match infer_edge_kind_from_ty(&f.ty) {
                     Ok(k) => k,
                     Err(e) => {
                         errors.push(e);
@@ -160,19 +200,23 @@ impl FromDeriveInput for Ent {
                 };
 
                 edges.push(EntEdge {
-                    name,
-                    ty,
+                    name: name.clone(),
+                    ty: f.ty.clone(),
                     ent_ty: syn::parse_str(&attr.r#type)?,
                     wrap: attr.wrap,
                     kind,
                     deletion_policy: attr.deletion_policy,
                 });
+            }
+
+            if acted_on_field {
+                continue;
             } else if ent.strict {
                 errors.push(darling::Error::custom("Missing ent(...) attribute").with_span(&name));
             } else {
                 fields.push(EntField {
-                    name,
-                    ty,
+                    name: name.clone(),
+                    ty: f.ty.clone(),
                     indexed: false,
                     mutable: false,
                 });
@@ -205,10 +249,10 @@ impl FromDeriveInput for Ent {
             generics: ent.generics,
             // These unwraps are safe because the previous is_none() checks should
             // have caused a return before reaching this point.
-            id: id.unwrap(),
-            database: database.unwrap(),
-            created: created.unwrap(),
-            last_updated: last_updated.unwrap(),
+            id: id.cloned().unwrap(),
+            database: database.cloned().unwrap(),
+            created: created.cloned().unwrap(),
+            last_updated: last_updated.cloned().unwrap(),
             fields,
             edges,
             attr: EntAttr {

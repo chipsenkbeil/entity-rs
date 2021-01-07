@@ -1,0 +1,71 @@
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-known-fields.rs:5:11
+  |
+5 |     #[ent(id, database)]
+  |           ^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-known-fields.rs:5:15
+  |
+5 |     #[ent(id, database)]
+  |               ^^^^^^^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-known-fields.rs:8:21
+  |
+8 |     #[ent(database, id)]
+  |                     ^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-known-fields.rs:8:11
+  |
+8 |     #[ent(database, id)]
+  |           ^^^^^^^^
+
+error: Already have an id elsewhere
+ --> $DIR/multiple-known-fields.rs:9:5
+  |
+9 |     database: WeakDatabaseRc,
+  |     ^^^^^^^^
+
+error: Already have a database elsewhere
+ --> $DIR/multiple-known-fields.rs:9:5
+  |
+9 |     database: WeakDatabaseRc,
+  |     ^^^^^^^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+  --> $DIR/multiple-known-fields.rs:11:11
+   |
+11 |     #[ent(created, last_updated)]
+   |           ^^^^^^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+  --> $DIR/multiple-known-fields.rs:11:20
+   |
+11 |     #[ent(created, last_updated)]
+   |                    ^^^^^^^^^^^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+  --> $DIR/multiple-known-fields.rs:14:25
+   |
+14 |     #[ent(last_updated, id)]
+   |                         ^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+  --> $DIR/multiple-known-fields.rs:14:11
+   |
+14 |     #[ent(last_updated, id)]
+   |           ^^^^^^^^^^^^
+
+error: Already have an id elsewhere
+  --> $DIR/multiple-known-fields.rs:15:5
+   |
+15 |     last_updated: u64,
+   |     ^^^^^^^^^^^^
+
+error: Already have a last_updated timestamp elsewhere
+  --> $DIR/multiple-known-fields.rs:15:5
+   |
+15 |     last_updated: u64,
+   |     ^^^^^^^^^^^^
