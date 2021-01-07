@@ -1,71 +1,71 @@
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
- --> $DIR/multiple-known-fields.rs:5:11
-  |
-5 |     #[ent(id, database)]
-  |           ^^
+  --> $DIR/multiple-known-fields.rs:10:11
+   |
+10 |     #[ent(id, database)]
+   |           ^^
 
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
- --> $DIR/multiple-known-fields.rs:5:15
-  |
-5 |     #[ent(id, database)]
-  |               ^^^^^^^^
+  --> $DIR/multiple-known-fields.rs:10:15
+   |
+10 |     #[ent(id, database)]
+   |               ^^^^^^^^
 
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
- --> $DIR/multiple-known-fields.rs:8:21
-  |
-8 |     #[ent(database, id)]
-  |                     ^^
+  --> $DIR/multiple-known-fields.rs:13:21
+   |
+13 |     #[ent(database, id)]
+   |                     ^^
 
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
- --> $DIR/multiple-known-fields.rs:8:11
-  |
-8 |     #[ent(database, id)]
-  |           ^^^^^^^^
+  --> $DIR/multiple-known-fields.rs:13:11
+   |
+13 |     #[ent(database, id)]
+   |           ^^^^^^^^
 
 error: Already have an id elsewhere
- --> $DIR/multiple-known-fields.rs:9:5
-  |
-9 |     database: WeakDatabaseRc,
-  |     ^^^^^^^^
+  --> $DIR/multiple-known-fields.rs:14:5
+   |
+14 |     database: WeakDatabaseRc,
+   |     ^^^^^^^^
 
 error: Already have a database elsewhere
- --> $DIR/multiple-known-fields.rs:9:5
-  |
-9 |     database: WeakDatabaseRc,
-  |     ^^^^^^^^
+  --> $DIR/multiple-known-fields.rs:14:5
+   |
+14 |     database: WeakDatabaseRc,
+   |     ^^^^^^^^
 
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
-  --> $DIR/multiple-known-fields.rs:11:11
+  --> $DIR/multiple-known-fields.rs:16:11
    |
-11 |     #[ent(created, last_updated)]
+16 |     #[ent(created, last_updated)]
    |           ^^^^^^^
 
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
-  --> $DIR/multiple-known-fields.rs:11:20
+  --> $DIR/multiple-known-fields.rs:16:20
    |
-11 |     #[ent(created, last_updated)]
+16 |     #[ent(created, last_updated)]
    |                    ^^^^^^^^^^^^
 
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
-  --> $DIR/multiple-known-fields.rs:14:25
+  --> $DIR/multiple-known-fields.rs:19:25
    |
-14 |     #[ent(last_updated, id)]
+19 |     #[ent(last_updated, id)]
    |                         ^^
 
 error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
-  --> $DIR/multiple-known-fields.rs:14:11
+  --> $DIR/multiple-known-fields.rs:19:11
    |
-14 |     #[ent(last_updated, id)]
+19 |     #[ent(last_updated, id)]
    |           ^^^^^^^^^^^^
 
 error: Already have an id elsewhere
-  --> $DIR/multiple-known-fields.rs:15:5
+  --> $DIR/multiple-known-fields.rs:20:5
    |
-15 |     last_updated: u64,
+20 |     last_updated: u64,
    |     ^^^^^^^^^^^^
 
 error: Already have a last_updated timestamp elsewhere
-  --> $DIR/multiple-known-fields.rs:15:5
+  --> $DIR/multiple-known-fields.rs:20:5
    |
-15 |     last_updated: u64,
+20 |     last_updated: u64,
    |     ^^^^^^^^^^^^
