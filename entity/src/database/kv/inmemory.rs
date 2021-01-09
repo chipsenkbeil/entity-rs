@@ -25,6 +25,13 @@ pub struct InmemoryDatabase {
     alloc: Mutex<IdAllocator>,
 }
 
+impl InmemoryDatabase {
+    /// Creates a new instance of an in-memory database
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 impl Default for InmemoryDatabase {
     /// Creates a new, empty database entry
     fn default() -> Self {

@@ -240,7 +240,12 @@ TODO
 
 Entity provides a few feature flags:
 
-* **`inmemory_db`** *(enabled by default)* - Enables the in-memory database for use with ent objects.
+* **`full`** - Enables all features.
+* **`global`** - Enables use of a database stored as a global variable,
+  providing shortcuts in creating and retrieving ents.
+* **`macros`** - Enables macros for deriving ents and exposing a cleaner
+  declarative API for ents. (Imports `entity_macros` directly)
+* **`inmemory_db`** - Enables the in-memory database for use with ent objects.
   This does not bring in `serde-1` by default, but including that feature will
   also support persisting the database to the filesystem.
 * **`sled_db`** - Enables the sled database for use with ent objects. Because
@@ -249,4 +254,4 @@ Entity provides a few feature flags:
   through the use of [typetag](https://github.com/dtolnay/typetag). This will
   require that all ents implement [Serialize](https://docs.serde.rs/serde/trait.Serialize.html)
   and [Deserialize](https://docs.serde.rs/serde/trait.Deserialize.html).
-* **`macros`** *(enabled by default)* - Importing macros from `entity_macros` directly from **entity**.
+  * Requires `serde` and `typetag` to be included in dependencies.
