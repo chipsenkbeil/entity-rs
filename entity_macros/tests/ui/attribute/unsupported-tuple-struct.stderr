@@ -1,6 +1,7 @@
-error: Tuple struct not supported
- --> $DIR/unsupported-tuple-struct.rs:4:1
+error: Unsupported shape `tuple`
+ --> $DIR/unsupported-tuple-struct.rs:3:1
   |
-4 | / #[derive(Clone, Ent)]
-5 | | pub struct SimpleEnt(#[ent(field)] String, #[ent(field)] u32);
-  | |______________________________________________________________^
+3 | #[simple_ent]
+  | ^^^^^^^^^^^^^
+  |
+  = note: this error originates in an attribute macro (in Nightly builds, run with -Z macro-backtrace for more info)

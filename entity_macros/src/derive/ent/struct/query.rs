@@ -1,27 +1,22 @@
-use super::Ent;
-use crate::utils;
+use crate::{data::r#struct::Ent, utils};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_quote, Expr, Generics, Ident, Path, Type, Visibility};
+use syn::{parse_quote, Expr, Path, Type};
 
-pub fn impl_ent_query(
-    root: &Path,
-    name: &Ident,
-    vis: &Visibility,
-    generics: &Generics,
-    const_type_name: &Ident,
-    ent: &Ent,
-) -> darling::Result<TokenStream> {
+pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+    let name = &ent.ident;
+    let vis = &ent.vis;
     let query_name = format_ident!("{}Query", name);
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    let ty_phantoms: Vec<Type> = generics
+    let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
+    let ty_phantoms: Vec<Type> = ent
+        .generics
         .type_params()
         .map(|tp| {
             let tp_ident = &tp.ident;
             parse_quote!(::std::marker::PhantomData<#tp_ident>)
         })
         .collect();
-    let default_phantoms: Vec<Expr> = (0..generics.type_params().count())
+    let default_phantoms: Vec<Expr> = (0..ent.generics.type_params().count())
         .map(|_| parse_quote!(::std::marker::PhantomData))
         .collect();
 
@@ -160,7 +155,9 @@ pub fn impl_ent_query(
                 <Self as ::std::convert::From<#root::Query>>::from(
                     #root::Query::default().where_type(
                         #root::TypedPredicate::equals(
-                            ::std::string::ToString::to_string(#const_type_name)
+                            ::std::string::ToString::to_string(
+                                <#name #ty_generics as #root::EntType>::type_str()
+                            )
                         )
                     )
                 )
@@ -169,13 +166,22 @@ pub fn impl_ent_query(
 
         #[automatically_derived]
         impl #impl_generics #query_name #ty_generics #where_clause {
-            #(#methods)*
+            /// Creates a new instance of the typed query
+            pub fn new() -> Self {
+                <Self as ::std::default::Default>::default()
+            }
 
-            #[doc = "Executes query against the given database"]
-            pub fn execute<__entity_D: #root::Database>(
+            #(#methods)*
+        }
+
+        #[automatically_derived]
+        impl #impl_generics #root::EntQuery for #query_name #ty_generics #where_clause {
+            type Output = ::std::vec::Vec<#name #ty_generics>;
+
+            fn execute<D: #root::Database>(
                 self,
-                database: &__entity_D,
-            ) -> #root::DatabaseResult<::std::vec::Vec<#name #ty_generics>> {
+                database: &D,
+            ) -> #root::DatabaseResult<Self::Output> {
                 #root::DatabaseExt::find_all_typed::<#name #ty_generics>(
                     database,
                     self.0,

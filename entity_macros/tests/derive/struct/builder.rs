@@ -1,10 +1,10 @@
 use derivative::Derivative;
-use entity::{Ent, Id, Value, WeakDatabaseRc, EPHEMERAL_ID};
+use entity::*;
 use std::convert::TryFrom;
 
 #[test]
 fn build_method_on_ent_will_populate_with_global_database() {
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntBuilder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -38,7 +38,7 @@ fn build_method_on_ent_will_populate_with_global_database() {
 
 #[test]
 fn default_fills_in_required_fields() {
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntBuilder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -68,7 +68,7 @@ fn default_fills_in_required_fields() {
 
 #[test]
 fn produces_an_error_enum_for_each_struct_field() {
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntBuilder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -122,7 +122,7 @@ fn produces_an_error_enum_for_each_struct_field() {
 
 #[test]
 fn default_returns_a_builder_with_all_normal_fields_set_to_none() {
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntBuilder)]
     struct TestEnt {
         #[ent(id)]
         id: Id,
@@ -169,7 +169,7 @@ fn default_returns_a_builder_with_all_normal_fields_set_to_none() {
 
 #[test]
 fn build_fails_when_struct_field_is_not_set() {
-    #[derive(Clone, Derivative, Ent)]
+    #[derive(Clone, Derivative, Ent, EntBuilder)]
     #[derivative(Debug)]
     struct TestEnt {
         #[ent(id)]
@@ -259,7 +259,7 @@ fn build_fails_when_struct_field_is_not_set() {
 
 #[test]
 fn build_succeeds_when_all_struct_fields_are_set() {
-    #[derive(Clone, Derivative, Ent)]
+    #[derive(Clone, Derivative, Ent, EntBuilder)]
     #[derivative(Debug)]
     struct TestEnt {
         #[ent(id)]
@@ -315,7 +315,7 @@ fn build_succeeds_when_all_struct_fields_are_set() {
 
 #[test]
 fn supports_generic_fields() {
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntBuilder)]
     struct TestEnt<T>
     where
         T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,

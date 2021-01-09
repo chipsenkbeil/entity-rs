@@ -1,23 +1,18 @@
-use super::{utils, Ent};
+use crate::data::r#struct::Ent;
 use heck::CamelCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{DeriveInput, Path};
+use syn::{Ident, Path, Type};
 
-pub fn impl_ent_builder(
-    root: &Path,
-    input: &DeriveInput,
-    ent: &Ent,
-) -> darling::Result<TokenStream> {
-    let ent_name = &input.ident;
+pub fn do_derive_ent_builder(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+    let ent_name = &ent.ident;
     let builder_name = format_ident!("{}Builder", ent_name);
     let builder_error_name = format_ident!("{}Error", builder_name);
 
-    let vis = &input.vis;
-    let named_fields = &utils::get_named_fields(input)?.named;
+    let vis = &ent.vis;
     let ent_database_field_name = &ent.database;
 
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
 
     let mut struct_field_names = Vec::new();
     let mut struct_field_defaults = Vec::new();
@@ -28,73 +23,71 @@ pub fn impl_ent_builder(
     let mut build_assignments = Vec::new();
     let mut has_normal_struct_field = false;
 
-    for f in named_fields {
-        let name = f.ident.as_ref().unwrap();
-        let ty = &f.ty;
+    push_id_field(
+        &root,
+        &ent.id,
+        &ent.id_ty,
+        &mut struct_field_names,
+        &mut struct_fields,
+        &mut struct_field_defaults,
+        &mut build_assignments,
+        &mut struct_setters,
+    );
+    push_database_field(
+        &root,
+        &ent.database,
+        &ent.database_ty,
+        &mut struct_field_names,
+        &mut struct_fields,
+        &mut struct_field_defaults,
+        &mut build_assignments,
+        &mut struct_setters,
+    );
+    push_timestamp_field(
+        &root,
+        &ent.created,
+        &ent.created_ty,
+        &mut struct_field_names,
+        &mut struct_fields,
+        &mut struct_field_defaults,
+        &mut build_assignments,
+        &mut struct_setters,
+    );
+    push_timestamp_field(
+        &root,
+        &ent.last_updated,
+        &ent.last_updated_ty,
+        &mut struct_field_names,
+        &mut struct_fields,
+        &mut struct_field_defaults,
+        &mut build_assignments,
+        &mut struct_setters,
+    );
 
+    for (name, ty) in ent
+        .fields
+        .iter()
+        .map(|f| (&f.name, &f.ty))
+        .chain(ent.edges.iter().map(|e| (&e.name, &e.ty)))
+    {
+        has_normal_struct_field = true;
         struct_field_names.push(name);
+        struct_fields.push(quote!(#name: ::std::option::Option<#ty>));
+        struct_field_defaults.push(quote!(::std::option::Option::None));
 
-        // If our special id field, we set an automatic default of the
-        // ephemeral id
-        if name == &ent.id {
-            struct_fields.push(quote!(#name: #ty));
-            struct_field_defaults.push(quote!(#root::EPHEMERAL_ID));
-            build_assignments.push(quote!(#name: self.#name));
+        let error_variant = format_ident!("Missing{}", name.to_string().to_camel_case());
+        build_assignments.push(quote! {
+            #name: self.#name.ok_or(#builder_error_name::#error_variant)?
+        });
+        error_variants.push(error_variant);
+        error_variant_field_names.push(name);
 
-            struct_setters.push(quote! {
-                pub fn #name(mut self, value: #ty) -> Self {
-                    self.#name = value;
-                    self
-                }
-            });
-        // If our database field, we set it to an empty ref by default
-        } else if name == &ent.database {
-            struct_fields.push(quote!(#name: #ty));
-            struct_field_defaults.push(quote!(#root::WeakDatabaseRc::new()));
-            build_assignments.push(quote!(#name: self.#name));
-
-            struct_setters.push(quote! {
-                pub fn #name(mut self, value: #ty) -> Self {
-                    self.#name = value;
-                    self
-                }
-            });
-        // If our created or last_updated field, we set it to the current time
-        } else if name == &ent.created || name == &ent.last_updated {
-            struct_fields.push(quote!(#name: #ty));
-            struct_field_defaults.push(quote!(::std::time::SystemTime::now()
-                .duration_since(::std::time::UNIX_EPOCH)
-                .expect("Corrupt system time")
-                .as_millis()
-                as ::std::primitive::u64));
-            build_assignments.push(quote!(#name: self.#name));
-
-            struct_setters.push(quote! {
-                pub fn #name(mut self, value: #ty) -> Self {
-                    self.#name = value;
-                    self
-                }
-            });
-        // Otherwise, we have no default available for fields & edges
-        } else {
-            has_normal_struct_field = true;
-            struct_fields.push(quote!(#name: ::std::option::Option<#ty>));
-            struct_field_defaults.push(quote!(::std::option::Option::None));
-
-            let error_variant = format_ident!("Missing{}", name.to_string().to_camel_case());
-            build_assignments.push(quote! {
-                #name: self.#name.ok_or(#builder_error_name::#error_variant)?
-            });
-            error_variants.push(error_variant);
-            error_variant_field_names.push(name);
-
-            struct_setters.push(quote! {
-                pub fn #name(mut self, value: #ty) -> Self {
-                    self.#name = ::std::option::Option::Some(value);
-                    self
-                }
-            });
-        }
+        struct_setters.push(quote! {
+            pub fn #name(mut self, value: #ty) -> Self {
+                self.#name = ::std::option::Option::Some(value);
+                self
+            }
+        });
     }
 
     let display_fmt_inner = if has_normal_struct_field {
@@ -162,11 +155,17 @@ pub fn impl_ent_builder(
         #[automatically_derived]
         impl #impl_generics #builder_name #ty_generics #where_clause {
             #(#struct_setters)*
+        }
+
+        #[automatically_derived]
+        impl #impl_generics #root::EntBuilder for #builder_name #ty_generics #where_clause {
+            type Output = #ent_name #ty_generics;
+            type Error = #builder_error_name;
 
             /// Called when finished constructing the ent, will consume the
             /// builder and return a new ent **without** committing it to
             /// the database.
-            pub fn finish(self) -> ::std::result::Result<#ent_name #ty_generics, #builder_error_name> {
+            fn finish(self) -> ::std::result::Result<Self::Output, Self::Error> {
                 ::std::result::Result::Ok(#ent_name {
                     #(#build_assignments),*
                 })
@@ -176,9 +175,9 @@ pub fn impl_ent_builder(
             /// builder and return a new ent after committing it to the
             /// associated database. If no database is connected to the ent,
             /// this will fail.
-            pub fn finish_and_commit(self) -> ::std::result::Result<
-                #root::DatabaseResult<#ent_name #ty_generics>,
-                #builder_error_name,
+            fn finish_and_commit(self) -> ::std::result::Result<
+                #root::DatabaseResult<Self::Output>,
+                Self::Error,
             > {
                 self.finish().map(|mut ent| {
                     if let ::std::result::Result::Err(x) = #root::Ent::commit(&mut ent) {
@@ -190,4 +189,73 @@ pub fn impl_ent_builder(
             }
         }
     })
+}
+
+fn push_id_field<'a, 'b>(
+    root: &'a Path,
+    name: &'b Ident,
+    ty: &'b Type,
+    names: &mut Vec<&'b Ident>,
+    defs: &mut Vec<TokenStream>,
+    defaults: &mut Vec<TokenStream>,
+    assignments: &mut Vec<TokenStream>,
+    setters: &mut Vec<TokenStream>,
+) {
+    names.push(name);
+    defs.push(quote!(#name: #ty));
+    defaults.push(quote!(#root::EPHEMERAL_ID));
+    assignments.push(quote!(#name: self.#name));
+    setters.push(quote! {
+        pub fn #name(mut self, value: #ty) -> Self {
+            self.#name = value;
+            self
+        }
+    });
+}
+
+fn push_database_field<'a, 'b>(
+    root: &'a Path,
+    name: &'b Ident,
+    ty: &'b Type,
+    names: &mut Vec<&'b Ident>,
+    defs: &mut Vec<TokenStream>,
+    defaults: &mut Vec<TokenStream>,
+    assignments: &mut Vec<TokenStream>,
+    setters: &mut Vec<TokenStream>,
+) {
+    names.push(name);
+    defs.push(quote!(#name: #ty));
+    defaults.push(quote!(#root::WeakDatabaseRc::new()));
+    assignments.push(quote!(#name: self.#name));
+    setters.push(quote! {
+        pub fn #name(mut self, value: #ty) -> Self {
+            self.#name = value;
+            self
+        }
+    });
+}
+
+fn push_timestamp_field<'a, 'b>(
+    _root: &'a Path,
+    name: &'b Ident,
+    ty: &'b Type,
+    names: &mut Vec<&'b Ident>,
+    defs: &mut Vec<TokenStream>,
+    defaults: &mut Vec<TokenStream>,
+    assignments: &mut Vec<TokenStream>,
+    setters: &mut Vec<TokenStream>,
+) {
+    names.push(name);
+    defs.push(quote!(#name: #ty));
+    defaults.push(quote!(::std::time::SystemTime::now()
+        .duration_since(::std::time::UNIX_EPOCH)
+        .expect("Corrupt system time")
+        .as_millis() as ::std::primitive::u64));
+    assignments.push(quote!(#name: self.#name));
+    setters.push(quote! {
+        pub fn #name(mut self, value: #ty) -> Self {
+            self.#name = value;
+            self
+        }
+    });
 }

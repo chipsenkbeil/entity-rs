@@ -1,24 +1,20 @@
-use super::{EntEdge, EntEdgeKind};
-use crate::utils;
+use crate::{
+    data::r#struct::{Ent, EntEdge, EntEdgeKind},
+    utils,
+};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Generics, Ident, Path, Type};
+use syn::{Ident, Path, Type};
 
-/// Implements individual typed methods for each of the provided edges for
-/// the ent with the given name
-pub(crate) fn impl_typed_edge_methods(
-    root: &Path,
-    name: &Ident,
-    generics: &Generics,
-    edges: &[EntEdge],
-) -> darling::Result<TokenStream> {
+pub fn do_derive_ent_typed_edges(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+    let name = &ent.ident;
     let mut edge_methods: Vec<TokenStream> = Vec::new();
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
 
-    for edge in edges {
+    for edge in ent.edges {
         edge_methods.push(fn_typed_id_getter(&edge)?);
         edge_methods.push(fn_typed_id_setter(&edge));
-        edge_methods.push(fn_typed_load_edge(root, &edge));
+        edge_methods.push(fn_typed_load_edge(&root, &edge));
     }
 
     Ok(quote! {

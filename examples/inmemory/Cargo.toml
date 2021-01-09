@@ -5,4 +5,4 @@ publish = false
 edition = "2018"
 
 [dependencies]
-entity = { version = "0.1.0", path = "../../entity", features = ["global", "inmemory_db"] }
+entity = { version = "0.1.0", path = "../../entity", features = ["global", "inmemory_db", "macros"] }

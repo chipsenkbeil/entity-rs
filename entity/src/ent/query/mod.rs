@@ -1,4 +1,4 @@
-use crate::Id;
+use crate::{Database, DatabaseResult, Ent, Id};
 use derive_more::{Constructor, IntoIterator};
 use std::fmt::Debug;
 
@@ -8,9 +8,27 @@ pub use filter::*;
 mod predicate;
 pub use predicate::*;
 
+/// Represents a query interface for some ent
+pub trait EntQuery {
+    type Output;
+
+    /// Executes the query against the provided database, returning the query's
+    /// output as the result
+    fn execute<D: Database>(self, database: &D) -> DatabaseResult<Self::Output>;
+}
+
 /// Represents a generic query to find ents within some database
 #[derive(Constructor, IntoIterator, Clone, Debug, Default)]
 pub struct Query(Vec<Filter>);
+
+impl EntQuery for Query {
+    type Output = Vec<Box<dyn Ent>>;
+
+    #[inline]
+    fn execute<D: Database>(self, database: &D) -> DatabaseResult<Self::Output> {
+        database.find_all(self)
+    }
+}
 
 impl Query {
     /// Consumes query, producing a new query with the additional filter

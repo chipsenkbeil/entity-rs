@@ -1,16 +1,14 @@
-use super::{Ent, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField};
-use crate::utils;
+use crate::{
+    data::r#struct::{Ent, EntEdge, EntEdgeDeletionPolicy, EntEdgeKind, EntField},
+    utils,
+};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Generics, Ident, Path, Type};
+use syn::{Ident, Path, Type};
 
-pub(crate) fn impl_ent(
-    root: &Path,
-    name: &Ident,
-    generics: &Generics,
-    ent: &Ent,
-    const_type_name: &Ident,
-) -> darling::Result<TokenStream> {
+pub fn do_derive_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+    let name = &ent.ident;
+
     let ident_id = &ent.id;
     let ident_database = &ent.database;
     let ident_created = &ent.created;
@@ -18,7 +16,7 @@ pub(crate) fn impl_ent(
     let fields = &ent.fields;
     let edges = &ent.edges;
 
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
 
     let field_names: Vec<Ident> = fields.iter().map(|f| f.name.clone()).collect();
     let field_types: Vec<Type> = fields.iter().map(|f| f.ty.clone()).collect();
@@ -33,20 +31,15 @@ pub(crate) fn impl_ent(
     let edge_names: Vec<Ident> = edges.iter().map(|e| e.name.clone()).collect();
     let edge_types: Vec<Type> = edges.iter().map(|e| e.ty.clone()).collect();
 
-    let field_definitions = make_field_definitions(root, fields)?;
-    let edge_definitions = make_edge_definitions(root, edges);
+    let field_definitions = make_field_definitions(&root, fields)?;
+    let edge_definitions = make_edge_definitions(&root, edges);
 
     let typetag_root = utils::typetag_crate()?;
     let typetag_t = quote!(#[#typetag_root::serde]);
 
-    Ok(quote! {
-        #[automatically_derived]
-        impl #impl_generics #root::EntType for #name #ty_generics #where_clause {
-            fn type_str() -> &'static ::std::primitive::str {
-                #const_type_name
-            }
-        }
+    let type_str_t = utils::make_type_str(name);
 
+    Ok(quote! {
         #typetag_t
         #[automatically_derived]
         impl #impl_generics #root::Ent for #name #ty_generics #where_clause {
@@ -59,7 +52,7 @@ pub(crate) fn impl_ent(
             }
 
             fn r#type(&self) -> &::std::primitive::str {
-                #const_type_name
+                #type_str_t
             }
 
             fn created(&self) -> ::std::primitive::u64 {

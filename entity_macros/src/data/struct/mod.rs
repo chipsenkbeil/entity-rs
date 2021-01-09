@@ -10,10 +10,19 @@ pub struct Ent {
     pub vis: Visibility,
     pub generics: Generics,
     pub attr: EntAttr,
+
     pub id: Ident,
+    pub id_ty: Type,
+
     pub database: Ident,
+    pub database_ty: Type,
+
     pub created: Ident,
+    pub created_ty: Type,
+
     pub last_updated: Ident,
+    pub last_updated_ty: Type,
+
     pub fields: Vec<EntField>,
     pub edges: Vec<EntEdge>,
 }
@@ -100,9 +109,13 @@ impl FromDeriveInput for Ent {
             .expect("Ent only supports named structs");
 
         let mut id = None;
+        let mut id_ty = None;
         let mut database = None;
+        let mut database_ty = None;
         let mut created = None;
+        let mut created_ty = None;
         let mut last_updated = None;
+        let mut last_updated_ty = None;
         let mut fields = Vec::new();
         let mut edges = Vec::new();
 
@@ -117,6 +130,7 @@ impl FromDeriveInput for Ent {
 
             // darling should have already validated this for us
             let name = f.ident.as_ref().expect("Ent only supports named structs");
+            let ty = &f.ty;
 
             // A field cannot be more than one ent "thing"; it doesn't make sense for any field to be
             // both the created and last_updated values, even though they're the same data type. In the
@@ -135,6 +149,7 @@ impl FromDeriveInput for Ent {
                     );
                 } else {
                     id = Some(name);
+                    id_ty = Some(ty);
                 }
             }
 
@@ -148,6 +163,7 @@ impl FromDeriveInput for Ent {
                     );
                 } else {
                     database = Some(name);
+                    database_ty = Some(ty);
                 }
             }
 
@@ -161,6 +177,7 @@ impl FromDeriveInput for Ent {
                     );
                 } else {
                     created = Some(name);
+                    created_ty = Some(ty);
                 }
             }
 
@@ -174,6 +191,7 @@ impl FromDeriveInput for Ent {
                     );
                 } else {
                     last_updated = Some(name);
+                    last_updated_ty = Some(ty);
                 }
             }
 
@@ -250,9 +268,13 @@ impl FromDeriveInput for Ent {
             // These unwraps are safe because the previous is_none() checks should
             // have caused a return before reaching this point.
             id: id.cloned().unwrap(),
+            id_ty: id_ty.cloned().unwrap(),
             database: database.cloned().unwrap(),
+            database_ty: database_ty.cloned().unwrap(),
             created: created.cloned().unwrap(),
+            created_ty: created_ty.cloned().unwrap(),
             last_updated: last_updated.cloned().unwrap(),
+            last_updated_ty: last_updated_ty.cloned().unwrap(),
             fields,
             edges,
             attr: EntAttr {

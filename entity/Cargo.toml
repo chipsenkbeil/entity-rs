@@ -11,8 +11,6 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 
 [features]
-default = ["global", "inmemory_db", "macros"]
-
 full = ["global", "macros", "inmemory_db", "serde-1", "sled_db"]
 global = ["lazy_static"]
 inmemory_db = []

@@ -1,19 +1,14 @@
-use super::EntField;
+use crate::data::r#struct::Ent;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Generics, Ident};
+use syn::Path;
 
-/// Implements individual methods for each of the provided fields for
-/// the ent with the given name
-pub(crate) fn impl_typed_field_methods(
-    name: &Ident,
-    generics: &Generics,
-    fields: &[EntField],
-) -> TokenStream {
+pub fn do_derive_ent_typed_fields(_root: Path, ent: Ent) -> TokenStream {
+    let name = &ent.ident;
     let mut field_methods: Vec<TokenStream> = Vec::new();
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
 
-    for field in fields {
+    for field in ent.fields {
         let field_name = &field.name;
         let field_type = &field.ty;
 

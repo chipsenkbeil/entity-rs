@@ -1,8 +1,9 @@
 mod attribute;
+mod data;
 mod derive;
 mod utils;
 
-use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
+use syn::{parse_macro_input, AttributeArgs, DeriveInput};
 
 /// Derives the Ent trait and additional typed functionality
 ///
@@ -90,24 +91,52 @@ use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
 /// ```
 #[proc_macro_derive(Ent, attributes(ent))]
 pub fn derive_ent(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
+    utils::do_derive(derive::do_derive_ent)(input)
+}
 
-    let expanded = utils::entity_crate()
-        .and_then(|root| derive::do_derive_ent(root, input))
-        .unwrap_or_else(|x| x.write_errors());
+#[proc_macro_derive(EntDebug, attributes(ent))]
+pub fn derive_ent_debug(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_debug)(input)
+}
 
-    proc_macro::TokenStream::from(expanded)
+#[proc_macro_derive(EntType, attributes(ent))]
+pub fn derive_ent_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_type)(input)
+}
+
+#[proc_macro_derive(EntBuilder, attributes(ent))]
+pub fn derive_ent_builder(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_builder)(input)
+}
+
+#[proc_macro_derive(EntLoader, attributes(ent))]
+pub fn derive_ent_loader(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_loader)(input)
+}
+
+#[proc_macro_derive(EntQuery, attributes(ent))]
+pub fn derive_ent_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_query)(input)
+}
+
+#[proc_macro_derive(EntTypedFields, attributes(ent))]
+pub fn derive_ent_typed_fields(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_typed_fields)(input)
+}
+
+#[proc_macro_derive(EntTypedEdges, attributes(ent))]
+pub fn derive_ent_typed_edges(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_typed_edges)(input)
+}
+
+#[proc_macro_derive(EntWrapper, attributes(ent))]
+pub fn derive_ent_wrapper(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_ent_wrapper)(input)
 }
 
 #[proc_macro_derive(Value, attributes(value))]
 pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
-    let expanded = utils::entity_crate()
-        .and_then(|root| derive::do_derive_value(root, input))
-        .unwrap_or_else(|x| x.write_errors());
-
-    proc_macro::TokenStream::from(expanded)
+    utils::do_derive(derive::do_derive_value)(input)
 }
 
 /// Injects elements needed for an ent to be derived.
@@ -127,10 +156,10 @@ pub fn simple_ent(
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
-    let item = parse_macro_input!(input as Item);
+    let input = parse_macro_input!(input as DeriveInput);
 
     let expanded = utils::entity_crate()
-        .and_then(|root| attribute::do_simple_ent(root, args, item))
+        .and_then(|root| attribute::do_simple_ent(root, args, input))
         .unwrap_or_else(|x| x.write_errors());
 
     proc_macro::TokenStream::from(expanded)

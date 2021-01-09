@@ -84,6 +84,56 @@ pub trait EntWrapper: Sized {
     fn wrap_ent(ent: Box<dyn Ent>) -> Option<Self>;
 }
 
+/// Represents a builder interface for some ent, capable of building a new
+/// ent instance and also saving the new ent to the database at the same time
+pub trait EntBuilder {
+    /// The ent that will be created
+    type Output: Ent;
+
+    /// The ent-specific builder errors that can occur
+    type Error;
+
+    /// Consumes the builder and creates a new instance of the ent
+    fn finish(self) -> Result<Self::Output, Self::Error>;
+
+    /// Consumes the builder, creates a new instance of the ent, and saves
+    /// it to the database referenced by the ent
+    fn finish_and_commit(self) -> Result<DatabaseResult<Self::Output>, Self::Error>;
+}
+
+/// Represents an interface to load some ent from a database
+pub trait EntLoader {
+    /// The ent that will be loaded
+    type Output: Ent;
+
+    /// Retrieves the ent instance with the specified id from the
+    /// provided database, returning none if ent not found
+    fn load_from_db(db: WeakDatabaseRc, id: Id) -> DatabaseResult<Option<Self::Output>>;
+
+    /// Retrieves the ent instance with the specified id from the
+    /// provided database, converting none into a missing ent error
+    fn load_from_db_strict(db: WeakDatabaseRc, id: Id) -> DatabaseResult<Self::Output> {
+        let maybe_ent = Self::load_from_db(db, id)?;
+
+        match maybe_ent {
+            Some(ent) => Ok(ent),
+            None => Err(DatabaseError::MissingEnt { id }),
+        }
+    }
+
+    /// Retrieves the ent instance with the specified id from
+    /// the global database, returning none if ent not found
+    fn load(id: Id) -> DatabaseResult<Option<Self::Output>> {
+        Self::load_from_db(crate::global::db(), id)
+    }
+
+    /// Retrieves the ent instance with the specified id from
+    /// the global database, converting none into a missing ent error
+    fn load_strict(id: Id) -> DatabaseResult<Self::Output> {
+        Self::load_from_db_strict(crate::global::db(), id)
+    }
+}
+
 /// Represents the interface for a generic entity whose fields and edges
 /// can be accessed by str name regardless of compile-time characteristics
 ///

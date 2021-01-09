@@ -8,7 +8,7 @@ fn implements_ent_wrapper_such_that_all_variant_types_can_be_wrapped() {
     #[simple_ent]
     struct TestEnt2 {}
 
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntWrapper)]
     enum TestEntEnum {
         One(TestEnt1),
         Two(TestEnt2),
@@ -31,7 +31,7 @@ fn implements_ent_wrapper_such_that_type_not_in_variants_cannot_be_wrapped() {
     #[simple_ent]
     struct TestEnt2 {}
 
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntWrapper)]
     enum TestEntEnum {
         Variant(TestEnt1),
     }

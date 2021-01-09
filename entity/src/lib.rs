@@ -10,6 +10,12 @@ pub use ent::*;
 #[cfg(feature = "macros")]
 pub use entity_macros::*;
 
+/// Represents a collection of core traits that should be imported to enable
+/// methods on a variety of types such as [`Ent`] and [`EntBuilder`]
+pub mod prelude {
+    pub use super::{Database, Ent, EntBuilder, EntLoader, EntQuery, EntType};
+}
+
 /// Vendor module to re-expose relevant libraries
 pub mod vendor {
     #[cfg(feature = "sled_db")]

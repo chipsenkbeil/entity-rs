@@ -1,8 +1,8 @@
 use derivative::Derivative;
-use entity::{Database, Ent, Id, InmemoryDatabase, TypedPredicate as P, Value, WeakDatabaseRc};
+use entity::{TypedPredicate as P, *};
 use std::convert::TryFrom;
 
-#[derive(Clone, Derivative, Ent)]
+#[derive(Clone, Derivative, Ent, EntType, EntQuery)]
 #[derivative(Debug)]
 struct TestEnt1 {
     #[ent(id)]
@@ -25,7 +25,7 @@ struct TestEnt1 {
     other: Id,
 }
 
-#[derive(Clone, Derivative, Ent)]
+#[derive(Clone, Derivative, Ent, EntType, EntQuery)]
 #[derivative(Debug)]
 struct TestEnt2 {
     #[ent(id)]
@@ -54,7 +54,7 @@ struct TestEnt2 {
     dups: Vec<Id>,
 }
 
-#[derive(Clone, Debug, Ent)]
+#[derive(Clone, Debug, Ent, EntQuery, EntType, EntWrapper)]
 enum TestEnt {
     One(TestEnt1),
     Two(TestEnt2),
@@ -226,7 +226,7 @@ fn produces_method_to_filter_by_field() {
 
 #[test]
 fn supports_generic_fields() {
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntQuery, EntType)]
     struct GenericTestEnt<T>
     where
         T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
@@ -247,7 +247,7 @@ fn supports_generic_fields() {
         value: T,
     }
 
-    #[derive(Clone, Ent)]
+    #[derive(Clone, Ent, EntQuery, EntType, EntWrapper)]
     enum GenericTestEntEnum<T>
     where
         T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,

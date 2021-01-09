@@ -1,9 +1,8 @@
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 use proc_macro_crate::crate_name;
-use std::collections::HashMap;
 use syn::{
-    parse_quote, Attribute, Data, DeriveInput, Expr, Fields, FieldsNamed, GenericArgument, Ident,
-    Lit, Meta, NestedMeta, Path, PathArguments, PathSegment, Type,
+    parse_macro_input, parse_quote, DeriveInput, Expr, GenericArgument, Ident, Macro, Path,
+    PathArguments, PathSegment, Type,
 };
 
 /// Produces a token stream in the form of `::entity` or renamed version
@@ -28,104 +27,29 @@ pub fn typetag_crate() -> darling::Result<Path> {
     Ok(parse_quote!(#root::vendor::macros::typetag))
 }
 
-/// Returns true if the attribute is in the form of ent(...) where
-/// the interior is checked for an identifier of the given str
-pub fn has_ent_attr(attrs: &[Attribute], ident_str: &str) -> bool {
-    attrs
-        .iter()
-        .filter_map(|a| a.parse_meta().ok())
-        .any(|m| match m {
-            Meta::List(x) if x.path.is_ident("ent") => x.nested.iter().any(|m| match m {
-                NestedMeta::Meta(x) => match x {
-                    Meta::Path(x) => x.is_ident(ident_str),
-                    _ => false,
-                },
-                _ => false,
-            }),
-            _ => false,
-        })
+/// Main helper called within each derive macro
+pub fn do_derive(
+    f: fn(Path, DeriveInput) -> darling::Result<TokenStream>,
+) -> impl Fn(proc_macro::TokenStream) -> proc_macro::TokenStream {
+    move |input: proc_macro::TokenStream| {
+        let input = parse_macro_input!(input as DeriveInput);
+
+        let expanded = entity_crate()
+            .and_then(|root| f(root, input))
+            .unwrap_or_else(|x| x.write_errors());
+
+        proc_macro::TokenStream::from(expanded)
+    }
 }
 
-/// Returns a map of inner attributes for <ROOT>(...) where
-/// the the map's keys are the identifiers as strings and the values are
-/// true/false for whether the attribute was <NAME> or no_<NAME>
-pub fn attrs_into_attr_map(attrs: &[Attribute], root: &str) -> Option<HashMap<String, bool>> {
-    attrs
-        .iter()
-        .filter_map(|a| a.parse_meta().ok())
-        .find_map(|m| match m {
-            Meta::List(x) if x.path.is_ident(root) => {
-                Some(nested_meta_iter_into_attr_map(x.nested.iter()))
-            }
-            Meta::Path(x) if x.is_ident(root) => Some(HashMap::new()),
-            Meta::NameValue(x) if x.path.is_ident(root) => Some(HashMap::new()),
-            _ => None,
-        })
-}
-
-pub fn nested_meta_iter_into_attr_map<'a, I: Iterator<Item = &'a NestedMeta>>(
-    it: I,
-) -> HashMap<String, bool> {
-    it.filter_map(|m| match m {
-        NestedMeta::Meta(x) => match x {
-            Meta::Path(x) => x.segments.last().map(|s| s.ident.to_string()).map(|s| {
-                match s.strip_prefix("no_") {
-                    Some(s) => (s.to_string(), false),
-                    None => (s, true),
-                }
-            }),
-            _ => None,
-        },
-        _ => None,
-    })
-    .collect()
-}
-
-pub fn nested_meta_iter_into_named_attr_map<'a, I: Iterator<Item = &'a NestedMeta>>(
-    it: I,
-) -> HashMap<String, Option<String>> {
-    it.filter_map(|m| match m {
-        NestedMeta::Meta(x) => match x {
-            Meta::Path(x) => x
-                .segments
-                .last()
-                .map(|s| s.ident.to_string())
-                .map(|s| (s, None)),
-            Meta::NameValue(x) => x
-                .path
-                .segments
-                .last()
-                .map(|s| s.ident.to_string())
-                .map(|s| {
-                    (
-                        s,
-                        Some(match &x.lit {
-                            Lit::Str(x) => x.value(),
-                            Lit::ByteStr(x) => String::from_utf8_lossy(&x.value()).to_string(),
-                            Lit::Byte(x) => x.value().to_string(),
-                            Lit::Char(x) => x.value().to_string(),
-                            Lit::Int(x) => x.base10_digits().to_string(),
-                            Lit::Float(x) => x.base10_digits().to_string(),
-                            Lit::Bool(x) => x.value.to_string(),
-                            Lit::Verbatim(x) => x.to_string(),
-                        }),
-                    )
-                }),
-            _ => None,
-        },
-        _ => None,
-    })
-    .collect()
-}
-
-/// Extracts and returns the named fields from the input, if possible
-pub fn get_named_fields(input: &DeriveInput) -> darling::Result<&FieldsNamed> {
-    match &input.data {
-        Data::Struct(x) => match &x.fields {
-            Fields::Named(x) => Ok(x),
-            _ => Err(darling::Error::custom("Expected named fields").with_span(input)),
-        },
-        _ => Err(darling::Error::custom("Expected struct").with_span(input)),
+/// Generates a macro call in form of `concat!(module_path!(), "::", stringify!(name))`
+pub fn make_type_str(name: &Ident) -> Macro {
+    parse_quote! {
+        ::std::concat!(
+            ::std::module_path!(),
+            "::",
+            ::std::stringify!(#name),
+        )
     }
 }
 

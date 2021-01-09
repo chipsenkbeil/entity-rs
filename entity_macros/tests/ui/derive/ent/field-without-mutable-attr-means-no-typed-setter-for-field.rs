@@ -1,6 +1,6 @@
-use entity::{Ent, Id, WeakDatabaseRc};
+use entity::{Ent, EntTypedFields, Id, WeakDatabaseRc};
 
-#[derive(Clone, Ent)]
+#[derive(Clone, Ent, EntTypedFields)]
 struct TestEnt {
     #[ent(id)]
     id: Id,

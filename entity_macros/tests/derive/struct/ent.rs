@@ -116,7 +116,6 @@ fn r#type_should_return_a_generated_type_using_module_path_and_ent_name() {
         last_updated: 0,
     };
 
-    assert_eq!(TEST_ENT_TYPE, concat!(module_path!(), "::", "TestEnt"));
     assert_eq!(ent.r#type(), concat!(module_path!(), "::", "TestEnt"));
 }
 
