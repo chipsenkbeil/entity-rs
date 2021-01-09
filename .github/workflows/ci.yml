@@ -35,7 +35,6 @@ jobs:
       - name: Check Cargo availability
         run: cargo --version
       - run: cargo test --verbose --workspace
-      - run: cargo test --verbose --manifest-path entity/Cargo.toml --no-default-features
       - run: cargo test --verbose -p entity --all-features
 
   examples:
@@ -72,12 +71,6 @@ jobs:
           name: clippy --workspace --all-targets --verbose
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --workspace --all-targets --verbose
-      - name: Run clippy --manifest-path entity/Cargo.toml --all-targets --no-default-features
-        uses: actions-rs/clippy-check@v1
-        with:
-          name: clippy --manifest-path entity/Cargo.toml --all-targets --no-default-features
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --manifest-path entity/Cargo.toml --all-targets --no-default-features
       - name: Run clippy -p entity --all-targets --all-features
         uses: actions-rs/clippy-check@v1
         with:

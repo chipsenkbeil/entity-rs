@@ -191,6 +191,7 @@ pub fn do_derive_ent_builder(root: Path, ent: Ent) -> darling::Result<TokenStrea
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_id_field<'a, 'b>(
     root: &'a Path,
     name: &'b Ident,
@@ -213,6 +214,7 @@ fn push_id_field<'a, 'b>(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_database_field<'a, 'b>(
     root: &'a Path,
     name: &'b Ident,
@@ -235,6 +237,7 @@ fn push_database_field<'a, 'b>(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_timestamp_field<'a, 'b>(
     _root: &'a Path,
     name: &'b Ident,
