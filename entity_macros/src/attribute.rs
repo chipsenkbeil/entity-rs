@@ -4,13 +4,14 @@ use darling::{
     util::{Flag, Ignored, PathList},
     FromDeriveInput, FromField, FromMeta,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{
     parse::{self, Parse, ParseStream},
     parse_quote,
     spanned::Spanned,
-    Attribute, AttributeArgs, DeriveInput, Field, Generics, Ident, Path, Type, Visibility,
+    Attribute, AttributeArgs, DeriveInput, Field, Generics, Ident, LitStr, Meta, NestedMeta, Path,
+    Type, Visibility,
 };
 
 const DEFAULT_ID_NAME: &str = "id";
@@ -228,6 +229,10 @@ pub fn do_simple_ent(
             match &mut input.data {
                 syn::Data::Struct(x) => match &mut x.fields {
                     syn::Fields::Named(x) => {
+                        for f in x.named.iter_mut() {
+                            modify_field_if_edge(&root, f);
+                        }
+
                         if !fields.iter().any(|f| f.id.is_some()) {
                             x.named.push(make_field(
                                 ent_args.id_ident(),
@@ -289,6 +294,71 @@ fn make_field(name: Ident, ty: Type, attrs: TokenStream) -> Field {
     };
 
     named_field.field
+}
+
+/// Modify any field marked as an edge without a type
+/// as having the type equal to the current field type
+/// and replace the field type with id
+///
+/// e.g.
+///
+/// #[ent(edge)]             --> #[ent(edge(type = "MyEnt"))]
+/// my_edge: MyEnt           --> my_edge: Id,
+///
+/// #[ent(edge)]             --> #[ent(edge(type = "MyEnt"))]
+/// my_edge: Option<MyEnt>   --> my_edge: Option<Id>,
+///
+/// #[ent(edge)]             --> #[ent(edge(type = "MyEnt"))]
+/// my_edge: Vec<MyEnt>      --> my_edge: Vec<Id>,
+fn modify_field_if_edge(root: &Path, field: &mut Field) {
+    if let Some(ent_attr) = field.attrs.iter_mut().find(|a| a.path.is_ident("ent")) {
+        if let Ok(Meta::List(x)) = ent_attr.parse_meta() {
+            let (mut edge, not_edge): (Vec<&NestedMeta>, Vec<&NestedMeta>) =
+                x.nested.iter().partition(|&nm| match nm {
+                    NestedMeta::Meta(x) => x.path().is_ident("edge"),
+                    _ => false,
+                });
+
+            if edge.len() == 1 {
+                if let NestedMeta::Meta(x) = edge.pop().unwrap() {
+                    match x {
+                        Meta::Path(_) => {
+                            let (ent_ty, ty) =
+                                utils::swap_inner_type(&field.ty, parse_quote!(#root::Id));
+                            let lit_ty =
+                                LitStr::new(&format!("{}", quote!(#ent_ty)), Span::mixed_site());
+                            field.ty = ty;
+                            ent_attr.tokens = quote! {
+                                (edge(type = #lit_ty), #(#not_edge),*)
+                            };
+                        }
+                        Meta::List(x) => {
+                            let (r#type, tail): (Vec<&NestedMeta>, Vec<&NestedMeta>) =
+                                x.nested.iter().partition(|&nm| match nm {
+                                    NestedMeta::Meta(Meta::NameValue(x)) => x.path.is_ident("type"),
+                                    _ => false,
+                                });
+
+                            // We have ent(edge(...)) without type = "..."
+                            if r#type.is_empty() {
+                                let (ent_ty, ty) =
+                                    utils::swap_inner_type(&field.ty, parse_quote!(#root::Id));
+                                let lit_ty = LitStr::new(
+                                    &format!("{}", quote!(#ent_ty)),
+                                    Span::mixed_site(),
+                                );
+                                field.ty = ty;
+                                ent_attr.tokens = quote! {
+                                    (edge(type = #lit_ty, #(#tail),*), #(#not_edge),*)
+                                };
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Workaround to parse a field using parse_quote! as described here:

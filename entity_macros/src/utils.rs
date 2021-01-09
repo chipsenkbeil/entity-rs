@@ -99,6 +99,25 @@ pub fn type_to_ident(input: &Type) -> Option<&Ident> {
     }
 }
 
+/// Swaps the inner type to the specified new inner value, returning a tuple
+/// of (old_inner, new_full)
+///
+/// Option<T>, U -> (T, Option<U>)
+/// Vec<T>, U -> (T, Vec<U>)
+/// T, U -> (T, U)
+pub fn swap_inner_type(input: &Type, new_inner: Type) -> (Type, Type) {
+    if let Ok(old_inner) = strip_option(input) {
+        (
+            old_inner.clone(),
+            parse_quote!(::std::option::Option<#new_inner>),
+        )
+    } else if let Ok(old_inner) = strip_vec(input) {
+        (old_inner.clone(), parse_quote!(::std::vec::Vec<#new_inner>))
+    } else {
+        (input.clone(), new_inner)
+    }
+}
+
 /// If given a type of Option<T>, will strip the outer type and return
 /// a reference to type of T, returning an error if anything else
 pub fn strip_option(input: &Type) -> darling::Result<&Type> {

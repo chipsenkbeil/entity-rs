@@ -5,8 +5,8 @@ struct User {
     name: String,
     age: u8,
 
-    #[ent(edge(type = "Address"))]
-    address: Id,
+    #[ent(edge)]
+    address: Address,
 }
 
 #[simple_ent]

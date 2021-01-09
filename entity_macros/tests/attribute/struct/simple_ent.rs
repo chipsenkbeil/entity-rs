@@ -271,3 +271,37 @@ fn supports_renaming_ent_fields() {
     assert_eq!(ent.my_created, 456);
     assert_eq!(ent.my_last_updated, 789);
 }
+
+#[test]
+fn supports_using_struct_field_type_for_ent_type() {
+    #[simple_ent]
+    struct SimpleEnt {
+        #[ent(edge)]
+        maybe_edge: Option<SimpleEnt>,
+
+        #[ent(edge(policy = "shallow"))]
+        edge: SimpleEnt,
+
+        #[ent(edge)]
+        many_edges: Vec<SimpleEnt>,
+
+        #[ent(edge(type = "SimpleEnt"))]
+        explicit_edge: Id,
+    }
+
+    let ent = SimpleEnt {
+        id: 0,
+        database: WeakDatabaseRc::new(),
+        created: 0,
+        last_updated: 0,
+        maybe_edge: Some(123),
+        edge: 456,
+        many_edges: vec![1, 2, 3, 4],
+        explicit_edge: 789,
+    };
+
+    assert_eq!(ent.maybe_edge, Some(123));
+    assert_eq!(ent.edge, 456);
+    assert_eq!(ent.many_edges, vec![1, 2, 3, 4]);
+    assert_eq!(ent.explicit_edge, 789);
+}
