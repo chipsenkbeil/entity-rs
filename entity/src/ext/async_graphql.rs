@@ -622,6 +622,29 @@ mod tests {
                     })
                 );
             }
+
+            #[test]
+            fn supports_filtering() {
+                let schema = Schema::build(TestQuery, EmptyMutation, EmptySubscription)
+                    .data(DatabaseRc::new(Box::new(new_test_database())))
+                    .finish();
+                let input = r#"
+                    { 
+                        ent(filter: { id: { equals: 1 } }) { 
+                            id 
+                        } 
+                    }
+                "#;
+                let response = futures::executor::block_on(schema.execute(input.trim()));
+                assert_eq!(
+                    response.data,
+                    value!({
+                        "ent": [
+                            { "id": 1 },
+                        ],
+                    })
+                );
+            }
         };
     }
 
