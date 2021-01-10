@@ -124,7 +124,7 @@ impl EdgeValue {
 
 /// Represents a wrapper around an ent query [`Filter`] that exposes a GraphQL API.
 #[derive(Clone, InputObject)]
-pub struct GqlFilter {
+pub struct GqlEntFilter {
     /// Filter by ent's id
     id: Option<GqlPredicate_Id>,
 
@@ -139,14 +139,23 @@ pub struct GqlFilter {
     last_updated: Option<GqlPredicate_u64>,
 
     /// Filter by ent's fields
-    fields: Option<Vec<GqlFieldFilter>>,
+    fields: Option<Vec<GqlEntFieldFilter>>,
 
     /// Filter by ent's edges
-    edges: Option<Vec<GqlEdgeFilter>>,
+    edges: Option<Vec<GqlEntEdgeFilter>>,
 }
 
-impl From<GqlFilter> for Query {
-    fn from(x: GqlFilter) -> Self {
+impl From<GqlEntFilter> for Query {
+    /// Converts [`GqlEntFilter`] to [`Query`] by chaining together all conditions
+    /// contained within the GraphQL filter in this order:
+    ///
+    /// 1. id
+    /// 2. type
+    /// 3. created
+    /// 4. last_updated
+    /// 5. fields
+    /// 6. edges
+    fn from(x: GqlEntFilter) -> Self {
         let mut query = Query::default();
 
         if let Some(pred) = x.id {
@@ -185,15 +194,15 @@ impl From<GqlFilter> for Query {
 }
 
 #[derive(Clone, InputObject)]
-pub struct GqlFieldFilter {
+pub struct GqlEntFieldFilter {
     name: String,
     predicate: GqlPredicate_Value,
 }
 
 #[derive(Clone, InputObject)]
-pub struct GqlEdgeFilter {
+pub struct GqlEntEdgeFilter {
     name: String,
-    filter: Box<GqlFilter>,
+    filter: Box<GqlEntFilter>,
 }
 
 macro_rules! impl_pred {
@@ -428,5 +437,208 @@ impl ScalarType for Value {
             },
             Self::Text(x) => AsyncGraphqlValue::String(x.to_string()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![cfg_attr(
+        not(any(feature = "inmemory_db", feature = "sled_db")),
+        allow(dead_code, unused_imports, unused_macros)
+    )]
+
+    #[cfg(feature = "inmemory_db")]
+    pub use crate::InmemoryDatabase;
+
+    #[cfg(feature = "sled_db")]
+    pub use crate::SledDatabase;
+
+    use super::*;
+    use crate::{Database, DatabaseRc, UntypedEnt};
+    use async_graphql::{value, Context, EmptyMutation, EmptySubscription, Schema};
+
+    macro_rules! impl_tests {
+        ($db_type:ty, $new_db:expr) => {
+            /// Creates a new database with some test entries used throughout
+            ///
+            /// IDs: 1-3 ~ are type1 with no fields or edges
+            /// IDs: 4-6 ~ are type2 with value fields and no edges
+            /// IDs: 7-9 ~ are type3 with collection fields and no edges
+            /// IDs: 10-12 ~ are type4 with edges to 1-9 and no fields
+            fn new_test_database() -> $db_type {
+                let db = $new_db;
+
+                // 1-3 have no fields or edges
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(1, vec![], vec![])))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(2, vec![], vec![])))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(3, vec![], vec![])))
+                    .unwrap();
+
+                // 4-6 have value fields only
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        4,
+                        vec![Field::new("a", 1), Field::new("b", 2)],
+                        vec![],
+                    )))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        5,
+                        vec![Field::new("a", 3), Field::new("b", 4)],
+                        vec![],
+                    )))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        6,
+                        vec![Field::new("a", 5), Field::new("b", 6)],
+                        vec![],
+                    )))
+                    .unwrap();
+
+                // 7-9 have collection fields only
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        7,
+                        vec![Field::new(
+                            "f",
+                            Value::from(
+                                vec![(String::from("a"), 3), (String::from("b"), 5)]
+                                    .into_iter()
+                                    .collect::<HashMap<String, u8>>(),
+                            ),
+                        )],
+                        vec![],
+                    )))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        8,
+                        vec![Field::new("f", vec![1, 2])],
+                        vec![],
+                    )))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        9,
+                        vec![Field::new(
+                            "f",
+                            Value::from(
+                                vec![
+                                    (String::from("a"), Value::from(vec![1, 2])),
+                                    (String::from("b"), Value::from(vec![3, 4])),
+                                ]
+                                .into_iter()
+                                .collect::<HashMap<String, Value>>(),
+                            ),
+                        )],
+                        vec![],
+                    )))
+                    .unwrap();
+
+                // 10-12 have edges only
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        10,
+                        vec![],
+                        vec![
+                            Edge::new("a", 1),
+                            Edge::new("b", vec![3, 4, 5]),
+                            Edge::new("c", None),
+                        ],
+                    )))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        11,
+                        vec![],
+                        vec![Edge::new("a", 2), Edge::new("b", vec![1, 2, 3, 4, 5, 6])],
+                    )))
+                    .unwrap();
+                let _ = db
+                    .insert(Box::from(UntypedEnt::from_collections(
+                        12,
+                        vec![],
+                        vec![
+                            Edge::new("a", 3),
+                            Edge::new("b", vec![]),
+                            Edge::new("c", Some(8)),
+                        ],
+                    )))
+                    .unwrap();
+
+                db
+            }
+
+            struct TestQuery;
+
+            #[Object]
+            impl TestQuery {
+                async fn ent<'ctx>(
+                    &self,
+                    ctx: &'ctx Context<'_>,
+                    id: Option<Id>,
+                    filter: Option<GqlEntFilter>,
+                ) -> async_graphql::Result<Vec<Box<dyn Ent>>> {
+                    let db = ctx.data::<DatabaseRc>()?;
+
+                    if let Some(id) = id {
+                        db.get_all(vec![id])
+                            .map_err(|x| async_graphql::Error::new(x.to_string()))
+                    } else if let Some(filter) = filter {
+                        db.find_all(filter.into())
+                            .map_err(|x| async_graphql::Error::new(x.to_string()))
+                    } else {
+                        Err(async_graphql::Error::new("Must provide one argument"))
+                    }
+                }
+            }
+
+            #[test]
+            fn supports_ent_trait_object_as_output_object() {
+                let schema = Schema::build(TestQuery, EmptyMutation, EmptySubscription)
+                    .data(DatabaseRc::new(Box::new(new_test_database())))
+                    .finish();
+                let input = r#"
+                    { 
+                        ent(id: 1) { 
+                            id 
+                        } 
+                    }
+                "#;
+                let response = futures::executor::block_on(schema.execute(input.trim()));
+                assert_eq!(
+                    response.data,
+                    value!({
+                        "ent": [
+                            { "id": 1 },
+                        ],
+                    })
+                );
+            }
+        };
+    }
+
+    #[cfg(feature = "inmemory_db")]
+    mod inmemory {
+        use super::*;
+
+        impl_tests!(InmemoryDatabase, InmemoryDatabase::default());
+    }
+
+    #[cfg(feature = "sled_db")]
+    mod sled_db {
+        use super::*;
+
+        impl_tests!(
+            SledDatabase,
+            SledDatabase::new(sled::Config::new().temporary(true).open().unwrap())
+        );
     }
 }

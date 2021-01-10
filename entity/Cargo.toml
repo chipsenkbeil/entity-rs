@@ -34,3 +34,6 @@ serde = { version = "1.0.117", features = ["derive"], optional = true }
 sled = { version = "0.34.6", optional = true }
 typetag = { version = "0.1.6", optional = true }
 entity_macros = { version = "0.1.0", path = "../entity_macros", optional = true }
+
+[dev-dependencies]
+futures = "0.3.9"
