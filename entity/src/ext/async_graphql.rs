@@ -15,50 +15,47 @@ use std::collections::HashMap;
 impl dyn Ent {
     #[graphql(name = "id")]
     async fn gql_id(&self) -> Id {
-        self.0.id()
+        self.id()
     }
 
     #[graphql(name = "type")]
     async fn gql_type(&self) -> &str {
-        self.0.r#type()
+        self.r#type()
     }
 
     #[graphql(name = "created")]
     async fn gql_created(&self) -> u64 {
-        self.0.created()
+        self.created()
     }
 
     #[graphql(name = "last_updated")]
     async fn gql_last_updated(&self) -> u64 {
-        self.0.last_updated()
+        self.last_updated()
     }
 
     #[graphql(name = "field")]
     async fn gql_field(&self, name: String) -> Option<Value> {
-        self.0.field(&name)
+        self.field(&name)
     }
 
     #[graphql(name = "fields")]
     async fn gql_fields(&self) -> Vec<Field> {
-        self.0.fields()
+        self.fields()
     }
 
     #[graphql(name = "edge")]
     async fn gql_edge(&self, name: String) -> Option<EdgeValue> {
-        self.0.edge(&name)
+        self.edge(&name)
     }
 
     #[graphql(name = "edges")]
     async fn gql_edges(&self) -> Vec<Edge> {
-        self.0.edges()
+        self.edges()
     }
 
     #[graphql(name = "load_edge")]
-    async fn gql_load_edge(&self, name: String) -> async_graphql::Result<Vec<GqlEnt>> {
-        self.0
-            .load_edge(&name)
-            .map(|ents| ents.into_iter().map(GqlEnt::from).collect())
-            .map_err(|x| Error::new(x.to_string()))
+    async fn gql_load_edge(&self, name: String) -> async_graphql::Result<Vec<Box<dyn Ent>>> {
+        self.load_edge(&name).map_err(|x| Error::new(x.to_string()))
     }
 }
 
