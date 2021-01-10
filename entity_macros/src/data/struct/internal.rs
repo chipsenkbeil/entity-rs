@@ -1,7 +1,7 @@
 use super::EntEdgeDeletionPolicy;
 use darling::{
     ast,
-    util::{Override, SpannedValue},
+    util::{Flag, Override, SpannedValue},
     FromDeriveInput, FromField, FromMeta,
 };
 use syn::{Generics, Ident, Type, Visibility};
@@ -14,16 +14,6 @@ pub struct Ent {
     pub vis: Visibility,
     pub generics: Generics,
     pub data: ast::Data<(), EntField>,
-    #[darling(default)]
-    pub no_builder: bool,
-    #[darling(default)]
-    pub no_query: bool,
-    #[darling(default)]
-    pub no_typed_methods: bool,
-    #[darling(default)]
-    pub typetag: bool,
-    #[darling(default)]
-    pub strict: bool,
 }
 
 /// Information for a field of a struct deriving ent
@@ -48,6 +38,8 @@ pub struct EntField {
     pub field_attr: Option<Override<FieldAttr>>,
     #[darling(default, rename = "edge")]
     pub edge_attr: Option<EdgeAttr>,
+    #[darling(default, rename = "ext")]
+    pub ext_attr: Option<ExtAttr>,
 }
 
 impl EntField {
@@ -115,8 +107,10 @@ impl EntField {
 #[derive(Debug, Clone, Default, FromMeta)]
 #[darling(default)]
 pub struct FieldAttr {
-    pub indexed: bool,
-    pub mutable: bool,
+    #[darling(default)]
+    pub indexed: Flag,
+    #[darling(default)]
+    pub mutable: Flag,
 }
 
 /// Information for an edge attribute on a field of a struct deriving ent
@@ -128,4 +122,11 @@ pub struct EdgeAttr {
     pub wrap: bool,
     #[darling(default, rename = "policy")]
     pub deletion_policy: EntEdgeDeletionPolicy,
+}
+
+/// Information for extension settings tied to a field or edge
+#[derive(Debug, Clone, FromMeta)]
+pub struct ExtAttr {
+    #[darling(default)]
+    pub async_graphql_filter_untyped: Flag,
 }

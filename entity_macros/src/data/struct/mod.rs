@@ -9,7 +9,6 @@ pub struct Ent {
     pub ident: Ident,
     pub vis: Visibility,
     pub generics: Generics,
-    pub attr: EntAttr,
 
     pub id: Ident,
     pub id_ty: Type,
@@ -27,28 +26,10 @@ pub struct Ent {
     pub edges: Vec<EntEdge>,
 }
 
-/// Struct type-level attributes for an ent
-#[derive(Debug)]
-pub struct EntAttr {
-    /// Indicates not to generate a builder helper struct
-    pub no_builder: bool,
-
-    /// Indicates not to generate a typed query struct
-    pub no_query: bool,
-
-    /// Indicates not to generate typed methods to access and
-    /// mutate ent fields
-    pub no_typed_methods: bool,
-
-    /// Indicates to include the typetag attribute on the ent trait impl,
-    /// required only when Serialize/Deserialize from serde is being
-    /// implemented for the given type
-    pub typetag: bool,
-
-    /// Indicates that struct fields must be explicitly labeled
-    /// as a an ent field or edge, rather than defaulting to ent field when
-    /// unlabeled
-    pub strict: bool,
+/// Extension information
+#[derive(Debug, Default)]
+pub struct EntExtAttr {
+    pub async_graphql_filter_untyped: bool,
 }
 
 /// Information about a specific field for an ent
@@ -65,6 +46,8 @@ pub struct EntField {
     /// able to be mutated and that a typed method for mutation should
     /// be included when generating typed methods
     pub mutable: bool,
+
+    pub ext: EntExtAttr,
 }
 
 /// Information about a specific edge for an ent
@@ -76,6 +59,7 @@ pub struct EntEdge {
     pub wrap: bool,
     pub kind: EntEdgeKind,
     pub deletion_policy: EntEdgeDeletionPolicy,
+    pub ext: EntExtAttr,
 }
 
 /// Information about an an edge's deletion policy
@@ -201,8 +185,15 @@ impl FromDeriveInput for Ent {
                 fields.push(EntField {
                     name: name.clone(),
                     ty: f.ty.clone(),
-                    indexed: attr.indexed,
-                    mutable: attr.mutable,
+                    indexed: attr.indexed.is_some(),
+                    mutable: attr.mutable.is_some(),
+                    ext: EntExtAttr {
+                        async_graphql_filter_untyped: f
+                            .ext_attr
+                            .as_ref()
+                            .map(|ext| ext.async_graphql_filter_untyped.is_some())
+                            .unwrap_or_default(),
+                    },
                 });
             }
 
@@ -224,19 +215,25 @@ impl FromDeriveInput for Ent {
                     wrap: attr.wrap,
                     kind,
                     deletion_policy: attr.deletion_policy,
+                    ext: EntExtAttr {
+                        async_graphql_filter_untyped: f
+                            .ext_attr
+                            .as_ref()
+                            .map(|ext| ext.async_graphql_filter_untyped.is_some())
+                            .unwrap_or_default(),
+                    },
                 });
             }
 
             if acted_on_field {
                 continue;
-            } else if ent.strict {
-                errors.push(darling::Error::custom("Missing ent(...) attribute").with_span(&name));
             } else {
                 fields.push(EntField {
                     name: name.clone(),
                     ty: f.ty.clone(),
                     indexed: false,
                     mutable: false,
+                    ext: Default::default(),
                 });
             }
         }
@@ -277,13 +274,6 @@ impl FromDeriveInput for Ent {
             last_updated_ty: last_updated_ty.cloned().unwrap(),
             fields,
             edges,
-            attr: EntAttr {
-                no_builder: ent.no_builder,
-                no_query: ent.no_query,
-                no_typed_methods: ent.no_typed_methods,
-                typetag: ent.typetag,
-                strict: ent.strict,
-            },
         })
     }
 }

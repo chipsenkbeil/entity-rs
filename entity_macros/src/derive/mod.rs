@@ -1,6 +1,8 @@
 mod ent;
 mod value;
 
+pub use ent::do_derive_async_graphql_ent;
+pub use ent::do_derive_async_graphql_ent_filter;
 pub use ent::do_derive_ent;
 pub use ent::do_derive_ent_builder;
 pub use ent::do_derive_ent_debug;

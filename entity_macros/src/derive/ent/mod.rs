@@ -103,3 +103,27 @@ pub fn do_derive_ent_typed_fields(root: Path, input: DeriveInput) -> darling::Re
         Data::Union(_) => Err(darling::Error::custom("Unions are not supported").with_span(&input)),
     }
 }
+
+pub fn do_derive_async_graphql_ent(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
+    match &input.data {
+        Data::Struct(_) => {
+            r#struct::do_derive_async_graphql_ent(root, StructEnt::from_derive_input(&input)?)
+        }
+        Data::Enum(_) => Err(darling::Error::custom("Enums are not supported").with_span(&input)),
+        Data::Union(_) => Err(darling::Error::custom("Unions are not supported").with_span(&input)),
+    }
+}
+
+pub fn do_derive_async_graphql_ent_filter(
+    root: Path,
+    input: DeriveInput,
+) -> darling::Result<TokenStream> {
+    match &input.data {
+        Data::Struct(_) => r#struct::do_derive_async_graphql_ent_filter(
+            root,
+            StructEnt::from_derive_input(&input)?,
+        ),
+        Data::Enum(_) => Err(darling::Error::custom("Enums are not supported").with_span(&input)),
+        Data::Union(_) => Err(darling::Error::custom("Unions are not supported").with_span(&input)),
+    }
+}
