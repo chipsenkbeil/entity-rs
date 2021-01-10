@@ -1,6 +1,7 @@
 mod alloc;
 mod database;
 mod ent;
+pub mod ext;
 pub mod global;
 
 pub use alloc::{Id, IdAllocator, EPHEMERAL_ID};

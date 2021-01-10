@@ -172,6 +172,7 @@ impl Field {
 /// Represents an attribute associated with a field for an ent
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "async-graphql", derive(async_graphql::Enum))]
 pub enum FieldAttribute {
     /// Indicates that this field is indexed for faster lookup
     Indexed,

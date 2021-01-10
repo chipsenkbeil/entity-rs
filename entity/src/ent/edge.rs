@@ -200,6 +200,7 @@ impl Edge {
 /// Represents the policy to apply to an edge when its ent is deleted
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "async-graphql", derive(async_graphql::Enum))]
 pub enum EdgeDeletionPolicy {
     /// When this ent instance is deleted, nothing else will be done
     Nothing,
@@ -228,6 +229,10 @@ impl Default for EdgeDeletionPolicy {
 #[cfg_attr(
     feature = "serde-1",
     strum_discriminants(derive(serde::Serialize, serde::Deserialize))
+)]
+#[cfg_attr(
+    feature = "async-graphql",
+    strum_discriminants(derive(async_graphql::Enum))
 )]
 pub enum EdgeValue {
     /// Edge can potentially have one outward connection
@@ -262,7 +267,7 @@ impl EdgeValue {
     /// use entity::EdgeValue;
     ///
     /// let v = EdgeValue::MaybeOne(None);
-    /// assert_eq!(v.to_ids(), vec![]);
+    /// assert!(v.to_ids().is_empty());
     ///
     /// let v = EdgeValue::MaybeOne(Some(999));
     /// assert_eq!(v.to_ids(), vec![999]);
