@@ -1,7 +1,7 @@
 ///! Requires async-graphql 2.4.6+
 use crate::{
-    Edge, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent, Field, Id, Number, Predicate,
-    PrimitiveValue, Value,
+    Edge, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent, Field, Filter, Id, Number, Predicate,
+    PrimitiveValue, Query, Value,
 };
 use async_graphql::{
     Error, InputObject, InputValueError, InputValueResult, Name, Number as AsyncGraphqlNumber,
@@ -123,7 +123,7 @@ impl EdgeValue {
 }
 
 /// Represents a wrapper around an ent query [`Filter`] that exposes a GraphQL API.
-#[derive(InputObject)]
+#[derive(Clone, InputObject)]
 pub struct GqlFilter {
     /// Filter by ent's id
     id: Option<GqlPredicate_Id>,
@@ -138,20 +138,59 @@ pub struct GqlFilter {
     /// Filter by ent's last updated timestamp
     last_updated: Option<GqlPredicate_u64>,
 
-    /// Filter by ent's field
-    field: Option<GqlFieldFilter>,
+    /// Filter by ent's fields
+    fields: Option<Vec<GqlFieldFilter>>,
 
-    /// Filter by ent's edge
-    edge: Option<GqlEdgeFilter>,
+    /// Filter by ent's edges
+    edges: Option<Vec<GqlEdgeFilter>>,
 }
 
-#[derive(InputObject)]
+impl From<GqlFilter> for Query {
+    fn from(x: GqlFilter) -> Self {
+        let mut query = Query::default();
+
+        if let Some(pred) = x.id {
+            query.add_filter(Filter::where_id(Predicate::from(pred)));
+        }
+
+        if let Some(pred) = x.r#type {
+            query.add_filter(Filter::where_type(Predicate::from(pred)));
+        }
+
+        if let Some(pred) = x.created {
+            query.add_filter(Filter::where_created(Predicate::from(pred)));
+        }
+
+        if let Some(pred) = x.last_updated {
+            query.add_filter(Filter::where_last_updated(Predicate::from(pred)));
+        }
+
+        if let Some(gql_filters) = x.fields {
+            for f in gql_filters {
+                query.add_filter(Filter::where_field(f.name, f.predicate));
+            }
+        }
+
+        if let Some(gql_filters) = x.edges {
+            for f in gql_filters {
+                let edge_query = Query::from(f.filter.as_ref().clone());
+                for edge_filter in edge_query {
+                    query.add_filter(Filter::where_edge(&f.name, edge_filter));
+                }
+            }
+        }
+
+        query
+    }
+}
+
+#[derive(Clone, InputObject)]
 pub struct GqlFieldFilter {
     name: String,
     predicate: GqlPredicate_Value,
 }
 
-#[derive(InputObject)]
+#[derive(Clone, InputObject)]
 pub struct GqlEdgeFilter {
     name: String,
     filter: Box<GqlFilter>,
@@ -306,8 +345,24 @@ macro_rules! impl_pred {
 
 impl_pred!(Value; @core @text);
 impl_pred!(String; @core @text);
+
 impl_pred!(Id; @core);
+impl_pred!(bool; @core);
+impl_pred!(char; @core);
+
+// NOTE: async-graphql does not support i128
+impl_pred!(isize; @core);
+impl_pred!(i64; @core);
+impl_pred!(i32; @core);
+impl_pred!(i16; @core);
+impl_pred!(i8; @core);
+
+// NOTE: async-graphql does not support u128
+impl_pred!(usize; @core);
 impl_pred!(u64; @core);
+impl_pred!(u32; @core);
+impl_pred!(u16; @core);
+impl_pred!(u8; @core);
 
 #[Scalar]
 impl ScalarType for Value {
