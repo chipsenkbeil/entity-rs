@@ -25,9 +25,9 @@ struct RootQuery;
 #[Object]
 impl RootQuery {
     /// Supports retrieving an ent by its id or general filter
-    async fn ent<'ctx>(
+    async fn ent(
         &self,
-        ctx: &'ctx Context<'_>,
+        ctx: &Context<'_>,
         id: Option<Id>,
         filter: Option<GqlEntFilter>,
     ) -> async_graphql::Result<Vec<Box<dyn Ent>>> {
@@ -45,9 +45,9 @@ impl RootQuery {
     }
 
     /// Supports retrieving an address by its id or specific filter
-    async fn address<'ctx>(
+    async fn address(
         &self,
-        ctx: &'ctx Context<'_>,
+        ctx: &Context<'_>,
         id: Option<Id>,
         filter: Option<GqlAddressFilter>,
     ) -> async_graphql::Result<Vec<Address>> {
@@ -65,9 +65,9 @@ impl RootQuery {
     }
 
     /// Supports retrieving a person by its id or specific filter
-    async fn person<'ctx>(
+    async fn person(
         &self,
-        ctx: &'ctx Context<'_>,
+        ctx: &Context<'_>,
         id: Option<Id>,
         filter: Option<GqlPersonFilter>,
     ) -> async_graphql::Result<Vec<Person>> {
