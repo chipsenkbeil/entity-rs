@@ -31,11 +31,13 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
           override: true
+      - name: Install cargo-hack
+        run: cargo install cargo-hack
       - uses: Swatinem/rust-cache@v1
       - name: Check Cargo availability
         run: cargo --version
-      - run: cargo test --verbose --workspace
-      - run: cargo test --verbose -p entity --all-features
+      - run: cargo hack test --verbose --workspace
+      - run: cargo hack test --verbose -p entity --all-features
 
   examples:
     name: Examples
@@ -47,9 +49,33 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Install cargo-hack
+        run: cargo install cargo-hack
       - uses: Swatinem/rust-cache@v1
       - run: cargo check --manifest-path examples/inmemory/Cargo.toml
       - run: cargo check --manifest-path examples/sled/Cargo.toml
+
+  minimal-version:
+    name: minimal-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Install cargo-hack
+        run: cargo install cargo-hack
+      - uses: Swatinem/rust-cache@v1
+      - name: "check --all-features -Z minimal-versions"
+        run: |
+          # Remove dev-dependencies from Cargo.toml to prevent the next `cargo update`
+          # from determining minimal versions based on dev-dependencies.
+          cargo hack --remove-dev-deps --workspace
+          # Update Cargo.lock to minimal version dependencies.
+          cargo update -Z minimal-versions
+          cargo hack check --all-features --no-dev-deps
 
   clippy:
     name: Lint with clippy
@@ -64,19 +90,11 @@ jobs:
           toolchain: stable
           override: true
           components: clippy
+      - name: Install cargo-hack
+        run: cargo install cargo-hack
       - uses: Swatinem/rust-cache@v1
-      - name: Run clippy --workspace --all-targets --verbose
-        uses: actions-rs/clippy-check@v1
-        with:
-          name: clippy --workspace --all-targets --verbose
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --workspace --all-targets --verbose
-      - name: Run clippy -p entity --all-targets --all-features
-        uses: actions-rs/clippy-check@v1
-        with:
-          name: clippy -p entity --all-targets --all-features
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p entity --all-targets --all-features
+      - name: Run clippy --workspace --all-features
+        run: cargo hack clippy --workspace --all-features
 
   rustfmt:
     name: Verify code formatting

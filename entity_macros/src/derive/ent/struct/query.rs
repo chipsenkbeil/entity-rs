@@ -98,6 +98,7 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
         });
 
         let method_name = format_ident!("query_{}", name);
+        // TODO: This may not be in scope! This needs to be optionally provided!
         let edge_query_ty = format_ident!(
             "{}Query",
             utils::type_to_ident(ent_ty).expect("Bad edge ent type")

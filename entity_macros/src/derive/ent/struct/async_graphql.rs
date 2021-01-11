@@ -2,9 +2,9 @@ use crate::{
     data::r#struct::{Ent, EntEdgeKind},
     utils,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::Path;
+use syn::{parse_quote, Ident, Path};
 
 pub fn do_derive_async_graphql_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
     let async_graphql_root = utils::async_graphql_crate()?;
@@ -111,8 +111,10 @@ pub fn do_derive_async_graphql_ent(root: Path, ent: Ent) -> darling::Result<Toke
             let load_method_name = format_ident!("load_{}", e.name);
             fns.push(quote! {
                 #[graphql(name = #gql_name)]
-                async fn #method_name(&self) -> #root::DatabaseResult<#ret_ty> {
-                    self.#load_method_name()
+                async fn #method_name(&self) -> #async_graphql_root::Result<#ret_ty> {
+                    self.#load_method_name().map_err(|x|
+                        #async_graphql_root::Error::new(::std::string::ToString::to_string(&x))
+                    )
                 }
             });
         }
@@ -138,7 +140,7 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
     let async_graphql_root = utils::async_graphql_crate()?;
     let entity_gql_root = quote!(#root::ext::async_graphql);
     let name = &ent.ident;
-    let filter_name = format_ident!("{}Filter", name);
+    let filter_name = format_ident!("Gql{}Filter", name);
     let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
 
     let ident_id = &ent.id;
@@ -154,15 +156,18 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
 
             let fname = &f.name;
             let doc_str = format!("Filter by {}'s {} field", name, fname);
-            let pred_ty = if f.ext.async_graphql_filter_untyped {
-                quote!(GqlPredicate_Value)
+            let pred_ident: Ident = if f.ext.async_graphql_filter_untyped {
+                Ident::new("GqlPredicate_Value", Span::mixed_site())
             } else {
-                let ty_ident = utils::type_to_ident(&utils::get_innermost_type(&f.ty));
-                quote!(GqlPredicate_#ty_ident)
+                format_ident!(
+                    "GqlPredicate_{}",
+                    utils::type_to_ident(&utils::get_innermost_type(&f.ty))
+                        .expect("Failed to convert type to ident")
+                )
             };
             struct_fields.push(quote! {
                 #[doc = #doc_str]
-                #fname: ::std::option::Option<#entity_gql_root::#pred_ty>
+                #fname: ::std::option::Option<#entity_gql_root::#pred_ident>
             });
         }
 
@@ -179,10 +184,22 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
             let ename = &e.name;
             let doc_str = format!("Filter by {}'s {} edge", name, ename);
 
-            // TODO: Support typed filter for edge (requires other ent to have it)
+            // TODO: Support typed filter by enabling an extension to
+            //       specify the type. We have to do this because we don't
+            //       have a guarantee that the filter is imported alongside
+            //       the ent, so it may not be in the current scope
+            let filter_ident: Ident = if e.ext.async_graphql_filter_untyped {
+                parse_quote!(#entity_gql_root::GqlEntFilter)
+            } else {
+                format_ident!(
+                    "Gql{}Filter",
+                    utils::type_to_ident(&e.ent_ty).expect("Failed to convert type to ident")
+                )
+            };
+
             struct_fields.push(quote! {
                 #[doc = #doc_str]
-                #ename: ::std::option::Option<#entity_gql_root::GqlEntFilter>
+                #ename: ::std::option::Option<#filter_ident>
             });
         }
 
@@ -201,8 +218,8 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
             /// Filter by ent's last updated timestamp
             #ident_last_updated: ::std::option::Option<#entity_gql_root::GqlPredicate_u64>,
 
-            #(#field_struct_fields),*
-            #(#edge_struct_fields),*
+            #(#field_struct_fields,)*
+            #(#edge_struct_fields,)*
         }
 
         impl #impl_generics ::std::convert::From<#filter_name #ty_generics>

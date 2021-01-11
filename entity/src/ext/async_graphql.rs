@@ -124,6 +124,7 @@ impl EdgeValue {
 
 /// Represents a wrapper around an ent query [`Filter`] that exposes a GraphQL API.
 #[derive(Clone, InputObject)]
+#[graphql(rename_fields = "snake_case")]
 pub struct GqlEntFilter {
     /// Filter by ent's id
     id: Option<GqlPredicate_Id>,
@@ -194,12 +195,14 @@ impl From<GqlEntFilter> for Query {
 }
 
 #[derive(Clone, InputObject)]
+#[graphql(rename_fields = "snake_case")]
 pub struct GqlEntFieldFilter {
     name: String,
     predicate: GqlPredicate_Value,
 }
 
 #[derive(Clone, InputObject)]
+#[graphql(rename_fields = "snake_case")]
 pub struct GqlEntEdgeFilter {
     name: String,
     filter: Box<GqlEntFilter>,
@@ -209,6 +212,7 @@ macro_rules! impl_pred {
     ($type:ty; $($attrs:tt)*) => {
         paste! {
             #[derive(Clone, InputObject)]
+            #[graphql(rename_fields = "snake_case")]
             #[allow(non_camel_case_types)]
             pub struct [<GqlPredicate_ $type _RangeArgs>] {
                 start: $type,
@@ -216,6 +220,7 @@ macro_rules! impl_pred {
             }
 
             #[derive(Clone, InputObject)]
+            #[graphql(rename_fields = "snake_case")]
             #[allow(non_camel_case_types)]
             pub struct [<GqlPredicate_ $type _HasKeyWhereValueArgs>] {
                 key: String,
@@ -225,6 +230,7 @@ macro_rules! impl_pred {
             /// Represents a wrapper around an ent query [`TypedPredicate`] that
             /// exposes a GraphQL API.
             #[derive(Clone, Default, InputObject)]
+            #[graphql(rename_fields = "snake_case")]
             #[allow(non_camel_case_types)]
             pub struct [<GqlPredicate_ $type>] {
                 #[doc = "Checks if multiple predicates pass"] and: Option<Vec<Self>>,
