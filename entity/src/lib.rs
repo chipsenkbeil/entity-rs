@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod alloc;
 mod database;
 mod ent;

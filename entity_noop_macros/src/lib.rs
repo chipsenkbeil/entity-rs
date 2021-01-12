@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 /// General purpose noop for function macro
 #[proc_macro]
 pub fn noop_func(_: proc_macro::TokenStream) -> proc_macro::TokenStream {

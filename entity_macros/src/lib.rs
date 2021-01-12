@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod attribute;
 mod data;
 mod derive;
