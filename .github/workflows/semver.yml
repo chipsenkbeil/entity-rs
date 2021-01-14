@@ -18,7 +18,7 @@ jobs:
           profile: minimal
           toolchain: nightly-2020-11-19
           override: true
-          components: rustc-dev llvm-tools-preview
+          components: rustc-dev, llvm-tools-preview
       - name: Install rust-semverver
         run: cargo install --git https://github.com/rust-lang/rust-semverver --rev 71c340ff867d2f79613cfe02c6714f1d2ef00bc4
   check-entity:
