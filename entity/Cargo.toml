@@ -37,3 +37,14 @@ entity_macros = { version = "0.1.0", path = "../entity_macros", optional = true 
 
 [dev-dependencies]
 futures = "0.3.9"
+
+[build-dependencies]
+# Using -Z minimal-versions fails with the async-graphql dependency as it
+# has the follow dep chain of
+#
+# multer 1.2.2 -> mime 0.3.0 -> unicase 2.0.0 -> rustc_version 0.1.0 -> semver 0.1.0
+#
+# The semver version fails to compile and is ancient, so we are providing a
+# requirement on a later version of the build dependency to enable using
+# the minimal version check
+semver = "0.11.0"
