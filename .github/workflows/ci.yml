@@ -54,6 +54,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - run: cargo check --manifest-path examples/inmemory/Cargo.toml
       - run: cargo check --manifest-path examples/sled/Cargo.toml
+      - run: cargo check --manifest-path examples/async_graphql/Cargo.toml
 
 # See https://github.com/chipsenkbeil/entity-rs/issues/38
 #   minimal-versions:
