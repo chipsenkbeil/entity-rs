@@ -1,0 +1,7 @@
+error: Unsupported shape `unit`
+ --> $DIR/unsupported-explicit-discriminator-variant.rs:3:10
+  |
+3 | #[derive(EntQuery)]
+  |          ^^^^^^^^
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

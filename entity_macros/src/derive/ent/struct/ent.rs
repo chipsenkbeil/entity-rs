@@ -287,10 +287,17 @@ pub fn do_derive_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
 
 fn make_field_definitions(root: &Path, fields: &[EntField]) -> darling::Result<Vec<TokenStream>> {
     let mut token_streams = Vec::new();
+    let mut errors = Vec::new();
 
     for f in fields {
         let name = &f.name;
-        let value_type = make_field_value_type(root, &f.ty)?;
+        let value_type = match make_field_value_type(root, &f.ty) {
+            Ok(x) => x,
+            Err(x) => {
+                errors.push(x);
+                continue;
+            }
+        };
 
         let mut attrs = Vec::new();
 
@@ -317,7 +324,11 @@ fn make_field_definitions(root: &Path, fields: &[EntField]) -> darling::Result<V
         });
     }
 
-    Ok(token_streams)
+    if errors.is_empty() {
+        Ok(token_streams)
+    } else {
+        Err(darling::Error::multiple(errors))
+    }
 }
 
 fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStream> {

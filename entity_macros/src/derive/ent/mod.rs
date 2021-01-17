@@ -19,16 +19,20 @@ pub fn do_derive_ent_wrapper(root: Path, input: DeriveInput) -> darling::Result<
         Data::Struct(_) => {
             Err(darling::Error::custom("Structs are not supported").with_span(&input))
         }
-        Data::Enum(_) => r#enum::do_derive_ent_wrapper(root, EnumEnt::from_derive_input(&input)?),
+        Data::Enum(_) => Ok(r#enum::do_derive_ent_wrapper(
+            root,
+            EnumEnt::from_derive_input(&input)?,
+        )),
         Data::Union(_) => Err(darling::Error::custom("Unions are not supported").with_span(&input)),
     }
 }
 
 pub fn do_derive_ent_builder(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
     match &input.data {
-        Data::Struct(_) => {
-            r#struct::do_derive_ent_builder(root, StructEnt::from_derive_input(&input)?)
-        }
+        Data::Struct(_) => Ok(r#struct::do_derive_ent_builder(
+            root,
+            StructEnt::from_derive_input(&input)?,
+        )),
         Data::Enum(_) => Err(darling::Error::custom("Enums are not supported").with_span(&input)),
         Data::Union(_) => Err(darling::Error::custom("Unions are not supported").with_span(&input)),
     }
@@ -61,10 +65,14 @@ pub fn do_derive_ent_debug(root: Path, input: DeriveInput) -> darling::Result<To
 
 pub fn do_derive_ent_query(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
     match &input.data {
-        Data::Struct(_) => {
-            r#struct::do_derive_ent_query(root, StructEnt::from_derive_input(&input)?)
-        }
-        Data::Enum(_) => r#enum::do_derive_ent_query(root, EnumEnt::from_derive_input(&input)?),
+        Data::Struct(_) => Ok(r#struct::do_derive_ent_query(
+            root,
+            StructEnt::from_derive_input(&input)?,
+        )),
+        Data::Enum(_) => Ok(r#enum::do_derive_ent_query(
+            root,
+            EnumEnt::from_derive_input(&input)?,
+        )),
         Data::Union(_) => Err(darling::Error::custom("Unions are not supported").with_span(&input)),
     }
 }
@@ -85,9 +93,10 @@ pub fn do_derive_ent_type(root: Path, input: DeriveInput) -> darling::Result<Tok
 
 pub fn do_derive_ent_typed_edges(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
     match &input.data {
-        Data::Struct(_) => {
-            r#struct::do_derive_ent_typed_edges(root, StructEnt::from_derive_input(&input)?)
-        }
+        Data::Struct(_) => Ok(r#struct::do_derive_ent_typed_edges(
+            root,
+            StructEnt::from_derive_input(&input)?,
+        )),
         Data::Enum(_) => Err(darling::Error::custom("Enums are not supported").with_span(&input)),
         Data::Union(_) => Err(darling::Error::custom("Unions are not supported").with_span(&input)),
     }

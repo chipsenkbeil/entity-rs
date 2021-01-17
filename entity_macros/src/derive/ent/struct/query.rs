@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_quote, Expr, Path, Type};
 
-pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
     let name = &ent.ident;
     let vis = &ent.vis;
     let query_name = format_ident!("{}Query", name);
@@ -123,7 +123,7 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
 
     let default_doc_str = format!("Creates new query that selects all {} by default", name);
 
-    Ok(quote! {
+    quote! {
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
         #[automatically_derived]
         #vis struct #query_name #impl_generics(
@@ -189,5 +189,5 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
                 )
             }
         }
-    })
+    }
 }

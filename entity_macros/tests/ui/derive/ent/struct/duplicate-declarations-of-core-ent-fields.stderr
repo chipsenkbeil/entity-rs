@@ -1,0 +1,23 @@
+error: Duplicate field `id`
+ --> $DIR/duplicate-declarations-of-core-ent-fields.rs:5:15
+  |
+5 |     #[ent(id, id)]
+  |               ^^
+
+error: Duplicate field `database`
+ --> $DIR/duplicate-declarations-of-core-ent-fields.rs:8:21
+  |
+8 |     #[ent(database, database)]
+  |                     ^^^^^^^^
+
+error: Duplicate field `created`
+  --> $DIR/duplicate-declarations-of-core-ent-fields.rs:11:20
+   |
+11 |     #[ent(created, created)]
+   |                    ^^^^^^^
+
+error: Duplicate field `last_updated`
+  --> $DIR/duplicate-declarations-of-core-ent-fields.rs:14:25
+   |
+14 |     #[ent(last_updated, last_updated)]
+   |                         ^^^^^^^^^^^^
