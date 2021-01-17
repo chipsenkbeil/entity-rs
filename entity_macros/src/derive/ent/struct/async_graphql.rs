@@ -184,12 +184,14 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
             let ename = &e.name;
             let doc_str = format!("Filter by {}'s {} edge", name, ename);
 
-            // TODO: Support typed filter by enabling an extension to
-            //       specify the type. We have to do this because we don't
-            //       have a guarantee that the filter is imported alongside
-            //       the ent, so it may not be in the current scope
+            // Attempt to determine the filter's type by the following:
+            // 1. If specified as untyped, use our standard untyped filter
+            // 2. If specified with explicit type, use it
+            // 3. Otherwise, fall back to Gql<NAME>Filter as name
             let filter_ident: Ident = if e.ext.async_graphql_filter_untyped {
                 parse_quote!(#entity_gql_root::GqlEntFilter)
+            } else if let Some(ty) = e.ext.async_graphql_filter_type.as_ref() {
+                parse_quote!(#ty)
             } else {
                 format_ident!(
                     "Gql{}Filter",

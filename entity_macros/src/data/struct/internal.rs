@@ -118,6 +118,8 @@ pub struct FieldAttr {
 pub struct EdgeAttr {
     #[darling(rename = "type")]
     pub r#type: String,
+    #[darling(default, rename = "query_type")]
+    pub query_ty: Option<String>,
     #[darling(default)]
     pub wrap: bool,
     #[darling(default, rename = "policy")]
@@ -128,5 +130,15 @@ pub struct EdgeAttr {
 #[derive(Debug, Clone, FromMeta)]
 pub struct ExtAttr {
     #[darling(default)]
-    pub async_graphql_filter_untyped: Flag,
+    pub async_graphql: AsyncGraphqlExtAttr,
+}
+
+/// Information specifically related to the `async-graphql` extension
+#[derive(Clone, Debug, Default, FromMeta)]
+pub struct AsyncGraphqlExtAttr {
+    #[darling(default)]
+    pub filter_untyped: Flag,
+
+    #[darling(default)]
+    pub filter_type: Option<String>,
 }

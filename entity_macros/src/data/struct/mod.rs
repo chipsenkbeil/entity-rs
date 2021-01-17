@@ -30,6 +30,7 @@ pub struct Ent {
 #[derive(Debug, Default)]
 pub struct EntExtAttr {
     pub async_graphql_filter_untyped: bool,
+    pub async_graphql_filter_type: Option<Type>,
 }
 
 /// Information about a specific field for an ent
@@ -56,6 +57,7 @@ pub struct EntEdge {
     pub name: Ident,
     pub ty: Type,
     pub ent_ty: Type,
+    pub ent_query_ty: Option<Type>,
     pub wrap: bool,
     pub kind: EntEdgeKind,
     pub deletion_policy: EntEdgeDeletionPolicy,
@@ -191,8 +193,13 @@ impl FromDeriveInput for Ent {
                         async_graphql_filter_untyped: f
                             .ext_attr
                             .as_ref()
-                            .map(|ext| ext.async_graphql_filter_untyped.is_some())
+                            .map(|ext| ext.async_graphql.filter_untyped.is_some())
                             .unwrap_or_default(),
+                        async_graphql_filter_type: f
+                            .ext_attr
+                            .as_ref()
+                            .and_then(|ext| ext.async_graphql.filter_type.as_deref())
+                            .and_then(|type_str| syn::parse_str(type_str).ok()),
                     },
                 });
             }
@@ -212,6 +219,9 @@ impl FromDeriveInput for Ent {
                     name: name.clone(),
                     ty: f.ty.clone(),
                     ent_ty: syn::parse_str(&attr.r#type)?,
+                    ent_query_ty: attr
+                        .query_ty
+                        .and_then(|type_str| syn::parse_str(&type_str).ok()),
                     wrap: attr.wrap,
                     kind,
                     deletion_policy: attr.deletion_policy,
@@ -219,8 +229,13 @@ impl FromDeriveInput for Ent {
                         async_graphql_filter_untyped: f
                             .ext_attr
                             .as_ref()
-                            .map(|ext| ext.async_graphql_filter_untyped.is_some())
+                            .map(|ext| ext.async_graphql.filter_untyped.is_some())
                             .unwrap_or_default(),
+                        async_graphql_filter_type: f
+                            .ext_attr
+                            .as_ref()
+                            .and_then(|ext| ext.async_graphql.filter_type.as_deref())
+                            .and_then(|type_str| syn::parse_str(type_str).ok()),
                     },
                 });
             }
