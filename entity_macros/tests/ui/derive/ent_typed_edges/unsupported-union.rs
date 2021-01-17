@@ -1,6 +1,6 @@
-use entity::Ent;
+use entity::EntTypedEdges;
 
-#[derive(Ent)]
+#[derive(EntTypedEdges)]
 union TestEnt {
     a: u32,
     b: char,

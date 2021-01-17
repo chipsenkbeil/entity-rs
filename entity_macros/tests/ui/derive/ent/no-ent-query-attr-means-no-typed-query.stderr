@@ -1,5 +1,0 @@
-error[E0433]: failed to resolve: use of undeclared type `TestEntQuery`
-  --> $DIR/no-ent-query-attr-means-no-typed-query.rs:20:13
-   |
-20 |     let _ = TestEntQuery::default();
-   |             ^^^^^^^^^^^^ use of undeclared type `TestEntQuery`

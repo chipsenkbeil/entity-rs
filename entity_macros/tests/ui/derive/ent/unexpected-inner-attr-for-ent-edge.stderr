@@ -1,5 +1,0 @@
-error: Unknown field: `something`
-  --> $DIR/unexpected-inner-attr-for-ent-edge.rs:17:34
-   |
-17 |     #[ent(edge(type = "TestEnt", something))]
-   |                                  ^^^^^^^^^

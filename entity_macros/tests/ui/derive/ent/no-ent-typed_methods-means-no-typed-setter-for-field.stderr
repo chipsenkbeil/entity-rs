@@ -1,8 +1,0 @@
-error[E0599]: no method named `set_my_field` found for struct `TestEnt` in the current scope
-  --> $DIR/no-ent-typed_methods-means-no-typed-setter-for-field.rs:31:9
-   |
-5  | struct TestEnt {
-   | -------------- method `set_my_field` not found for this
-...
-31 |     ent.set_my_field(3).unwrap();
-   |         ^^^^^^^^^^^^ method not found in `TestEnt`

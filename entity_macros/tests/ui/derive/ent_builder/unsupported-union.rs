@@ -1,6 +1,6 @@
-use entity::Ent;
+use entity::EntBuilder;
 
-#[derive(Ent)]
+#[derive(EntBuilder)]
 union TestEnt {
     a: u32,
     b: char,

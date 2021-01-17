@@ -1,5 +1,0 @@
-error: Unexpected meta-item format `word`
-  --> $DIR/missing-type-value-for-edge-attr.rs:17:16
-   |
-17 |     #[ent(edge(type))]
-   |                ^^^^

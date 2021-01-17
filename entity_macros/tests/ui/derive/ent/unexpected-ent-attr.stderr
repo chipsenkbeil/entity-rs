@@ -1,5 +1,0 @@
-error: Unknown field: `something`
-  --> $DIR/unexpected-ent-attr.rs:17:11
-   |
-17 |     #[ent(something)]
-   |           ^^^^^^^^^

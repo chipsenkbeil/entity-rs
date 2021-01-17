@@ -1,6 +1,6 @@
-use entity::Ent;
+use entity::AsyncGraphqlEnt;
 
-#[derive(Ent)]
+#[derive(AsyncGraphqlEnt)]
 union TestEnt {
     a: u32,
     b: char,

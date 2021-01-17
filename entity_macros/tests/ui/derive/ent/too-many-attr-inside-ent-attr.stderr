@@ -1,5 +1,0 @@
-error: Duplicate field `created`
-  --> $DIR/too-many-attr-inside-ent-attr.rs:11:20
-   |
-11 |     #[ent(created, created)]
-   |                    ^^^^^^^

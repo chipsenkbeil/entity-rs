@@ -1,7 +1,0 @@
-error: Unsupported shape `named`
- --> $DIR/unsupported-enum-with-named-fields.rs:3:17
-  |
-3 | #[derive(Clone, Ent)]
-  |                 ^^^
-  |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
