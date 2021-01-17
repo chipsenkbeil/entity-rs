@@ -55,25 +55,26 @@ jobs:
       - run: cargo check --manifest-path examples/inmemory/Cargo.toml
       - run: cargo check --manifest-path examples/sled/Cargo.toml
 
-  minimal-version:
-    name: minimal-version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2020-09-21
-          override: true
-      - name: Install cargo-hack
-        run: cargo install cargo-hack
-      - name: "check --all-features -Z minimal-versions"
-        run: |
-          # Remove dev-dependencies from Cargo.toml to prevent the next `cargo update`
-          # from determining minimal versions based on dev-dependencies.
-          cargo hack --remove-dev-deps --workspace
-          # Update Cargo.lock to minimal version dependencies.
-          cargo update -Z minimal-versions
-          cargo hack check --all-features --no-dev-deps
+# See https://github.com/chipsenkbeil/entity-rs/issues/38
+#   minimal-versions:
+#     name: minimal-versions
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: actions-rs/toolchain@v1
+#         with:
+#           toolchain: nightly-2020-09-21
+#           override: true
+#       - name: Install cargo-hack
+#         run: cargo install cargo-hack
+#       - name: "check --all-features -Z minimal-versions"
+#         run: |
+#           # Remove dev-dependencies from Cargo.toml to prevent the next `cargo update`
+#           # from determining minimal versions based on dev-dependencies.
+#           cargo hack --remove-dev-deps --workspace
+#           # Update Cargo.lock to minimal version dependencies.
+#           cargo update -Z minimal-versions
+#           cargo hack check --all-features --workspace --no-dev-deps
 
   clippy:
     name: Lint with clippy
