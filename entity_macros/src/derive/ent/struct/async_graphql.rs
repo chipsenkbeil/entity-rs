@@ -2,9 +2,9 @@ use crate::{
     data::r#struct::{Ent, EntEdgeKind},
     utils,
 };
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_quote, Ident, Path, Type};
+use syn::{parse_quote, Path, Type};
 
 pub fn do_derive_async_graphql_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
     let async_graphql_root = utils::async_graphql_crate()?;
@@ -156,18 +156,21 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
 
             let fname = &f.name;
             let doc_str = format!("Filter by {}'s {} field", name, fname);
-            let pred_ident: Ident = if f.ext.async_graphql_filter_untyped {
-                Ident::new("GqlPredicate_Value", Span::mixed_site())
+            let pred_ty: Type = if f.ext.async_graphql_filter_untyped {
+                parse_quote!(#entity_gql_root::GqlPredicate_Value)
+            } else if let Some(ty) = f.ext.async_graphql_filter_type.as_ref() {
+                parse_quote!(::std::boxed::Box<#ty>)
             } else {
-                format_ident!(
+                let ty = format_ident!(
                     "GqlPredicate_{}",
                     utils::type_to_ident(&utils::get_innermost_type(&f.ty))
                         .expect("Failed to convert type to ident")
-                )
+                );
+                parse_quote!(::std::boxed::Box<#entity_gql_root::#ty>)
             };
             struct_fields.push(quote! {
                 #[doc = #doc_str]
-                #fname: ::std::option::Option<#entity_gql_root::#pred_ident>
+                #fname: ::std::option::Option<#pred_ty>
             });
         }
 

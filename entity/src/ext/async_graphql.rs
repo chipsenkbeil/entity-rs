@@ -273,6 +273,12 @@ macro_rules! impl_pred {
                 #[doc = "Checks if text starts with any of the specified text (case insensitive)"] text_starts_with_any_case_insensitive: Option<Vec<String>>,
             }
 
+            impl From<Box<[<GqlPredicate_ $type>]>> for Predicate {
+                fn from(x: Box<[<GqlPredicate_ $type>]>) -> Self {
+                    Self::from(x.as_ref().clone())
+                }
+            }
+
             impl From<[<GqlPredicate_ $type>]> for Predicate {
                 /// Converts into a predicate based on criteria in GraphQL
                 /// predicate
