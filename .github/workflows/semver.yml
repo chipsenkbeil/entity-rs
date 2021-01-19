@@ -2,7 +2,6 @@ name: Semver
 
 on:
   push:
-  pull_request:
 
 env:
   RUST_BACKTRACE: 1
@@ -26,16 +25,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: install-semver
     steps:
+      - run: ls -l .
       - run: cd "$GITHUB_WORKSPACE/entity" && cargo semver --api-guidelines --all-features
   check-entity-macros:
     name: Check entity_macros crate (all features)
     runs-on: ubuntu-latest
     needs: install-semver
     steps:
+      - run: ls -l .
       - run: cd "$GITHUB_WORKSPACE/entity_macros" && cargo semver --api-guidelines --all-features
   check-entity-noop-macros:
     name: Check entity_noop_macros crate (all features)
     runs-on: ubuntu-latest
     needs: install-semver
     steps:
+      - run: ls -l .
       - run: cd "$GITHUB_WORKSPACE/entity_noop_macros" && cargo semver --api-guidelines --all-features
