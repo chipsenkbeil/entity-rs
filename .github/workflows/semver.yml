@@ -34,7 +34,7 @@ jobs:
     steps:
       - run: cd "$GITHUB_WORKSPACE/entity_macros" && cargo semver --api-guidelines --all-features
   check-entity-noop-macros:
-    name: Check entity_macros crate (all features)
+    name: Check entity_noop_macros crate (all features)
     runs-on: ubuntu-latest
     needs: install-semver
     steps:
