@@ -7,9 +7,12 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  install-semver:
-    name: Install the semver tool
+    name: Check semver for ${{ matrix.crate }} crate
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [entity, entity_macros, entity_noop_macros]
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -20,24 +23,4 @@ jobs:
           components: rustc-dev, llvm-tools-preview
       - name: Install rust-semverver
         run: cargo install --git https://github.com/rust-lang/rust-semverver --rev 71c340ff867d2f79613cfe02c6714f1d2ef00bc4
-  check-entity:
-    name: Check entity crate (all features)
-    runs-on: ubuntu-latest
-    needs: install-semver
-    steps:
-      - run: ls -l .
-      - run: cd "$GITHUB_WORKSPACE/entity" && cargo semver --api-guidelines --all-features
-  check-entity-macros:
-    name: Check entity_macros crate (all features)
-    runs-on: ubuntu-latest
-    needs: install-semver
-    steps:
-      - run: ls -l .
-      - run: cd "$GITHUB_WORKSPACE/entity_macros" && cargo semver --api-guidelines --all-features
-  check-entity-noop-macros:
-    name: Check entity_noop_macros crate (all features)
-    runs-on: ubuntu-latest
-    needs: install-semver
-    steps:
-      - run: ls -l .
-      - run: cd "$GITHUB_WORKSPACE/entity_noop_macros" && cargo semver --api-guidelines --all-features
+      - run: cd "${{ matrix.crate }}" && cargo semver --api-guidelines --all-features
