@@ -4,7 +4,7 @@ use crate::{
 };
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{parse_quote, Ident, Path};
+use syn::{parse_quote, Ident, Path, Type};
 
 pub fn do_derive_async_graphql_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
     let async_graphql_root = utils::async_graphql_crate()?;
@@ -188,20 +188,24 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
             // 1. If specified as untyped, use our standard untyped filter
             // 2. If specified with explicit type, use it
             // 3. Otherwise, fall back to Gql<NAME>Filter as name
-            let filter_ident: Ident = if e.ext.async_graphql_filter_untyped {
+            //
+            // NOTE: To avoid infinite recursion, any typed filter must be
+            //       wrapped in a box
+            let filter_ty: Type = if e.ext.async_graphql_filter_untyped {
                 parse_quote!(#entity_gql_root::GqlEntFilter)
             } else if let Some(ty) = e.ext.async_graphql_filter_type.as_ref() {
-                parse_quote!(#ty)
+                parse_quote!(::std::boxed::Box<#ty>)
             } else {
-                format_ident!(
+                let ty = format_ident!(
                     "Gql{}Filter",
                     utils::type_to_ident(&e.ent_ty).expect("Failed to convert type to ident")
-                )
+                );
+                parse_quote!(::std::boxed::Box<#ty>)
             };
 
             struct_fields.push(quote! {
                 #[doc = #doc_str]
-                #ename: ::std::option::Option<#filter_ident>
+                #ename: ::std::option::Option<#filter_ty>
             });
         }
 
@@ -210,6 +214,7 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
 
     Ok(quote! {
         #[derive(::std::clone::Clone, #async_graphql_root::InputObject)]
+        #[graphql(rename_fields = "snake_case")]
         pub struct #filter_name #ty_generics #where_clause {
             /// Filter by ent's id
             #ident_id: ::std::option::Option<#entity_gql_root::GqlPredicate_Id>,
@@ -222,6 +227,16 @@ pub fn do_derive_async_graphql_ent_filter(root: Path, ent: Ent) -> darling::Resu
 
             #(#field_struct_fields,)*
             #(#edge_struct_fields,)*
+        }
+
+        impl #impl_generics ::std::convert::From<::std::boxed::Box<#filter_name #ty_generics>>
+            for #root::Query #where_clause
+        {
+            /// Converts from heap by cloning inner filter and converting it
+            /// to the generic query
+            fn from(x: ::std::boxed::Box<#filter_name #ty_generics>) -> Self {
+                Self::from(::std::clone::Clone::clone(::std::convert::AsRef::as_ref(&x)))
+            }
         }
 
         impl #impl_generics ::std::convert::From<#filter_name #ty_generics>
