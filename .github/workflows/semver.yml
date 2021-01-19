@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: [entity, entity_macros, entity_noop_macros]
+        crate: [entity] # entity_macros failing with "lost build artifact"
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -25,4 +25,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - name: Install rust-semverver
         run: cargo install --git https://github.com/rust-lang/rust-semverver --rev 71c340ff867d2f79613cfe02c6714f1d2ef00bc4
-      - run: cd "${{ matrix.crate }}" && cargo semver --api-guidelines --all-features
+      - run: cd "${{ matrix.crate }}" && \
+          eval "current_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)" \
+          cargo semver --api-guidelines --all-features | tee semver_out \
+          (head -n 1 semver_out | grep "\-> $current_version") || (echo "versioning mismatch" && return 1)
