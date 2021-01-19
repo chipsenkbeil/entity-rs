@@ -1,7 +1,7 @@
 use crate::{data::r#struct::Ent, utils};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_quote, Expr, Ident, Path, Type};
+use syn::{parse_quote, Expr, Path, Type};
 
 pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
     let name = &ent.ident;
@@ -101,13 +101,14 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
 
         // NOTE: We attempt to use the specified query type, defaulting to
         //       <NAME>Query if not specified
-        let edge_query_ty: Ident = if let Some(ty) = e.ent_query_ty.as_ref() {
+        let edge_query_ty: Type = if let Some(ty) = e.ent_query_ty.as_ref() {
             parse_quote!(#ty)
         } else {
-            format_ident!(
+            let ident = format_ident!(
                 "{}Query",
                 utils::type_to_ident(ent_ty).expect("Bad edge ent type")
-            )
+            );
+            parse_quote!(#ident)
         };
         let doc_string = format!(
             concat!(

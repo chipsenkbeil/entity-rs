@@ -409,3 +409,143 @@ fn produces_method_to_yield_edge_ents() {
     assert_eq!(results.len(), 1);
     assert!(results.contains(&2));
 }
+
+#[test]
+fn supports_providing_an_explicit_query_type_on_edges() {
+    #[derive(Clone, Ent, EntQuery, EntType)]
+    pub struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        // Specify a generic query type instead of using TestEntQuery by default
+        #[ent(edge(type = "TestEnt", query_type = "Query"))]
+        other: Id,
+    }
+
+    let database = InmemoryDatabase::default();
+
+    database
+        .insert(Box::from(TestEnt {
+            id: 1,
+            database: WeakDatabaseRc::new(),
+            created: 0,
+            last_updated: 0,
+            other: 2,
+        }))
+        .expect("Failed to insert a test ent");
+
+    database
+        .insert(Box::from(TestEnt {
+            id: 2,
+            database: WeakDatabaseRc::new(),
+            created: 0,
+            last_updated: 0,
+            other: 1,
+        }))
+        .expect("Failed to insert a test ent");
+
+    let results: Vec<Id> = TestEntQuery::default()
+        .where_id(P::equals(1))
+        .query_other()
+        .execute(&database)
+        .expect("Failed to query for ents")
+        .iter()
+        .map(|boxed_ent| boxed_ent.id())
+        .collect();
+    assert_eq!(results.len(), 1);
+    assert!(results.contains(&2));
+}
+
+mod type_path {
+    use ent1::{TestEnt1, TestEnt1Query as QueryForTestEnt1};
+    use ent2::{TestEnt2, TestEnt2Query as QueryForTestEnt2};
+    use entity::*;
+
+    mod ent1 {
+        use entity::*;
+
+        #[derive(Clone, Ent, EntQuery, EntType)]
+        pub struct TestEnt1 {
+            #[ent(id)]
+            pub id: Id,
+
+            #[ent(database)]
+            pub database: WeakDatabaseRc,
+
+            #[ent(created)]
+            pub created: u64,
+
+            #[ent(last_updated)]
+            pub last_updated: u64,
+
+            #[ent(edge(type = "super::TestEnt2", query_type = "super::QueryForTestEnt2"))]
+            pub other: Id,
+        }
+    }
+
+    mod ent2 {
+        use entity::*;
+
+        #[derive(Clone, Ent, EntQuery, EntType)]
+        pub struct TestEnt2 {
+            #[ent(id)]
+            pub id: Id,
+
+            #[ent(database)]
+            pub database: WeakDatabaseRc,
+
+            #[ent(created)]
+            pub created: u64,
+
+            #[ent(last_updated)]
+            pub last_updated: u64,
+
+            #[ent(edge(type = "super::TestEnt1", query_type = "super::QueryForTestEnt1"))]
+            pub other: Id,
+        }
+    }
+
+    #[test]
+    fn supports_providing_an_explicit_query_type_path_on_edges() {
+        let database = InmemoryDatabase::default();
+
+        database
+            .insert(Box::from(TestEnt1 {
+                id: 1,
+                database: WeakDatabaseRc::new(),
+                created: 0,
+                last_updated: 0,
+                other: 2,
+            }))
+            .expect("Failed to insert a test ent");
+
+        database
+            .insert(Box::from(TestEnt2 {
+                id: 2,
+                database: WeakDatabaseRc::new(),
+                created: 0,
+                last_updated: 0,
+                other: 1,
+            }))
+            .expect("Failed to insert a test ent");
+
+        let results: Vec<Id> = QueryForTestEnt1::default()
+            .query_other()
+            .execute(&database)
+            .expect("Failed to query for ents")
+            .iter()
+            .map(Ent::id)
+            .collect();
+        assert_eq!(results.len(), 1);
+        assert!(results.contains(&2));
+    }
+}
