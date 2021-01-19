@@ -7,6 +7,7 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  semver:
     name: Check semver for ${{ matrix.crate }} crate
     runs-on: ubuntu-latest
     strategy:
