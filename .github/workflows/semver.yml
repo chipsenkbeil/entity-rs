@@ -28,5 +28,6 @@ jobs:
         working-directory: ./${{ matrix.crate }}
         run: |
           eval "current_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)"
-          cargo semver --api-guidelines --all-features | tee semver_out
-          (head -n 1 semver_out | grep "\-> $current_version") || (echo "versioning mismatch" && return 1)
+          eval "next_verson=$(cargo semver --api-guidelines --all-features --compact)"
+          (test "$(printf '%s\n' "$current_version $next_version" | sort -V | head -n 1)" != "$current_version") || \
+            (echo "Need to update $current_version -> $next_version" && exit 1)
