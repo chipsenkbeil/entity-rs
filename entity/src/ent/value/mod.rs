@@ -7,7 +7,9 @@ use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
     convert::TryFrom,
+    ffi::{OsStr, OsString},
     hash::{Hash, Hasher},
+    path::{Path, PathBuf},
 };
 use strum::ParseError;
 
@@ -240,6 +242,30 @@ impl From<PrimitiveValue> for Value {
     }
 }
 
+impl From<PathBuf> for Value {
+    fn from(p: PathBuf) -> Self {
+        Self::from(p.into_os_string())
+    }
+}
+
+impl<'a> From<&'a Path> for Value {
+    fn from(p: &'a Path) -> Self {
+        Self::from(p.as_os_str())
+    }
+}
+
+impl From<OsString> for Value {
+    fn from(s: OsString) -> Self {
+        Self::Text(s.to_string_lossy().to_string())
+    }
+}
+
+impl<'a> From<&'a OsStr> for Value {
+    fn from(s: &'a OsStr) -> Self {
+        Self::from(s.to_os_string())
+    }
+}
+
 impl From<String> for Value {
     /// Converts a string into a text value without any allocation
     fn from(s: String) -> Self {
@@ -329,6 +355,8 @@ impl_generic_try_into!(Map, HashMap<String, T>, T, |x: HashMap<String, Value>| x
     .map(|(k, v)| T::try_from(v).map(|t| (k, t)))
     .collect());
 impl_try_into!(Text, String, |x| Ok(x));
+impl_try_into!(Text, PathBuf, |x| Ok(PathBuf::from(x)));
+impl_try_into!(Text, OsString, |x| Ok(OsString::from(x)));
 impl_try_into!(Primitive, bool, bool::try_from);
 impl_try_into!(Primitive, char, char::try_from);
 impl_try_into!(Primitive, f32, f32::try_from);
