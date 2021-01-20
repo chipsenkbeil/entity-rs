@@ -2,7 +2,7 @@
 name = "entity"
 description = "Library that provides entity-like constructs"
 categories = ["data-structures"]
-version = "0.1.0"
+version = "0.1.1-dev"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
 homepage = "https://github.com/chipsenkbeil/entity-rs"
