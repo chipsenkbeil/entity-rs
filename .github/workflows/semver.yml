@@ -27,7 +27,8 @@ jobs:
       - name: Do semver check
         working-directory: ./${{ matrix.crate }}
         run: |
-          eval "current_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)"
-          eval "next_verson=$(cargo semver --api-guidelines --all-features --compact)"
-          (test "$(printf '%s\n' "$current_version $next_version" | sort -V | head -n 1)" != "$current_version") || \
-            (echo "Need to update $current_version -> $next_version" && exit 1)
+          eval "local_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)"
+          eval "target_version=$(cargo semver --api-guidelines --all-features --compact)"
+          echo "Local Version: $local_version\nTarget Version: $target_version"
+          (test "$(printf '%s\n%s\n' "$local_version" "$target_version" | sort -V | head -n 1)" == "$local_version") || \
+            (echo "Need to update $local_version -> $target_version" && exit 1)
