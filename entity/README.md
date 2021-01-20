@@ -34,6 +34,14 @@ transform your data to be compatible with supported databases and queries.
 entity = "0.1"
 ```
 
+For most use cases, you can import all features using the `full` flag, or for
+a more tailored experience can import individual features:
+
+```toml
+[dependencies]
+entity = { version = "0.1", features = ["global", "macros", "inmemory_db"] }
+```
+
 ### Example of defining data
 
 ```rust
