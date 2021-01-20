@@ -6,26 +6,26 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Ident, Path, Type};
 
-pub fn do_derive_ent_typed_edges(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+pub fn do_derive_ent_typed_edges(root: Path, ent: Ent) -> TokenStream {
     let name = &ent.ident;
     let mut edge_methods: Vec<TokenStream> = Vec::new();
     let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
 
     for edge in ent.edges {
-        edge_methods.push(fn_typed_id_getter(&edge)?);
+        edge_methods.push(fn_typed_id_getter(&edge));
         edge_methods.push(fn_typed_id_setter(&edge));
         edge_methods.push(fn_typed_load_edge(&root, &edge));
     }
 
-    Ok(quote! {
+    quote! {
         #[automatically_derived]
         impl #impl_generics #name #ty_generics #where_clause {
             #(#edge_methods)*
         }
-    })
+    }
 }
 
-fn fn_typed_id_getter(edge: &EntEdge) -> darling::Result<TokenStream> {
+fn fn_typed_id_getter(edge: &EntEdge) -> TokenStream {
     let name = &edge.name;
     let ty = &edge.ty;
 
@@ -36,7 +36,7 @@ fn fn_typed_id_getter(edge: &EntEdge) -> darling::Result<TokenStream> {
     let return_type = match edge.kind {
         EntEdgeKind::Maybe | EntEdgeKind::One => quote! { #ty },
         EntEdgeKind::Many => {
-            let inner_t = utils::strip_vec(ty)?;
+            let inner_t = utils::get_innermost_type(ty);
             quote! { &[#inner_t] }
         }
     };
@@ -45,11 +45,11 @@ fn fn_typed_id_getter(edge: &EntEdge) -> darling::Result<TokenStream> {
         EntEdgeKind::Many => quote! { &self.#name },
     };
 
-    Ok(quote! {
+    quote! {
         pub fn #method_name(&self) -> #return_type {
             #inner_return
         }
-    })
+    }
 }
 
 fn fn_typed_id_setter(edge: &EntEdge) -> TokenStream {

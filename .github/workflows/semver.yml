@@ -1,0 +1,34 @@
+name: Semver
+
+on:
+  push:
+
+env:
+  RUST_BACKTRACE: 1
+
+jobs:
+  semver:
+    name: Check semver for ${{ matrix.crate }} crate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [entity] # entity_macros failing with "lost build artifact"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2020-11-19
+          override: true
+          components: rustc-dev, llvm-tools-preview
+      - name: Install rust-semverver
+        run: cargo install --git https://github.com/rust-lang/rust-semverver --rev 71c340ff867d2f79613cfe02c6714f1d2ef00bc4
+      - name: Do semver check
+        working-directory: ./${{ matrix.crate }}
+        run: |
+          eval "local_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)"
+          eval "minimum_required_version=$(cargo semver --api-guidelines --all-features --compact)"
+          printf "Local Version: %s\Minimum Required Version: %s\n" "$local_version" "$minimum_required_version"
+          (test "$(printf '%s\n%s\n' "$local_version" "$minimum_required_version" | sort -V | head -n 1)" == "$minimum_required_version") || \
+            (echo "Need to update $local_version -> $minimum_required_version" && exit 1)

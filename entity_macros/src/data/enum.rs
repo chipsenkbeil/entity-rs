@@ -9,16 +9,6 @@ pub struct Ent {
     pub vis: Visibility,
     pub generics: Generics,
     pub data: ast::Data<EntVariant, ()>,
-
-    /// Indicates not to generate a typed query struct
-    #[darling(default)]
-    pub no_query: bool,
-
-    /// Indicates to include the typetag attribute on the ent trait impl,
-    /// required only when Serialize/Deserialize from serde is being
-    /// implemented for the given type
-    #[darling(default)]
-    pub typetag: bool,
 }
 
 /// Information for a variant of an enum deriving ent

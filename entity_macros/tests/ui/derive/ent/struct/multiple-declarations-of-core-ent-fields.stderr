@@ -1,0 +1,23 @@
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-declarations-of-core-ent-fields.rs:5:11
+  |
+5 |     #[ent(id, database, created, last_updated)]
+  |           ^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-declarations-of-core-ent-fields.rs:5:15
+  |
+5 |     #[ent(id, database, created, last_updated)]
+  |               ^^^^^^^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-declarations-of-core-ent-fields.rs:5:25
+  |
+5 |     #[ent(id, database, created, last_updated)]
+  |                         ^^^^^^^
+
+error: A field can only declare one of `id`, `database`, `created`, or `last_updated`
+ --> $DIR/multiple-declarations-of-core-ent-fields.rs:5:34
+  |
+5 |     #[ent(id, database, created, last_updated)]
+  |                                  ^^^^^^^^^^^^

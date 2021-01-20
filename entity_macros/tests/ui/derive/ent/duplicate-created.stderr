@@ -1,5 +1,0 @@
-error: Already have a created timestamp elsewhere
-  --> $DIR/duplicate-created.rs:15:5
-   |
-15 |     created2: u64,
-   |     ^^^^^^^^

@@ -1,7 +1,0 @@
-error: Unsupported shape `tuple`
- --> $DIR/unsupported-tuple-struct.rs:3:17
-  |
-3 | #[derive(Clone, Ent)]
-  |                 ^^^
-  |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

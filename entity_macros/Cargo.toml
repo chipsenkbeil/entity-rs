@@ -22,7 +22,10 @@ quote = "1.0.7"
 syn = { version = "1.0.53", features = ["full"] }
 
 [dev-dependencies]
+async-graphql = "2.4.6"
 derivative = "2.1.1"
-entity = { version = "0.1.0", path = "../entity", default-features = false, features = ["global", "inmemory_db", "macros"] }
-rustversion = "1.0"
+entity = { version = "0.1.0", path = "../entity", default-features = false, features = ["async-graphql", "global", "inmemory_db", "macros"] }
+futures = "0.3.9"
+rustversion = "1.0.4"
+serde_json = "1.0.61"
 trybuild = "1.0.35"

@@ -1,9 +1,9 @@
 use entity::Ent;
 
-#[derive(Copy, Clone, Ent)]
+#[derive(Ent)]
 union TestEnt {
     a: u32,
-    b: i32,
+    b: char,
 }
 
 fn main() {}

@@ -1,5 +1,0 @@
-error: Already have an id elsewhere
- --> $DIR/duplicate-id.rs:9:5
-  |
-9 |     id2: Id,
-  |     ^^^

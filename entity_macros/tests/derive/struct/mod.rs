@@ -1,3 +1,4 @@
+mod async_graphql;
 mod builder;
 mod debug;
 mod edge;

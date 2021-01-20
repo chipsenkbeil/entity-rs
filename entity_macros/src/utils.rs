@@ -27,6 +27,16 @@ pub fn typetag_crate() -> darling::Result<Path> {
     Ok(parse_quote!(#root::vendor::macros::typetag))
 }
 
+/// Produces a token stream in the form of `::async_graphql` or renamed version
+pub fn async_graphql_crate() -> darling::Result<Path> {
+    crate_name("async-graphql")
+        .map(|name| {
+            let crate_ident = Ident::new(&name, Span::mixed_site());
+            parse_quote!(::#crate_ident)
+        })
+        .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
+}
+
 /// Main helper called within each derive macro
 pub fn do_derive(
     f: fn(Path, DeriveInput) -> darling::Result<TokenStream>,
@@ -168,6 +178,26 @@ fn strip_for_type_str<'a, 'b>(input: &'a Type, ty_str: &'b str) -> darling::Resu
             None => Err(darling::Error::custom("Expected type to have a path").with_span(x)),
         },
         x => Err(darling::Error::custom("Expected type to be a path").with_span(x)),
+    }
+}
+
+/// Converts some<inner<ty>> -> ty, stopping early if there is more than one
+/// parameter in angle brackets such as some<inner<ty1, ty2>> -> inner<ty1, ty2>
+/// and also short-circuits when encountering any other type to stop and return
+pub fn get_innermost_type(ty: &Type) -> &Type {
+    match ty {
+        Type::Path(x) if !x.path.segments.is_empty() => {
+            match &x.path.segments.last().unwrap().arguments {
+                PathArguments::AngleBracketed(x) if x.args.len() == 1 => {
+                    match x.args.last().unwrap() {
+                        GenericArgument::Type(x) => get_innermost_type(x),
+                        _ => ty,
+                    }
+                }
+                _ => ty,
+            }
+        }
+        _ => ty,
     }
 }
 

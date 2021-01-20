@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_quote, Expr, Path, Type};
 
-pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
     let name = &ent.ident;
     let query_name = format_ident!("{}Query", name);
     let vis = &ent.vis;
@@ -21,20 +21,17 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
         .collect();
 
     // We want this to be the total + 1 because we will include the enum
+    //
+    // NOTE: We assume that the fields are newtype from a filter done
+    //       prior to this function call to limit to newtype enums
     let enum_variants = ent.data.as_ref().take_enum().unwrap();
     let total_variants = enum_variants.len();
     let variant_types = enum_variants
         .into_iter()
-        .map(|v| {
-            if v.fields.is_newtype() {
-                Ok(v.fields.iter().next().unwrap())
-            } else {
-                Err(darling::Error::custom("Variant must be newtype").with_span(&v.ident))
-            }
-        })
-        .collect::<Result<Vec<&Type>, darling::Error>>()?;
+        .map(|v| v.fields.iter().next().unwrap())
+        .collect::<Vec<&Type>>();
 
-    Ok(quote! {
+    quote! {
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
         #[automatically_derived]
         #vis struct #query_name #impl_generics(
@@ -124,5 +121,5 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
                 )
             }
         }
-    })
+    }
 }

@@ -1,6 +1,9 @@
+#![forbid(unsafe_code)]
+
 mod alloc;
 mod database;
 mod ent;
+pub mod ext;
 pub mod global;
 
 pub use alloc::{Id, IdAllocator, EPHEMERAL_ID};
@@ -13,7 +16,10 @@ pub use entity_macros::*;
 /// Represents a collection of core traits that should be imported to enable
 /// methods on a variety of types such as [`Ent`] and [`EntBuilder`]
 pub mod prelude {
-    pub use super::{Database, Ent, EntBuilder, EntLoader, EntQuery, EntType};
+    pub use super::{
+        AsAny, Database, DatabaseExt, Ent, EntBuilder, EntExt, EntLoader, EntQuery, EntType,
+        EntWrapper,
+    };
 }
 
 /// Vendor module to re-expose relevant libraries

@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Ident, Path, Type};
 
-pub fn do_derive_ent_builder(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+pub fn do_derive_ent_builder(root: Path, ent: Ent) -> TokenStream {
     let ent_name = &ent.ident;
     let builder_name = format_ident!("{}Builder", ent_name);
     let builder_error_name = format_ident!("{}Error", builder_name);
@@ -105,7 +105,7 @@ pub fn do_derive_ent_builder(root: Path, ent: Ent) -> darling::Result<TokenStrea
         quote!(::std::result::Result::Ok(()))
     };
 
-    Ok(quote! {
+    quote! {
         #[derive(
             ::std::marker::Copy,
             ::std::clone::Clone,
@@ -188,7 +188,7 @@ pub fn do_derive_ent_builder(root: Path, ent: Ent) -> darling::Result<TokenStrea
                 })
             }
         }
-    })
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

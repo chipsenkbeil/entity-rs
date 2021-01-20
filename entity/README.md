@@ -3,8 +3,8 @@
 [![Build Status][build_img]][build_lnk]
 [![Crates.io][crates_img]][crates_lnk]
 [![Docs.rs][doc_img]][doc_lnk]
-[![entity: rustc 1.45+]][Rust 1.45]
-[![entity_macros: rustc 1.45+]][Rust 1.45]
+[![entity: rustc 1.46+]][Rust 1.46]
+[![entity_macros: rustc 1.46+]][Rust 1.46]
 
 [build_img]: https://github.com/chipsenkbeil/entity-rs/workflows/CI/badge.svg
 [build_lnk]: https://github.com/chipsenkbeil/entity-rs/actions
@@ -12,13 +12,13 @@
 [crates_lnk]: https://crates.io/crates/entity
 [doc_img]: https://docs.rs/entity/badge.svg
 [doc_lnk]: https://docs.rs/entity
-[entity: rustc 1.45+]: https://img.shields.io/badge/entity-rustc_1.45+-lightgray.svg
-[entity_macros: rustc 1.45+]: https://img.shields.io/badge/entity_macros-rustc_1.45+-lightgray.svg
-[Rust 1.45]: https://blog.rust-lang.org/2020/07/16/Rust-1.45.0.html
+[entity: rustc 1.46+]: https://img.shields.io/badge/entity-rustc_1.46+-lightgray.svg
+[entity_macros: rustc 1.46+]: https://img.shields.io/badge/entity_macros-rustc_1.46+-lightgray.svg
+[Rust 1.46]: https://blog.rust-lang.org/2020/08/27/Rust-1.46.0.html
 
 A simplistic framework based on [TAO, Facebook's distributed database for Social Graph](https://www.usenix.org/system/files/conference/atc13/atc13-bronson.pdf).
 
-Requires Rust 1.45+. Without `entity_macros`, may compile and run for
+Requires Rust 1.46+. Without `entity_macros`, may compile and run for
 older versions of Rust.
 
 ## Getting Started

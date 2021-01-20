@@ -1,3 +1,4 @@
+mod async_graphql;
 mod builder;
 mod debug;
 mod edge;
@@ -7,6 +8,8 @@ mod loader;
 mod query;
 mod r#type;
 
+pub use self::async_graphql::do_derive_async_graphql_ent;
+pub use self::async_graphql::do_derive_async_graphql_ent_filter;
 pub use builder::do_derive_ent_builder;
 pub use debug::do_derive_ent_debug;
 pub use edge::do_derive_ent_typed_edges;

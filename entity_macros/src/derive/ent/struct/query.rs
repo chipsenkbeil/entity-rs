@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_quote, Expr, Path, Type};
 
-pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
     let name = &ent.ident;
     let vis = &ent.vis;
     let query_name = format_ident!("{}Query", name);
@@ -98,10 +98,18 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
         });
 
         let method_name = format_ident!("query_{}", name);
-        let edge_query_ty = format_ident!(
-            "{}Query",
-            utils::type_to_ident(ent_ty).expect("Bad edge ent type")
-        );
+
+        // NOTE: We attempt to use the specified query type, defaulting to
+        //       <NAME>Query if not specified
+        let edge_query_ty: Type = if let Some(ty) = e.ent_query_ty.as_ref() {
+            parse_quote!(#ty)
+        } else {
+            let ident = format_ident!(
+                "{}Query",
+                utils::type_to_ident(ent_ty).expect("Bad edge ent type")
+            );
+            parse_quote!(#ident)
+        };
         let doc_string = format!(
             concat!(
                 "Returns a query for \"{}\" that is pre-filtered to ents ",
@@ -122,7 +130,7 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
 
     let default_doc_str = format!("Creates new query that selects all {} by default", name);
 
-    Ok(quote! {
+    quote! {
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
         #[automatically_derived]
         #vis struct #query_name #impl_generics(
@@ -188,5 +196,5 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream>
                 )
             }
         }
-    })
+    }
 }

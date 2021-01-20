@@ -1,0 +1,23 @@
+error: No id field provided
+ --> $DIR/missing-core-ent-fields.rs:4:1
+  |
+4 | struct TestEnt {}
+  | ^^^^^^^^^^^^^^^^^
+
+error: No database field provided
+ --> $DIR/missing-core-ent-fields.rs:4:1
+  |
+4 | struct TestEnt {}
+  | ^^^^^^^^^^^^^^^^^
+
+error: No created field provided
+ --> $DIR/missing-core-ent-fields.rs:4:1
+  |
+4 | struct TestEnt {}
+  | ^^^^^^^^^^^^^^^^^
+
+error: No last_updated field provided
+ --> $DIR/missing-core-ent-fields.rs:4:1
+  |
+4 | struct TestEnt {}
+  | ^^^^^^^^^^^^^^^^^

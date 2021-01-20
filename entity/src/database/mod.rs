@@ -123,3 +123,23 @@ impl<T: Database> DatabaseExt for T {
             .map(|x| x.into_iter().filter_map(|ent| ent.to_ent::<E>()).collect())
     }
 }
+
+impl DatabaseExt for dyn Database {
+    fn insert_typed<E: Ent>(&self, ent: E) -> DatabaseResult<Id> {
+        self.insert(Box::from(ent))
+    }
+
+    fn get_typed<E: Ent>(&self, id: Id) -> DatabaseResult<Option<E>> {
+        self.get(id).map(|x| x.and_then(|ent| ent.to_ent::<E>()))
+    }
+
+    fn get_all_typed<E: Ent>(&self, ids: Vec<Id>) -> DatabaseResult<Vec<E>> {
+        self.get_all(ids)
+            .map(|x| x.into_iter().filter_map(|ent| ent.to_ent::<E>()).collect())
+    }
+
+    fn find_all_typed<E: Ent>(&self, query: Query) -> DatabaseResult<Vec<E>> {
+        self.find_all(query)
+            .map(|x| x.into_iter().filter_map(|ent| ent.to_ent::<E>()).collect())
+    }
+}

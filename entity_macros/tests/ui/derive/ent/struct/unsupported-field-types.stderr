@@ -1,0 +1,65 @@
+error: Arrays are not supported as field types
+  --> $DIR/unsupported-field-types.rs:18:8
+   |
+18 |     a: [u32; 3],
+   |        ^^^^^^^^
+
+error: fn(...) are not supported as field types
+  --> $DIR/unsupported-field-types.rs:21:8
+   |
+21 |     b: fn(u32) -> u32,
+   |        ^^^^^^^^^^^^^^
+
+error: *const T and *mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:24:8
+   |
+24 |     c: *const u32,
+   |        ^^^^^^^^^^
+
+error: *const T and *mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:27:8
+   |
+27 |     d: *mut u32,
+   |        ^^^^^^^^
+
+error: &'a T and &'a mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:30:8
+   |
+30 |     e: &'a u32,
+   |        ^^^^^^^
+
+error: &'a T and &'a mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:33:8
+   |
+33 |     f: &'a mut u32,
+   |        ^^^^^^^^^^^
+
+error: &'a T and &'a mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:36:8
+   |
+36 |     g: &'a [u32],
+   |        ^^^^^^^^^
+
+error: Tuples are not supported as field types
+  --> $DIR/unsupported-field-types.rs:39:8
+   |
+39 |     h: (u32, u32),
+   |        ^^^^^^^^^^
+
+error: &'a T and &'a mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:42:12
+   |
+42 |     i: Vec<&'a u32>,
+   |            ^^^^^^^
+
+error: &'a T and &'a mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:45:42
+   |
+45 |     j: std::collections::HashMap<String, &'a u32>,
+   |                                          ^^^^^^^
+
+error: &'a T and &'a mut T are not supported as field types
+  --> $DIR/unsupported-field-types.rs:48:15
+   |
+48 |     k: Option<&'a u32>,
+   |               ^^^^^^^

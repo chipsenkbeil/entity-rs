@@ -1,6 +1,6 @@
 use crate::{Database, DatabaseResult, Ent, Id};
 use derive_more::{Constructor, IntoIterator};
-use std::fmt::Debug;
+use std::{fmt::Debug, iter::Extend};
 
 mod filter;
 pub use filter::*;
@@ -30,6 +30,13 @@ impl EntQuery for Query {
     }
 }
 
+impl Extend<Filter> for Query {
+    /// Extends the query's filters with the contents of the iterator
+    fn extend<T: IntoIterator<Item = Filter>>(&mut self, iter: T) {
+        self.0.extend(iter)
+    }
+}
+
 impl Query {
     /// Consumes query, producing a new query with the additional filter
     /// added to the end of the filters to be applied
@@ -38,6 +45,12 @@ impl Query {
         filters.push(filter);
 
         Query::new(filters)
+    }
+
+    /// Updates the query by adding an additional filter to the end
+    pub fn add_filter(&mut self, filter: Filter) -> &mut Self {
+        self.0.push(filter);
+        self
     }
 
     pub fn where_id<P: Into<TypedPredicate<Id>>>(self, p: P) -> Self {

@@ -1,0 +1,8 @@
+error: Structs are not supported
+ --> $DIR/unsupported-struct.rs:4:1
+  |
+4 | / struct TestEnt {
+5 | |     a: u32,
+6 | |     b: char,
+7 | | }
+  | |_^

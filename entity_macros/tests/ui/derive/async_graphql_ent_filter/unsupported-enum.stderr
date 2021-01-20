@@ -1,0 +1,8 @@
+error: Enums are not supported
+ --> $DIR/unsupported-enum.rs:4:1
+  |
+4 | / enum TestEnt {
+5 | |     A,
+6 | |     B,
+7 | | }
+  | |_^

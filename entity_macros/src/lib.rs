@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod attribute;
 mod data;
 mod derive;
@@ -137,6 +139,18 @@ pub fn derive_ent_wrapper(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 #[proc_macro_derive(Value, attributes(value))]
 pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     utils::do_derive(derive::do_derive_value)(input)
+}
+
+/// Special wrapper to derive an async-graphql object based on the ent
+#[proc_macro_derive(AsyncGraphqlEnt, attributes(ent))]
+pub fn derive_async_graphql_ent(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_async_graphql_ent)(input)
+}
+
+/// Special wrapper to derive an async-graphql filter based on the ent
+#[proc_macro_derive(AsyncGraphqlEntFilter, attributes(ent))]
+pub fn derive_async_graphql_ent_filter(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_async_graphql_ent_filter)(input)
 }
 
 /// Injects elements needed for an ent to be derived.
