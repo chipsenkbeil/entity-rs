@@ -22,10 +22,11 @@ jobs:
           toolchain: nightly-2020-11-19
           override: true
           components: rustc-dev, llvm-tools-preview
-      - uses: Swatinem/rust-cache@v1
       - name: Install rust-semverver
         run: cargo install --git https://github.com/rust-lang/rust-semverver --rev 71c340ff867d2f79613cfe02c6714f1d2ef00bc4
-      - run: cd "${{ matrix.crate }}" && \
-          eval "current_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)" && \
-          (cargo semver --api-guidelines --all-features | tee semver_out) && \
+      - name: Do semver check
+        working-directory: ./${{ matrix.crate }}
+        run: |
+          eval "current_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)"
+          cargo semver --api-guidelines --all-features | tee semver_out
           (head -n 1 semver_out | grep "\-> $current_version") || (echo "versioning mismatch" && return 1)
