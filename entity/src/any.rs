@@ -8,3 +8,15 @@ pub trait AsAny: Any {
     /// converts mutable reference to Any
     fn as_mut_any(&mut self) -> &mut dyn Any;
 }
+
+/// Blanket implementation that enables any `'static` reference to convert
+/// to the `Any` type
+impl<T: 'static> AsAny for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}

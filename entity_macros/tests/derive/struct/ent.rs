@@ -846,10 +846,7 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
     assert_eq!(
         children
             .iter()
-            .map(|ent| ent
-                .as_any()
-                .downcast_ref::<TestEnt>()
-                .expect("Could not cast to TestEnt"))
+            .map(|ent| ent.as_ent::<TestEnt>().expect("Could not cast to TestEnt"))
             .collect::<Vec<&TestEnt>>(),
         vec![&ent2, &ent3],
     );
@@ -860,10 +857,7 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
     assert_eq!(
         parent
             .iter()
-            .map(|ent| ent
-                .as_any()
-                .downcast_ref::<TestEnt>()
-                .expect("Could not cast to TestEnt"))
+            .map(|ent| ent.as_ent::<TestEnt>().expect("Could not cast to TestEnt"))
             .collect::<Vec<&TestEnt>>(),
         vec![&ent1],
     );
@@ -874,10 +868,7 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
     assert_eq!(
         favorite
             .iter()
-            .map(|ent| ent
-                .as_any()
-                .downcast_ref::<TestEnt>()
-                .expect("Could not cast to TestEnt"))
+            .map(|ent| ent.as_ent::<TestEnt>().expect("Could not cast to TestEnt"))
             .collect::<Vec<&TestEnt>>(),
         vec![&ent1],
     );

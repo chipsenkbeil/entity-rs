@@ -1,10 +1,9 @@
-mod any;
 mod edge;
 mod field;
 pub mod query;
 mod value;
 
-pub use any::*;
+use crate::AsAny;
 pub use edge::*;
 pub use field::*;
 pub use query::*;
@@ -255,18 +254,6 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
     ///
     /// Requires ent to be connected to a database
     fn remove(&self) -> DatabaseResult<bool>;
-}
-
-/// Blanket implementation for all ents that enables them to be converted
-/// to any, which is useful when converting `&dyn Ent` into a concrete type
-impl<T: Ent> AsAny for T {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
 }
 
 dyn_clone::clone_trait_object!(Ent);

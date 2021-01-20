@@ -3,7 +3,7 @@ pub use kv::*;
 
 use crate::{
     ent::{Ent, Query, ValueType},
-    Id,
+    AsAny, Id,
 };
 use derive_more::Display;
 use std::sync::{Arc, Weak};
@@ -63,7 +63,7 @@ impl std::error::Error for DatabaseError {}
 /// operations using ents. Given that many database implementations handle
 /// interior mutability themselves, the API of this trait does not provide
 /// any mut guarantees itself.
-pub trait Database: Send + Sync {
+pub trait Database: AsAny + Send + Sync {
     /// Retrieves a copy of a single, generic ent with the corresponding id
     ///
     /// This should not connect the ent back to the database upon return as
@@ -88,6 +88,22 @@ pub trait Database: Send + Sync {
 
     /// Finds all generic ents that match the query
     fn find_all(&self, query: Query) -> DatabaseResult<Vec<Box<dyn Ent>>>;
+}
+
+/// Implementation for a generic trait object of [`Database`] that provides
+/// methods to downcast into a concrete type
+impl dyn Database {
+    /// Attempts to convert this dynamic Database ref into a concrete Database
+    /// ref by downcasting
+    pub fn as_database<D: Database>(&self) -> Option<&D> {
+        self.as_any().downcast_ref::<D>()
+    }
+
+    /// Attempts to convert this dynamic Database mutable ref into a concrete
+    /// Database mutable ref by downcasting
+    pub fn as_mut_database<D: Database>(&mut self) -> Option<&mut D> {
+        self.as_mut_any().downcast_mut::<D>()
+    }
 }
 
 pub trait DatabaseExt: Database {
