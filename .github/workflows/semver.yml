@@ -29,6 +29,6 @@ jobs:
         run: |
           eval "local_version=$(grep -e '^version = .*$' Cargo.toml | cut -d ' ' -f 3)"
           eval "minimum_required_version=$(cargo semver --api-guidelines --all-features --compact)"
-          printf "Local Version: %s\Minimum Required Version: %s\n" "$local_version" "$minimum_required_version"
+          printf "Local Version: %s\nMinimum Required Version: %s\n" "$local_version" "$minimum_required_version"
           (test "$(printf '%s\n%s\n' "$local_version" "$minimum_required_version" | sort -V | head -n 1)" == "$minimum_required_version") || \
             (echo "Need to update $local_version -> $minimum_required_version" && exit 1)
