@@ -1,17 +1,16 @@
-use derive_more::{From, TryInto};
 use doc_comment::doc_comment;
 use paste::paste;
 use std::{
     cmp::Ordering,
+    convert::TryFrom,
     hash::{Hash, Hasher},
 };
 use strum::{Display, EnumDiscriminants, EnumString};
 
 /// Represents a generic number that maintains an internal Rust representation
 /// of the actual number
-#[derive(Copy, Clone, Debug, From, EnumDiscriminants, TryInto)]
+#[derive(Copy, Clone, Debug, EnumDiscriminants)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
-#[try_into(owned, ref, ref_mut)]
 #[strum_discriminants(derive(Display, EnumString))]
 #[strum_discriminants(name(NumberType), strum(serialize_all = "snake_case"))]
 #[cfg_attr(
@@ -268,20 +267,20 @@ impl Number {
     #[inline]
     pub fn to_absolute(&self) -> Self {
         match self {
-            Self::F32(x) => Self::from(x.abs()),
-            Self::F64(x) => Self::from(x.abs()),
-            Self::I128(x) => Self::from(x.abs()),
-            Self::I16(x) => Self::from(x.abs()),
-            Self::I32(x) => Self::from(x.abs()),
-            Self::I64(x) => Self::from(x.abs()),
-            Self::I8(x) => Self::from(x.abs()),
-            Self::Isize(x) => Self::from(x.abs()),
-            Self::U128(x) => Self::from(*x),
-            Self::U16(x) => Self::from(*x),
-            Self::U32(x) => Self::from(*x),
-            Self::U64(x) => Self::from(*x),
-            Self::U8(x) => Self::from(*x),
-            Self::Usize(x) => Self::from(*x),
+            Self::F32(x) => Self::F32(x.abs()),
+            Self::F64(x) => Self::F64(x.abs()),
+            Self::I128(x) => Self::I128(x.abs()),
+            Self::I16(x) => Self::I16(x.abs()),
+            Self::I32(x) => Self::I32(x.abs()),
+            Self::I64(x) => Self::I64(x.abs()),
+            Self::I8(x) => Self::I8(x.abs()),
+            Self::Isize(x) => Self::Isize(x.abs()),
+            Self::U128(x) => Self::U128(*x),
+            Self::U16(x) => Self::U16(*x),
+            Self::U32(x) => Self::U32(*x),
+            Self::U64(x) => Self::U64(*x),
+            Self::U8(x) => Self::U8(*x),
+            Self::Usize(x) => Self::Usize(*x),
         }
     }
 
@@ -306,6 +305,175 @@ impl Number {
         self.into()
     }
 }
+
+/// Represents some data that can be converted to and from a [`Number`]
+pub trait NumberLike: Sized {
+    /// Consumes this data, converting it into an abstract [`Number`]
+    fn into_number(self) -> Number;
+
+    /// Attempts to convert an abstract [`Number`] into this data, returning
+    /// the owned value back if unable to convert
+    fn try_from_number(number: Number) -> Result<Self, Number>;
+}
+
+impl NumberLike for Number {
+    fn into_number(self) -> Number {
+        self
+    }
+
+    fn try_from_number(number: Number) -> Result<Self, Number> {
+        Ok(number)
+    }
+}
+
+macro_rules! try_from_both_bounded {
+    ($val:ident, $variant:ident, $source:ty, $target:ty) => {{
+        let min = Self::MIN as $source;
+        let max = Self::MAX as $source;
+        if $val < min || $val > max {
+            Err(Number::$variant($val))
+        } else {
+            Ok($val as $target)
+        }
+    }};
+}
+
+impl NumberLike for f32 {
+    fn into_number(self) -> Number {
+        Number::F32(self)
+    }
+
+    fn try_from_number(number: Number) -> Result<Self, Number> {
+        match number {
+            Number::F32(x) => Ok(x),
+            Number::F64(x) => try_from_both_bounded!(x, F64, f64, f32),
+            Number::I128(x) => try_from_both_bounded!(x, I128, i128, f32),
+            Number::I16(x) => Ok(Self::from(x)),
+            Number::I32(x) => try_from_both_bounded!(x, I32, i32, f32),
+            Number::I64(x) => try_from_both_bounded!(x, I64, i64, f32),
+            Number::I8(x) => Ok(Self::from(x)),
+            Number::Isize(x) => try_from_both_bounded!(x, Isize, isize, f32),
+            Number::U128(x) => try_from_both_bounded!(x, U128, u128, f32),
+            Number::U16(x) => Ok(Self::from(x)),
+            Number::U32(x) => try_from_both_bounded!(x, U32, u32, f32),
+            Number::U64(x) => try_from_both_bounded!(x, U64, u64, f32),
+            Number::U8(x) => Ok(Self::from(x)),
+            Number::Usize(x) => try_from_both_bounded!(x, Usize, usize, f32),
+        }
+    }
+}
+
+impl From<f32> for Number {
+    fn from(x: f32) -> Self {
+        <f32 as NumberLike>::into_number(x)
+    }
+}
+
+impl TryFrom<Number> for f32 {
+    type Error = Number;
+
+    fn try_from(x: Number) -> Result<Self, Self::Error> {
+        <f32 as NumberLike>::try_from_number(x)
+    }
+}
+
+impl NumberLike for f64 {
+    fn into_number(self) -> Number {
+        Number::F64(self)
+    }
+
+    fn try_from_number(number: Number) -> Result<Self, Number> {
+        match number {
+            Number::F32(x) => Ok(Self::from(x)),
+            Number::F64(x) => Ok(x),
+            Number::I128(x) => try_from_both_bounded!(x, I128, i128, f64),
+            Number::I16(x) => Ok(Self::from(x)),
+            Number::I32(x) => Ok(Self::from(x)),
+            Number::I64(x) => try_from_both_bounded!(x, I64, i64, f64),
+            Number::I8(x) => Ok(Self::from(x)),
+            Number::Isize(x) => try_from_both_bounded!(x, Isize, isize, f64),
+            Number::U128(x) => try_from_both_bounded!(x, U128, u128, f64),
+            Number::U16(x) => Ok(Self::from(x)),
+            Number::U32(x) => Ok(Self::from(x)),
+            Number::U64(x) => try_from_both_bounded!(x, U64, u64, f64),
+            Number::U8(x) => Ok(Self::from(x)),
+            Number::Usize(x) => try_from_both_bounded!(x, Usize, usize, f64),
+        }
+    }
+}
+
+impl From<f64> for Number {
+    fn from(x: f64) -> Self {
+        <f64 as NumberLike>::into_number(x)
+    }
+}
+
+impl TryFrom<Number> for f64 {
+    type Error = Number;
+
+    fn try_from(x: Number) -> Result<Self, Self::Error> {
+        <f64 as NumberLike>::try_from_number(x)
+    }
+}
+
+macro_rules! impl_number_like {
+    ($type:ty, $variant:ident) => {
+        impl NumberLike for $type {
+            fn into_number(self) -> Number {
+                Number::$variant(self)
+            }
+
+            /// Attempts to convert from generic number, succeeding if within
+            /// finite bounds of target type, otherwise failing and returning
+            /// back ownership of generic number
+            fn try_from_number(number: Number) -> Result<Self, Number> {
+                match number {
+                    Number::F32(x) => try_from_both_bounded!(x, F32, f32, $type),
+                    Number::F64(x) => try_from_both_bounded!(x, F64, f64, $type),
+                    Number::I128(x) => <$type>::try_from(x).map_err(|_| Number::I128(x)),
+                    Number::I16(x) => <$type>::try_from(x).map_err(|_| Number::I16(x)),
+                    Number::I32(x) => <$type>::try_from(x).map_err(|_| Number::I32(x)),
+                    Number::I64(x) => <$type>::try_from(x).map_err(|_| Number::I64(x)),
+                    Number::I8(x) => <$type>::try_from(x).map_err(|_| Number::I8(x)),
+                    Number::Isize(x) => <$type>::try_from(x).map_err(|_| Number::Isize(x)),
+                    Number::U128(x) => <$type>::try_from(x).map_err(|_| Number::U128(x)),
+                    Number::U16(x) => <$type>::try_from(x).map_err(|_| Number::U16(x)),
+                    Number::U32(x) => <$type>::try_from(x).map_err(|_| Number::U32(x)),
+                    Number::U64(x) => <$type>::try_from(x).map_err(|_| Number::U64(x)),
+                    Number::U8(x) => <$type>::try_from(x).map_err(|_| Number::U8(x)),
+                    Number::Usize(x) => <$type>::try_from(x).map_err(|_| Number::Usize(x)),
+                }
+            }
+        }
+
+        impl From<$type> for Number {
+            fn from(x: $type) -> Self {
+                <$type as NumberLike>::into_number(x)
+            }
+        }
+
+        impl TryFrom<Number> for $type {
+            type Error = Number;
+
+            fn try_from(x: Number) -> Result<Self, Self::Error> {
+                <$type as NumberLike>::try_from_number(x)
+            }
+        }
+    };
+}
+
+impl_number_like!(isize, Isize);
+impl_number_like!(i128, I128);
+impl_number_like!(i64, I64);
+impl_number_like!(i32, I32);
+impl_number_like!(i16, I16);
+impl_number_like!(i8, I8);
+impl_number_like!(usize, Usize);
+impl_number_like!(u128, U128);
+impl_number_like!(u64, U64);
+impl_number_like!(u32, U32);
+impl_number_like!(u16, U16);
+impl_number_like!(u8, U8);
 
 /// Represents the sign of a number
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -717,5 +885,150 @@ mod tests {
 
         check_abs_match!(U128, U64, U32, U16, U8, Usize; 0, 0);
         check_abs_match!(U128, U64, U32, U16, U8, Usize; 1, 1);
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_f32_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_f32() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_f64_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_f64() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_isize_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_isize() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_i128_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_i128() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_i64_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_i64() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_i32_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_i32() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_i16_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_i16() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_i8_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_i8() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_usize_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_usize() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_u128_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_u128() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_u64_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_u64() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_u32_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_u32() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_u16_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_u16() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_u8_to_number() {
+        todo!()
+    }
+
+    #[test]
+    fn number_like_can_convert_number_to_u8() {
+        todo!()
     }
 }

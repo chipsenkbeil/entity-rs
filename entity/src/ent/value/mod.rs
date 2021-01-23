@@ -1,8 +1,11 @@
 mod number;
+mod primitive;
+mod r#type;
 
-pub use number::{Number, NumberSign, NumberType};
+pub use number::{Number, NumberLike, NumberSign, NumberType};
+pub use primitive::{PrimitiveValue, PrimitiveValueLike, PrimitiveValueType};
+pub use r#type::ValueType;
 
-use derive_more::From;
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
@@ -11,7 +14,6 @@ use std::{
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
 };
-use strum::ParseError;
 
 /// Represents either a primitive or complex value
 #[derive(Clone, Debug)]
@@ -172,729 +174,506 @@ impl PartialOrd for Value {
     }
 }
 
-impl<T: Into<Value>> From<Vec<T>> for Value {
-    /// Converts a vec of some value into a value list
-    fn from(list: Vec<T>) -> Self {
-        Self::List(list.into_iter().map(|v| v.into()).collect())
+/// Represents some data that can be converted to and from a [`Value`]
+pub trait ValueLike: Sized {
+    /// Consumes this data, converting it into an abstract [`Value`]
+    fn into_value(self) -> Value;
+
+    /// Attempts to convert an abstract [`Value`] into this data, returning
+    /// the owned value back if unable to convert
+    fn try_from_value(value: Value) -> Result<Self, Value>;
+}
+
+impl ValueLike for Value {
+    fn into_value(self) -> Value {
+        self
+    }
+
+    fn try_from_value(value: Value) -> Result<Self, Value> {
+        Ok(value)
     }
 }
 
-impl<T: Into<Value>> From<VecDeque<T>> for Value {
-    /// Converts a vec deque of some value into a value list
-    fn from(list: VecDeque<T>) -> Self {
-        Self::List(list.into_iter().map(|v| v.into()).collect())
+impl<T: PrimitiveValueLike> ValueLike for T {
+    fn into_value(self) -> Value {
+        Value::Primitive(self.into_primitive_value())
+    }
+
+    fn try_from_value(value: Value) -> Result<Self, Value> {
+        match value {
+            Value::Primitive(x) => T::try_from_primitive_value(x).map_err(Value::Primitive),
+            x => Err(x),
+        }
     }
 }
 
-impl<T: Into<Value>> From<LinkedList<T>> for Value {
-    /// Converts a linked list of some value into a value list
-    fn from(list: LinkedList<T>) -> Self {
-        Self::List(list.into_iter().map(|v| v.into()).collect())
+impl<T: ValueLike> ValueLike for Option<T> {
+    fn into_value(self) -> Value {
+        Value::Optional(self.map(|x| Box::new(x.into_value())))
+    }
+
+    fn try_from_value(value: Value) -> Result<Self, Value> {
+        match value {
+            Value::Optional(Some(x)) => Ok(Some(
+                T::try_from_value(*x).map_err(|x| Value::Optional(Some(Box::new(x))))?,
+            )),
+            Value::Optional(None) => Ok(None),
+            x => Err(x),
+        }
     }
 }
 
-impl<T: Into<Value>> From<BinaryHeap<T>> for Value {
-    /// Converts a binary heap of some value into a value list
-    fn from(list: BinaryHeap<T>) -> Self {
-        Self::List(list.into_iter().map(|v| v.into()).collect())
+impl ValueLike for PathBuf {
+    fn into_value(self) -> Value {
+        Value::Text(self.to_string_lossy().to_string())
+    }
+
+    fn try_from_value(value: Value) -> Result<Self, Value> {
+        match value {
+            Value::Text(x) => Ok(PathBuf::from(x)),
+            x => Err(x),
+        }
     }
 }
 
-impl<T: Into<Value>> From<HashSet<T>> for Value {
-    /// Converts a hashset of some value into a value list
-    fn from(list: HashSet<T>) -> Self {
-        Self::List(list.into_iter().map(|v| v.into()).collect())
+impl ValueLike for OsString {
+    fn into_value(self) -> Value {
+        Value::Text(self.to_string_lossy().to_string())
+    }
+
+    fn try_from_value(value: Value) -> Result<Self, Value> {
+        match value {
+            Value::Text(x) => Ok(OsString::from(x)),
+            x => Err(x),
+        }
     }
 }
 
-impl<T: Into<Value>> From<BTreeSet<T>> for Value {
-    /// Converts a btree set of some value into a value list
-    fn from(list: BTreeSet<T>) -> Self {
-        Self::List(list.into_iter().map(|v| v.into()).collect())
+impl ValueLike for String {
+    fn into_value(self) -> Value {
+        Value::Text(self)
     }
-}
 
-impl<T: Into<Value>> From<HashMap<String, T>> for Value {
-    /// Converts a hashmap of string keys and some value into a value map
-    fn from(map: HashMap<String, T>) -> Self {
-        Self::Map(map.into_iter().map(|(k, v)| (k, v.into())).collect())
-    }
-}
-
-impl<T: Into<Value>> From<BTreeMap<String, T>> for Value {
-    /// Converts a btree map of string keys and some value into a value map
-    fn from(map: BTreeMap<String, T>) -> Self {
-        Self::Map(map.into_iter().map(|(k, v)| (k, v.into())).collect())
-    }
-}
-
-impl<T: Into<Value>> From<Option<T>> for Value {
-    /// Converts an option of some value into an optional value
-    fn from(maybe: Option<T>) -> Self {
-        Self::Optional(maybe.map(|x| Box::from(x.into())))
-    }
-}
-
-impl From<PrimitiveValue> for Value {
-    /// Converts a primitive value into a value without any allocation
-    fn from(v: PrimitiveValue) -> Self {
-        Self::Primitive(v)
-    }
-}
-
-impl From<PathBuf> for Value {
-    fn from(p: PathBuf) -> Self {
-        Self::from(p.into_os_string())
+    fn try_from_value(value: Value) -> Result<Self, Value> {
+        match value {
+            Value::Text(x) => Ok(x),
+            x => Err(x),
+        }
     }
 }
 
 impl<'a> From<&'a Path> for Value {
     fn from(p: &'a Path) -> Self {
-        Self::from(p.as_os_str())
-    }
-}
-
-impl From<OsString> for Value {
-    fn from(s: OsString) -> Self {
-        Self::Text(s.to_string_lossy().to_string())
+        p.to_path_buf().into_value()
     }
 }
 
 impl<'a> From<&'a OsStr> for Value {
     fn from(s: &'a OsStr) -> Self {
-        Self::from(s.to_os_string())
-    }
-}
-
-impl From<String> for Value {
-    /// Converts a string into a text value without any allocation
-    fn from(s: String) -> Self {
-        Self::Text(s)
+        s.to_os_string().into_value()
     }
 }
 
 impl<'a> From<&'a str> for Value {
-    /// Converts a str slice into a value by allocating a new string
     fn from(s: &'a str) -> Self {
-        Self::from(s.to_string())
+        s.to_string().into_value()
     }
 }
 
-macro_rules! impl_from_primitive {
-    ($type:ty) => {
-        impl From<$type> for Value {
-            fn from(v: $type) -> Self {
-                Self::from(PrimitiveValue::from(v))
+macro_rules! impl_list {
+    ($outer:ident $($type:tt)*) => {
+        impl<T: ValueLike $(+ $type)*> ValueLike for $outer<T> {
+            fn into_value(self) -> Value {
+                Value::List(self.into_iter().map(ValueLike::into_value).collect())
             }
-        }
-    };
-}
 
-impl_from_primitive!(bool);
-impl_from_primitive!(char);
-impl_from_primitive!(f32);
-impl_from_primitive!(f64);
-impl_from_primitive!(i128);
-impl_from_primitive!(i16);
-impl_from_primitive!(i32);
-impl_from_primitive!(i64);
-impl_from_primitive!(i8);
-impl_from_primitive!(isize);
-impl_from_primitive!(u128);
-impl_from_primitive!(u16);
-impl_from_primitive!(u32);
-impl_from_primitive!(u64);
-impl_from_primitive!(u8);
-impl_from_primitive!(usize);
-
-macro_rules! impl_try_into {
-    ($variant:ident, $type:ty, $convert:expr) => {
-        impl TryFrom<Value> for $type {
-            type Error = &'static str;
-
-            fn try_from(value: Value) -> Result<Self, Self::Error> {
+            fn try_from_value(value: Value) -> Result<Self, Value> {
                 match value {
-                    Value::$variant(x) => $convert(x),
-                    _ => Err(concat!(
-                        "Only ",
-                        stringify!($variant),
-                        " can be converted to ",
-                        stringify!($type)
-                    )),
-                }
-            }
-        }
-    };
-}
-macro_rules! impl_generic_try_into {
-    ($variant:ident, $type:ty, $generic:tt, $convert:expr) => {
-        impl<$generic: TryFrom<Value, Error = &'static str>> TryFrom<Value> for $type {
-            type Error = &'static str;
+                    Value::List(x) => {
+                        let mut tmp = Vec::new();
+                        let mut has_failure = false;
 
-            fn try_from(value: Value) -> Result<Self, Self::Error> {
-                match value {
-                    Value::$variant(x) => $convert(x),
-                    _ => Err(concat!(
-                        "Only ",
-                        stringify!($variant),
-                        " can be converted to ",
-                        stringify!($type)
-                    )),
-                }
-            }
-        }
-    };
-}
+                        for v in x {
+                            let result = T::try_from_value(v);
+                            if result.is_err() {
+                                has_failure = true;
+                            }
+                            tmp.push(result);
+                        }
 
-impl_generic_try_into!(List, Vec<T>, T, |x: Vec<Value>| x
-    .into_iter()
-    .map(T::try_from)
-    .collect());
-impl_generic_try_into!(Map, HashMap<String, T>, T, |x: HashMap<String, Value>| x
-    .into_iter()
-    .map(|(k, v)| T::try_from(v).map(|t| (k, t)))
-    .collect());
-impl_try_into!(Text, String, |x| Ok(x));
-impl_try_into!(Text, PathBuf, |x| Ok(PathBuf::from(x)));
-impl_try_into!(Text, OsString, |x| Ok(OsString::from(x)));
-impl_try_into!(Primitive, bool, bool::try_from);
-impl_try_into!(Primitive, char, char::try_from);
-impl_try_into!(Primitive, f32, f32::try_from);
-impl_try_into!(Primitive, f64, f64::try_from);
-impl_try_into!(Primitive, i128, i128::try_from);
-impl_try_into!(Primitive, i16, i16::try_from);
-impl_try_into!(Primitive, i32, i32::try_from);
-impl_try_into!(Primitive, i64, i64::try_from);
-impl_try_into!(Primitive, i8, i8::try_from);
-impl_try_into!(Primitive, isize, isize::try_from);
-impl_try_into!(Primitive, u128, u128::try_from);
-impl_try_into!(Primitive, u16, u16::try_from);
-impl_try_into!(Primitive, u32, u32::try_from);
-impl_try_into!(Primitive, u64, u64::try_from);
-impl_try_into!(Primitive, u8, u8::try_from);
-impl_try_into!(Primitive, usize, usize::try_from);
-
-/// Represents value types (primitive or complex). Assumes that complex
-/// types will contain the same inner type and does not vary
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
-pub enum ValueType {
-    List(Box<ValueType>),
-    Map(Box<ValueType>),
-    Optional(Box<ValueType>),
-    Primitive(PrimitiveValueType),
-    Text,
-    Custom,
-}
-
-impl ValueType {
-    pub fn is_primitive_type(&self) -> bool {
-        matches!(self, Self::Primitive(_))
-    }
-
-    pub fn to_primitive_type(&self) -> Option<PrimitiveValueType> {
-        match self {
-            Self::Primitive(x) => Some(*x),
-            _ => None,
-        }
-    }
-
-    /// Constructs a value type from a Rust-based type string similar to what
-    /// you would find from `std::any::type_name`
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{ValueType as VT, PrimitiveValueType as PVT, NumberType as NT};
-    ///
-    /// assert_eq!(
-    ///     VT::from_type_name("u8").expect("one"),
-    ///     VT::Primitive(PVT::Number(NT::U8)),
-    /// );
-    ///
-    /// assert_eq!(
-    ///     VT::from_type_name("std::vec::Vec<std::string::String>").expect("two"),
-    ///     VT::List(Box::from(VT::Text)),
-    /// );
-    ///
-    /// assert_eq!(
-    ///     VT::from_type_name("Vec<Option<u8>>").expect("three"),
-    ///     VT::List(Box::from(VT::Optional(Box::from(VT::Primitive(PVT::Number(NT::U8)))))),
-    /// );
-    ///
-    /// assert_eq!(
-    ///     VT::from_type_name("HashMap<String, u8>").expect("four"),
-    ///     VT::Map(Box::from(VT::Primitive(PVT::Number(NT::U8)))),
-    /// );
-    /// ```
-    pub fn from_type_name(name: &str) -> Result<Self, ParseError> {
-        if name.is_empty() {
-            return Err(ParseError::VariantNotFound);
-        }
-
-        // Split based on the start of a generic in the form of Outer<Inner>
-        let mut tokens = name.split(|c| c == '<');
-        let maybe_outer_str = tokens.next();
-        let inner_str = {
-            let mut x = tokens.collect::<Vec<&str>>().join("<");
-            if x.ends_with('>') {
-                x.pop();
-            }
-            x
-        };
-
-        // Get the outer type based on an equivalent rust type
-        //
-        // * HashMap -> Map
-        // * Vec -> List
-        // * Option -> Optional
-        // * String -> Text
-        // * (anything else) -> Primitive
-        match maybe_outer_str
-            .unwrap()
-            .split(|c| c == ':')
-            .last()
-            .unwrap()
-            .to_lowercase()
-            .as_str()
-        {
-            // If a map, we expect the form to be ...<String, ...> and will
-            // verify that the first type paraemter is String
-            "hashmap" => {
-                let mut items = inner_str.split(|c| c == ',');
-                if let Some(s) = items.next() {
-                    if s.trim().to_lowercase().as_str() != "string" {
-                        return Err(ParseError::VariantNotFound);
+                        // Roll back to the original value list if there is
+                        // any error
+                        if has_failure {
+                            Err(Value::List(
+                                tmp.into_iter()
+                                    .map(|v| match v {
+                                        Ok(x) => x.into_value(),
+                                        Err(x) => x,
+                                    })
+                                    .collect(),
+                            ))
+                        } else {
+                            Ok(tmp.into_iter().map(|v| v.unwrap()).collect())
+                        }
                     }
+                    x => Err(x),
                 }
-
-                let rest = items.collect::<String>();
-                Ok(ValueType::Map(Box::from(Self::from_type_name(
-                    &rest.trim(),
-                )?)))
-            }
-            "vec" => Ok(ValueType::List(Box::from(Self::from_type_name(
-                &inner_str,
-            )?))),
-            "option" => Ok(ValueType::Optional(Box::from(Self::from_type_name(
-                &inner_str,
-            )?))),
-            "string" => Ok(ValueType::Text),
-            x => Ok(ValueType::Primitive(PrimitiveValueType::from_type_name(x)?)),
-        }
-    }
-}
-
-impl Default for ValueType {
-    /// Returns default value type of primitive unit
-    fn default() -> Self {
-        Self::Primitive(Default::default())
-    }
-}
-
-impl std::str::FromStr for ValueType {
-    type Err = ParseError;
-
-    /// Parses a string delimited by colons into a nested value type
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{ValueType as VT, PrimitiveValueType as PVT, NumberType as NT};
-    /// use strum::ParseError;
-    /// use std::str::FromStr;
-    ///
-    /// assert_eq!(VT::from_str("char").unwrap(), VT::Primitive(PVT::Char));
-    /// assert_eq!(VT::from_str("u32").unwrap(), VT::Primitive(PVT::Number(NT::U32)));
-    /// assert_eq!(VT::from_str("number:u32").unwrap(), VT::Primitive(PVT::Number(NT::U32)));
-    /// assert_eq!(VT::from_str("primitive:number:u32").unwrap(), VT::Primitive(PVT::Number(NT::U32)));
-    /// assert_eq!(VT::from_str("list:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::Number(NT::U32)))));
-    /// assert_eq!(VT::from_str("list:number:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::Number(NT::U32)))));
-    /// assert_eq!(VT::from_str("list:primitive:number:u32").unwrap(), VT::List(Box::from(VT::Primitive(PVT::Number(NT::U32)))));
-    /// assert_eq!(VT::from_str("unknown").unwrap_err(), ParseError::VariantNotFound);
-    /// ```
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        fn opt_to_err(maybe_type: Option<ValueType>) -> Result<ValueType, ParseError> {
-            match maybe_type {
-                Some(t) => Ok(t),
-                None => Err(ParseError::VariantNotFound),
             }
         }
+    };
+}
 
-        fn from_tokens<'a>(
-            mut it: impl Iterator<Item = &'a str>,
-        ) -> Result<Option<ValueType>, ParseError> {
-            match it.next() {
-                // Special case where we cannot feed this directly into the
-                // primitive value type as it is the following type that is
-                // used instead, so we take the next value instead and use it
-                Some("number") => from_tokens(it),
-                Some(token) => {
-                    let maybe_inner = from_tokens(it)?;
-                    match token {
-                        "list" => Ok(Some(ValueType::List(Box::from(opt_to_err(maybe_inner)?)))),
-                        "map" => Ok(Some(ValueType::Map(Box::from(opt_to_err(maybe_inner)?)))),
-                        "optional" => Ok(Some(ValueType::Optional(Box::from(opt_to_err(
-                            maybe_inner,
-                        )?)))),
-                        "primitive" => Ok(Some(ValueType::Primitive(
-                            opt_to_err(maybe_inner)?
-                                .to_primitive_type()
-                                .ok_or(ParseError::VariantNotFound)?,
-                        ))),
-                        "text" => Ok(Some(ValueType::Text)),
-                        x => Ok(Some(ValueType::Primitive(PrimitiveValueType::from_str(x)?))),
-                    }
-                }
-                None => Ok(None),
+impl_list!(Vec);
+impl_list!(VecDeque);
+impl_list!(LinkedList);
+impl_list!(BinaryHeap Ord);
+impl_list!(HashSet Hash Eq);
+impl_list!(BTreeSet Ord);
+
+macro_rules! impl_map {
+    ($outer:ident) => {
+        impl<T: ValueLike> ValueLike for $outer<String, T> {
+            fn into_value(self) -> Value {
+                Value::Map(self.into_iter().map(|(k, v)| (k, v.into_value())).collect())
             }
-        }
 
-        match from_tokens(s.split(':')) {
-            Ok(Some(value_type)) => Ok(value_type),
-            Ok(None) => Err(ParseError::VariantNotFound),
-            Err(x) => Err(x),
-        }
-    }
-}
-
-impl std::fmt::Display for ValueType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::List(t) => write!(f, "list:{}", t),
-            Self::Map(t) => write!(f, "map:{}", t),
-            Self::Optional(t) => write!(f, "optional:{}", t),
-            Self::Primitive(t) => write!(f, "{}", t),
-            Self::Text => write!(f, "text"),
-            Self::Custom => write!(f, "custom"),
-        }
-    }
-}
-
-impl From<Value> for ValueType {
-    fn from(value: Value) -> Self {
-        Self::from(&value)
-    }
-}
-
-impl<'a> From<&'a Value> for ValueType {
-    /// Produces the type of the referenced value by recursively iterating
-    /// through complex types, assuming that the first value in types like
-    /// list represent the entire set, defaulting to a primitive unit if
-    /// a complex value does not have any items
-    fn from(v: &'a Value) -> Self {
-        match v {
-            Value::List(x) => Self::List(Box::from(
-                x.iter().next().map(ValueType::from).unwrap_or_default(),
-            )),
-            Value::Map(x) => Self::Map(Box::from(
-                x.values().next().map(ValueType::from).unwrap_or_default(),
-            )),
-            Value::Optional(x) => Self::Optional(Box::from(
-                x.as_ref()
-                    .map(Box::as_ref)
-                    .map(ValueType::from)
-                    .unwrap_or_default(),
-            )),
-            Value::Primitive(x) => Self::Primitive(PrimitiveValueType::from(x)),
-            Value::Text(_) => Self::Text,
-        }
-    }
-}
-
-impl From<PrimitiveValueType> for ValueType {
-    /// Converts primitive value type to a value type
-    fn from(t: PrimitiveValueType) -> Self {
-        Self::Primitive(t)
-    }
-}
-
-impl From<NumberType> for ValueType {
-    /// Converts number type (subclass of primitive type) to a value type
-    fn from(t: NumberType) -> Self {
-        Self::Primitive(PrimitiveValueType::Number(t))
-    }
-}
-
-impl Default for PrimitiveValueType {
-    /// Returns default primitive value type of unit
-    fn default() -> Self {
-        Self::Unit
-    }
-}
-
-/// Represents a primitive value
-#[derive(Copy, Clone, Debug, From)]
-#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
-pub enum PrimitiveValue {
-    Bool(bool),
-    Char(char),
-    Number(Number),
-    Unit,
-}
-
-impl PrimitiveValue {
-    /// Returns true if this value is of the specified type
-    #[inline]
-    pub fn is_type(&self, r#type: PrimitiveValueType) -> bool {
-        self.to_type() == r#type
-    }
-
-    /// Returns the type of this value
-    #[inline]
-    pub fn to_type(&self) -> PrimitiveValueType {
-        PrimitiveValueType::from(self)
-    }
-
-    /// Returns true if this value and the other value are of the same type
-    #[inline]
-    pub fn has_same_type(&self, other: &PrimitiveValue) -> bool {
-        self.to_type() == other.to_type()
-    }
-}
-
-impl Hash for PrimitiveValue {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            Self::Bool(x) => x.hash(state),
-            Self::Char(x) => x.hash(state),
-            Self::Number(x) => x.hash(state),
-            Self::Unit => Self::Unit.hash(state),
-        }
-    }
-}
-
-/// Value is considered equal, ignoring the fact that NaN != NaN for floats
-impl Eq for PrimitiveValue {}
-
-impl PartialEq for PrimitiveValue {
-    /// Compares two primitive values of same type for equality, otherwise
-    /// returns false
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Bool(a), Self::Bool(b)) => a == b,
-            (Self::Char(a), Self::Char(b)) => a == b,
-            (Self::Number(a), Self::Number(b)) => a == b,
-            (Self::Unit, Self::Unit) => true,
-            _ => false,
-        }
-    }
-}
-
-impl PartialOrd for PrimitiveValue {
-    /// Compares same variants of same type for ordering, otherwise returns none
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match (self, other) {
-            (Self::Bool(a), Self::Bool(b)) => a.partial_cmp(b),
-            (Self::Char(a), Self::Char(b)) => a.partial_cmp(b),
-            (Self::Number(a), Self::Number(b)) => a.partial_cmp(b),
-            (Self::Unit, Self::Unit) => Some(Ordering::Equal),
-            _ => None,
-        }
-    }
-}
-
-macro_rules! impl_primitive_try_into {
-    ($variant:ident, $type:ty, $convert:expr) => {
-        impl TryFrom<PrimitiveValue> for $type {
-            type Error = &'static str;
-
-            fn try_from(value: PrimitiveValue) -> Result<Self, Self::Error> {
+            fn try_from_value(value: Value) -> Result<Self, Value> {
                 match value {
-                    PrimitiveValue::$variant(x) => $convert(x),
-                    _ => Err(concat!(
-                        "Only ",
-                        stringify!($variant),
-                        " can be converted to ",
-                        stringify!($type)
-                    )),
+                    Value::Map(x) => {
+                        let mut tmp = Vec::new();
+                        let mut has_failure = false;
+
+                        for (k, v) in x {
+                            let result = match T::try_from_value(v) {
+                                Ok(v) => Ok((k, v)),
+                                Err(v) => Err((k, v)),
+                            };
+                            if result.is_err() {
+                                has_failure = true;
+                            }
+                            tmp.push(result);
+                        }
+
+                        // Roll back to the original value list if there is
+                        // any error
+                        if has_failure {
+                            Err(Value::Map(
+                                tmp.into_iter()
+                                    .map(|x| match x {
+                                        Ok((k, v)) => (k, v.into_value()),
+                                        Err((k, v)) => (k, v),
+                                    })
+                                    .collect(),
+                            ))
+                        } else {
+                            Ok(tmp.into_iter().map(|v| v.unwrap()).collect())
+                        }
+                    }
+                    x => Err(x),
                 }
             }
         }
     };
 }
 
-impl_primitive_try_into!(Bool, bool, |x| Ok(x));
-impl_primitive_try_into!(Char, char, |x| Ok(x));
-impl_primitive_try_into!(Number, f32, f32::try_from);
-impl_primitive_try_into!(Number, f64, f64::try_from);
-impl_primitive_try_into!(Number, i128, i128::try_from);
-impl_primitive_try_into!(Number, i16, i16::try_from);
-impl_primitive_try_into!(Number, i32, i32::try_from);
-impl_primitive_try_into!(Number, i64, i64::try_from);
-impl_primitive_try_into!(Number, i8, i8::try_from);
-impl_primitive_try_into!(Number, isize, isize::try_from);
-impl_primitive_try_into!(Number, u128, u128::try_from);
-impl_primitive_try_into!(Number, u16, u16::try_from);
-impl_primitive_try_into!(Number, u32, u32::try_from);
-impl_primitive_try_into!(Number, u64, u64::try_from);
-impl_primitive_try_into!(Number, u8, u8::try_from);
-impl_primitive_try_into!(Number, usize, usize::try_from);
+impl_map!(HashMap);
+impl_map!(BTreeMap);
 
-macro_rules! impl_to_number {
-    ($type:ty) => {
-        impl From<$type> for PrimitiveValue {
-            fn from(v: $type) -> Self {
-                Self::Number(Number::from(v))
-            }
-        }
-    };
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl_to_number!(f32);
-impl_to_number!(f64);
-impl_to_number!(i128);
-impl_to_number!(i16);
-impl_to_number!(i32);
-impl_to_number!(i64);
-impl_to_number!(i8);
-impl_to_number!(isize);
-impl_to_number!(u128);
-impl_to_number!(u16);
-impl_to_number!(u32);
-impl_to_number!(u64);
-impl_to_number!(u8);
-impl_to_number!(usize);
-
-/// Represents primitive value types
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
-pub enum PrimitiveValueType {
-    Bool,
-    Char,
-    Number(NumberType),
-    Unit,
-}
-
-impl PrimitiveValueType {
-    pub fn is_bool(&self) -> bool {
-        matches!(self, Self::Bool)
+    #[test]
+    fn bool_can_convert_to_value() {
+        assert_eq!(
+            true.into_value(),
+            Value::Primitive(PrimitiveValue::Bool(true))
+        );
     }
 
-    pub fn is_char(&self) -> bool {
-        matches!(self, Self::Char)
+    #[test]
+    fn value_can_convert_to_bool() {
+        assert_eq!(
+            bool::try_from_value(Value::Primitive(PrimitiveValue::Bool(true))),
+            Ok(true),
+        );
+
+        assert_eq!(
+            bool::try_from_value(Value::Primitive(PrimitiveValue::Char('c'))),
+            Err(Value::Primitive(PrimitiveValue::Char('c'))),
+        );
     }
 
-    pub fn is_number(&self) -> bool {
-        matches!(self, Self::Number(_))
+    #[test]
+    fn char_can_convert_to_value() {
+        assert_eq!(
+            'c'.into_value(),
+            Value::Primitive(PrimitiveValue::Char('c'))
+        );
     }
 
-    pub fn is_unit(&self) -> bool {
-        matches!(self, Self::Unit)
+    #[test]
+    fn value_can_convert_to_char() {
+        todo!();
     }
 
-    pub fn to_number_type(&self) -> Option<NumberType> {
-        match self {
-            Self::Number(x) => Some(*x),
-            _ => None,
-        }
+    #[test]
+    fn f32_can_convert_to_value() {
+        todo!();
     }
 
-    /// Constructs a primitive value type from a Rust-based type string similar
-    /// to what you would find from `std::any::type_name`
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{PrimitiveValueType as PVT, NumberType as NT};
-    ///
-    /// assert_eq!(
-    ///     PVT::from_type_name("bool").unwrap(),
-    ///     PVT::Bool,
-    /// );
-    ///
-    /// assert_eq!(
-    ///     PVT::from_type_name("char").unwrap(),
-    ///     PVT::Char,
-    /// );
-    ///
-    /// assert_eq!(
-    ///     PVT::from_type_name("u8").unwrap(),
-    ///     PVT::Number(NT::U8),
-    /// );
-    ///
-    /// assert_eq!(
-    ///     PVT::from_type_name("()").unwrap(),
-    ///     PVT::Unit,
-    /// );
-    /// ```
-    pub fn from_type_name(tname: &str) -> Result<Self, ParseError> {
-        use std::str::FromStr;
-
-        // Translate any Rust-specific types to our custom format, passing
-        // anything that is the same to our FromStr implementation
-        match tname {
-            "()" => Self::from_str("unit"),
-            x => Self::from_str(x),
-        }
+    #[test]
+    fn value_can_convert_to_f32() {
+        todo!();
     }
-}
 
-impl std::fmt::Display for PrimitiveValueType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Bool => write!(f, "bool"),
-            Self::Char => write!(f, "char"),
-            Self::Number(t) => write!(f, "number:{}", t),
-            Self::Unit => write!(f, "unit"),
-        }
+    #[test]
+    fn f64_can_convert_to_value() {
+        todo!();
     }
-}
 
-impl From<PrimitiveValue> for PrimitiveValueType {
-    fn from(v: PrimitiveValue) -> Self {
-        Self::from(&v)
+    #[test]
+    fn value_can_convert_to_f64() {
+        todo!();
     }
-}
 
-impl<'a> From<&'a PrimitiveValue> for PrimitiveValueType {
-    fn from(v: &'a PrimitiveValue) -> Self {
-        match v {
-            PrimitiveValue::Bool(_) => Self::Bool,
-            PrimitiveValue::Char(_) => Self::Char,
-            PrimitiveValue::Number(x) => Self::Number(x.to_type()),
-            PrimitiveValue::Unit => Self::Unit,
-        }
+    #[test]
+    fn isize_can_convert_to_value() {
+        todo!();
     }
-}
 
-impl std::str::FromStr for PrimitiveValueType {
-    type Err = ParseError;
+    #[test]
+    fn value_can_convert_to_isize() {
+        todo!();
+    }
 
-    /// Parses a primitive value type
-    ///
-    /// ## Examples
-    ///
-    /// ```
-    /// use entity::{PrimitiveValueType as PVT, NumberType as NT};
-    /// use strum::ParseError;
-    /// use std::str::FromStr;
-    ///
-    /// assert_eq!(PVT::from_str("bool").unwrap(), PVT::Bool);
-    /// assert_eq!(PVT::from_str("char").unwrap(), PVT::Char);
-    /// assert_eq!(PVT::from_str("u32").unwrap(), PVT::Number(NT::U32));
-    /// assert_eq!(PVT::from_str("number:u32").unwrap(), PVT::Number(NT::U32));
-    /// assert_eq!(PVT::from_str("unit").unwrap(), PVT::Unit);
-    /// assert_eq!(PVT::from_str("unknown").unwrap_err(), ParseError::VariantNotFound);
-    /// ```
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut s_it = s.split(':');
-        let primary = s_it.next();
-        let secondary = s_it.next();
-        let has_more = s_it.next().is_some();
+    #[test]
+    fn i8_can_convert_to_value() {
+        todo!();
+    }
 
-        // If has too many values, we exit
-        if has_more {
-            return Err(ParseError::VariantNotFound);
-        }
+    #[test]
+    fn value_can_convert_to_i8() {
+        todo!();
+    }
 
-        match (primary, secondary) {
-            (Some("bool"), None) => Ok(Self::Bool),
-            (Some("char"), None) => Ok(Self::Char),
-            (Some("number"), Some(x)) => Ok(Self::Number(NumberType::from_str(x)?)),
-            (Some("unit"), None) => Ok(Self::Unit),
-            (Some(x), None) => Ok(Self::Number(NumberType::from_str(x)?)),
-            _ => Err(ParseError::VariantNotFound),
-        }
+    #[test]
+    fn i16_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_i16() {
+        todo!();
+    }
+
+    #[test]
+    fn i32_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_i32() {
+        todo!();
+    }
+
+    #[test]
+    fn i64_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_i64() {
+        todo!();
+    }
+
+    #[test]
+    fn i128_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_i128() {
+        todo!();
+    }
+
+    #[test]
+    fn usize_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_usize() {
+        todo!();
+    }
+
+    #[test]
+    fn u8_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_u8() {
+        todo!();
+    }
+
+    #[test]
+    fn u16_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_u16() {
+        todo!();
+    }
+
+    #[test]
+    fn u32_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_u32() {
+        todo!();
+    }
+
+    #[test]
+    fn u64_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_u64() {
+        todo!();
+    }
+
+    #[test]
+    fn u128_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_u128() {
+        todo!();
+    }
+
+    #[test]
+    fn option_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_option() {
+        todo!();
+    }
+
+    #[test]
+    fn string_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_string() {
+        todo!();
+    }
+
+    #[test]
+    fn pathbuf_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_pathbuf() {
+        todo!();
+    }
+
+    #[test]
+    fn osstring_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_osstring() {
+        todo!();
+    }
+
+    #[test]
+    fn vec_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_vec() {
+        todo!();
+    }
+
+    #[test]
+    fn vecdeque_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_vecdeque() {
+        todo!();
+    }
+
+    #[test]
+    fn linkedlist_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_linkedlist() {
+        todo!();
+    }
+
+    #[test]
+    fn binaryheap_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_binaryheap() {
+        todo!();
+    }
+
+    #[test]
+    fn hashset_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_hashset() {
+        todo!();
+    }
+
+    #[test]
+    fn btreeset_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_btreeset() {
+        todo!();
+    }
+
+    #[test]
+    fn hashmap_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_hashmap() {
+        todo!();
+    }
+
+    #[test]
+    fn btreemap_can_convert_to_value() {
+        todo!();
+    }
+
+    #[test]
+    fn value_can_convert_to_btreemap() {
+        todo!();
     }
 }

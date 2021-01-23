@@ -1,4 +1,4 @@
-use crate::Value;
+use crate::{Value, ValueLike};
 use derivative::Derivative;
 use std::{
     collections::{HashMap, HashSet},
@@ -1280,8 +1280,8 @@ impl Predicate {
     /// let p = P::contains(4);
     /// assert_eq!(p.check(&V::from(vec![1, 2, 3])), false);
     /// ```
-    pub fn contains<T: Into<Value>>(value: T) -> Self {
-        Self::Contains(value.into())
+    pub fn contains<T: ValueLike>(value: T) -> Self {
+        Self::Contains(value.into_value())
     }
 
     /// Creates a new predicate for [`Predicate::ContainsAll`]
@@ -1297,8 +1297,8 @@ impl Predicate {
     /// let p = P::contains_all(vec![1, 4]);
     /// assert_eq!(p.check(&V::from(vec![1, 2, 3])), false);
     /// ```
-    pub fn contains_all<T: Into<Value>, I: IntoIterator<Item = T>>(i: I) -> Self {
-        Self::ContainsAll(i.into_iter().map(|p| p.into()).collect())
+    pub fn contains_all<T: ValueLike, I: IntoIterator<Item = T>>(i: I) -> Self {
+        Self::ContainsAll(i.into_iter().map(|p| p.into_value()).collect())
     }
 
     /// Creates a new predicate for [`Predicate::ContainsAny`]
@@ -1314,8 +1314,8 @@ impl Predicate {
     /// let p = P::contains_any(vec![4, 5]);
     /// assert_eq!(p.check(&V::from(vec![1, 2, 3])), false);
     /// ```
-    pub fn contains_any<T: Into<Value>, I: IntoIterator<Item = T>>(i: I) -> Self {
-        Self::ContainsAny(i.into_iter().map(|p| p.into()).collect())
+    pub fn contains_any<T: ValueLike, I: IntoIterator<Item = T>>(i: I) -> Self {
+        Self::ContainsAny(i.into_iter().map(|p| p.into_value()).collect())
     }
 
     /// Creates a new predicate for [`Predicate::Equals`]
@@ -1329,8 +1329,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(3)), true);
     /// assert_eq!(p.check(&V::from(2)), false);
     /// ```
-    pub fn equals<T: Into<Value>>(value: T) -> Self {
-        Self::Equals(value.into())
+    pub fn equals<T: ValueLike>(value: T) -> Self {
+        Self::Equals(value.into_value())
     }
 
     /// Creates a new predicate for [`Predicate::GreaterThan`]
@@ -1344,8 +1344,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(4)), true);
     /// assert_eq!(p.check(&V::from(3)), false);
     /// ```
-    pub fn greater_than<T: Into<Value>>(value: T) -> Self {
-        Self::GreaterThan(value.into())
+    pub fn greater_than<T: ValueLike>(value: T) -> Self {
+        Self::GreaterThan(value.into_value())
     }
 
     /// Creates a new predicate for [`Predicate::GreaterThanOrEquals`]
@@ -1360,8 +1360,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(3)), true);
     /// assert_eq!(p.check(&V::from(2)), false);
     /// ```
-    pub fn greater_than_or_equals<T: Into<Value>>(value: T) -> Self {
-        Self::GreaterThanOrEquals(value.into())
+    pub fn greater_than_or_equals<T: ValueLike>(value: T) -> Self {
+        Self::GreaterThanOrEquals(value.into_value())
     }
 
     /// Creates a new predicate for [`Predicate::InRange`]
@@ -1378,9 +1378,9 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(5)), true);
     /// assert_eq!(p.check(&V::from(6)), false);
     /// ```
-    pub fn in_range<T: Into<Value>>(range: RangeInclusive<T>) -> Self {
+    pub fn in_range<T: ValueLike>(range: RangeInclusive<T>) -> Self {
         let (start, end) = range.into_inner();
-        Self::InRange(RangeInclusive::new(start.into(), end.into()))
+        Self::InRange(RangeInclusive::new(start.into_value(), end.into_value()))
     }
 
     /// Creates a new predicate for [`Predicate::InSet`]
@@ -1397,8 +1397,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(3)), true);
     /// assert_eq!(p.check(&V::from(4)), false);
     /// ```
-    pub fn in_set<T: Into<Value>, I: IntoIterator<Item = T>>(set: I) -> Self {
-        Self::InSet(set.into_iter().map(|v| v.into()).collect())
+    pub fn in_set<T: ValueLike, I: IntoIterator<Item = T>>(set: I) -> Self {
+        Self::InSet(set.into_iter().map(|v| v.into_value()).collect())
     }
 
     /// Creates a new predicate for [`Predicate::LessThan`]
@@ -1412,8 +1412,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(2)), true);
     /// assert_eq!(p.check(&V::from(3)), false);
     /// ```
-    pub fn less_than<T: Into<Value>>(value: T) -> Self {
-        Self::LessThan(value.into())
+    pub fn less_than<T: ValueLike>(value: T) -> Self {
+        Self::LessThan(value.into_value())
     }
 
     /// Creates a new predicate for [`Predicate::LessThanOrEquals`]
@@ -1428,8 +1428,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(3)), true);
     /// assert_eq!(p.check(&V::from(4)), false);
     /// ```
-    pub fn less_than_or_equals<T: Into<Value>>(value: T) -> Self {
-        Self::LessThanOrEquals(value.into())
+    pub fn less_than_or_equals<T: ValueLike>(value: T) -> Self {
+        Self::LessThanOrEquals(value.into_value())
     }
 
     /// Creates a new predicate for [`Predicate::NotEquals`]
@@ -1441,8 +1441,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(2)), true);
     /// assert_eq!(p.check(&V::from(3)), false);
     /// ```
-    pub fn not_equals<T: Into<Value>>(value: T) -> Self {
-        Self::NotEquals(value.into())
+    pub fn not_equals<T: ValueLike>(value: T) -> Self {
+        Self::NotEquals(value.into_value())
     }
 
     /// Creates a new predicate for [`Predicate::NotInRange`]
@@ -1459,9 +1459,9 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(5)), false);
     /// assert_eq!(p.check(&V::from(6)), true);
     /// ```
-    pub fn not_in_range<T: Into<Value>>(range: RangeInclusive<T>) -> Self {
+    pub fn not_in_range<T: ValueLike>(range: RangeInclusive<T>) -> Self {
         let (start, end) = range.into_inner();
-        Self::NotInRange(RangeInclusive::new(start.into(), end.into()))
+        Self::NotInRange(RangeInclusive::new(start.into_value(), end.into_value()))
     }
 
     /// Creates a new predicate for [`Predicate::NotInSet`]
@@ -1478,8 +1478,8 @@ impl Predicate {
     /// assert_eq!(p.check(&V::from(3)), false);
     /// assert_eq!(p.check(&V::from(4)), true);
     /// ```
-    pub fn not_in_set<T: Into<Value>, I: IntoIterator<Item = T>>(set: I) -> Self {
-        Self::NotInSet(set.into_iter().map(|v| v.into()).collect())
+    pub fn not_in_set<T: ValueLike, I: IntoIterator<Item = T>>(set: I) -> Self {
+        Self::NotInSet(set.into_iter().map(|v| v.into_value()).collect())
     }
 
     /// Creates a new predicate for [`Predicate::HasKey`]
@@ -1862,13 +1862,13 @@ impl Predicate {
     }
 }
 
-impl<T: Into<Value>> PartialEq<TypedPredicate<T>> for Predicate {
+impl<T: ValueLike> PartialEq<TypedPredicate<T>> for Predicate {
     fn eq(&self, other: &TypedPredicate<T>) -> bool {
         self == other.as_untyped()
     }
 }
 
-impl<T: Into<Value>> From<TypedPredicate<T>> for Predicate {
+impl<T: ValueLike> From<TypedPredicate<T>> for Predicate {
     fn from(typed_predicate: TypedPredicate<T>) -> Self {
         typed_predicate.0
     }
@@ -2194,21 +2194,21 @@ impl std::ops::Not for Predicate {
 /// Represents a typed [`Predicate`], ensuring that only valid conditions are
 /// used for a given type
 #[derive(Clone, Debug, PartialEq)]
-pub struct TypedPredicate<T: Into<Value>>(Predicate, PhantomData<T>);
+pub struct TypedPredicate<T: ValueLike>(Predicate, PhantomData<T>);
 
-impl<T: Into<Value>> PartialEq<Predicate> for TypedPredicate<T> {
+impl<T: ValueLike> PartialEq<Predicate> for TypedPredicate<T> {
     fn eq(&self, other: &Predicate) -> bool {
         self.as_untyped() == other
     }
 }
 
-impl<T: Into<Value>> From<Predicate> for TypedPredicate<T> {
+impl<T: ValueLike> From<Predicate> for TypedPredicate<T> {
     fn from(predicate: Predicate) -> Self {
         Self(predicate, PhantomData)
     }
 }
 
-impl<T: Into<Value>> std::ops::BitXor for TypedPredicate<T> {
+impl<T: ValueLike> std::ops::BitXor for TypedPredicate<T> {
     type Output = Self;
 
     /// Shorthand to produce [`Predicate::Xor`]
@@ -2217,7 +2217,7 @@ impl<T: Into<Value>> std::ops::BitXor for TypedPredicate<T> {
     }
 }
 
-impl<T: Into<Value>> std::ops::BitAnd for TypedPredicate<T> {
+impl<T: ValueLike> std::ops::BitAnd for TypedPredicate<T> {
     type Output = Self;
 
     /// Shorthand to produce [`Predicate::And`]
@@ -2226,7 +2226,7 @@ impl<T: Into<Value>> std::ops::BitAnd for TypedPredicate<T> {
     }
 }
 
-impl<T: Into<Value>> std::ops::BitOr for TypedPredicate<T> {
+impl<T: ValueLike> std::ops::BitOr for TypedPredicate<T> {
     type Output = Self;
 
     /// Shorthand to produce [`Predicate::Or`]
@@ -2235,7 +2235,7 @@ impl<T: Into<Value>> std::ops::BitOr for TypedPredicate<T> {
     }
 }
 
-impl<T: Into<Value>> std::ops::Not for TypedPredicate<T> {
+impl<T: ValueLike> std::ops::Not for TypedPredicate<T> {
     type Output = Self;
 
     /// Shorthand to produce [`Predicate::Not`]
@@ -2244,7 +2244,7 @@ impl<T: Into<Value>> std::ops::Not for TypedPredicate<T> {
     }
 }
 
-impl<T: Into<Value> + TryFrom<Value>> TypedPredicate<T> {
+impl<T: ValueLike + TryFrom<Value>> TypedPredicate<T> {
     /// Creates a new typed predicate for [`Predicate::Lambda`]
     ///
     /// ### Examples
@@ -2266,7 +2266,7 @@ impl<T: Into<Value> + TryFrom<Value>> TypedPredicate<T> {
     }
 }
 
-impl<T: Into<Value>> TypedPredicate<T> {
+impl<T: ValueLike> TypedPredicate<T> {
     /// Creates a new typed predicate from an untyped predicate
     pub fn new(predicate: Predicate) -> Self {
         Self::from(predicate)
@@ -2284,7 +2284,7 @@ impl<T: Into<Value>> TypedPredicate<T> {
     /// NOTE: This consumes the value instead of the untyped version that
     ///       merely references the value
     pub fn check(&self, value: T) -> bool {
-        self.0.check(&value.into())
+        self.0.check(&value.into_value())
     }
 
     /// Creates a new typed predicate for [`Predicate::Always`]
@@ -2390,7 +2390,7 @@ impl<T: Into<Value>> TypedPredicate<T> {
 /// Implementation for collections with a singular type. For
 /// [`std::collections::HashMap`] and similar types, use the
 /// [`MapTypedPredicate`] instead.
-impl<T: Into<Value>, C: IntoIterator<Item = T> + Into<Value>> TypedPredicate<C> {
+impl<T: ValueLike, C: IntoIterator<Item = T> + ValueLike> TypedPredicate<C> {
     /// Creates a new typed predicate for [`Predicate::Any`]
     ///
     /// ### Examples
@@ -2460,7 +2460,7 @@ impl<T: Into<Value>, C: IntoIterator<Item = T> + Into<Value>> TypedPredicate<C> 
     }
 }
 
-impl<T: Into<Value>> TypedPredicate<T> {
+impl<T: ValueLike> TypedPredicate<T> {
     /// Creates a new typed predicate for [`Predicate::Equals`]
     ///
     /// ### Examples
@@ -2624,7 +2624,7 @@ impl<T: Into<Value>> TypedPredicate<T> {
     }
 }
 
-impl<T: Into<Value>> TypedPredicate<HashMap<String, T>> {
+impl<T: ValueLike> TypedPredicate<HashMap<String, T>> {
     /// Creates a new typed predicate for [`Predicate::HasKey`]
     ///
     /// ### Examples
@@ -2677,7 +2677,7 @@ impl<T: Into<Value>> TypedPredicate<HashMap<String, T>> {
     }
 }
 
-impl<T: Into<Value>> TypedPredicate<Option<T>> {
+impl<T: ValueLike> TypedPredicate<Option<T>> {
     /// Creates a new typed predicate for [`Predicate::IsNone`]
     ///
     /// ### Examples
@@ -3031,13 +3031,13 @@ impl TypedPredicate<String> {
 /// This is required due to limitations in Rust's blanket impl functionality,
 /// which will be resolved once specialization is available.
 #[derive(Clone, Debug, PartialEq)]
-pub struct MapTypedPredicate<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>>(
+pub struct MapTypedPredicate<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike>(
     Predicate,
     PhantomData<T>,
     PhantomData<C>,
 );
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> PartialEq<Predicate>
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> PartialEq<Predicate>
     for MapTypedPredicate<T, C>
 {
     fn eq(&self, other: &Predicate) -> bool {
@@ -3045,7 +3045,7 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> PartialE
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> From<Predicate>
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> From<Predicate>
     for MapTypedPredicate<T, C>
 {
     fn from(predicate: Predicate) -> Self {
@@ -3053,15 +3053,15 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> From<Pre
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>>
-    From<MapTypedPredicate<T, C>> for Predicate
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> From<MapTypedPredicate<T, C>>
+    for Predicate
 {
     fn from(map_typed_predicate: MapTypedPredicate<T, C>) -> Self {
         map_typed_predicate.0
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> From<TypedPredicate<C>>
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> From<TypedPredicate<C>>
     for MapTypedPredicate<T, C>
 {
     fn from(typed_predicate: TypedPredicate<C>) -> Self {
@@ -3069,15 +3069,15 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> From<Typ
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>>
-    From<MapTypedPredicate<T, C>> for TypedPredicate<C>
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> From<MapTypedPredicate<T, C>>
+    for TypedPredicate<C>
 {
     fn from(map_typed_predicate: MapTypedPredicate<T, C>) -> Self {
         Self(map_typed_predicate.into(), PhantomData)
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops::BitXor
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> std::ops::BitXor
     for MapTypedPredicate<T, C>
 {
     type Output = Self;
@@ -3088,7 +3088,7 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops::BitAnd
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> std::ops::BitAnd
     for MapTypedPredicate<T, C>
 {
     type Output = Self;
@@ -3099,7 +3099,7 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops::BitOr
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> std::ops::BitOr
     for MapTypedPredicate<T, C>
 {
     type Output = Self;
@@ -3110,7 +3110,7 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops::Not
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> std::ops::Not
     for MapTypedPredicate<T, C>
 {
     type Output = Self;
@@ -3121,7 +3121,7 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> std::ops
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> MapTypedPredicate<T, C> {
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> MapTypedPredicate<T, C> {
     /// Creates a new map typed predicate from an untyped predicate
     pub fn new(predicate: Predicate) -> Self {
         Self::from(predicate)
@@ -3139,11 +3139,11 @@ impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> MapTyped
     /// NOTE: This consumes the value instead of the untyped version that
     ///       merely references the value
     pub fn check(&self, value: C) -> bool {
-        self.0.check(&value.into())
+        self.0.check(&value.into_value())
     }
 }
 
-impl<T: Into<Value>, C: IntoIterator<Item = (String, T)> + Into<Value>> MapTypedPredicate<T, C> {
+impl<T: ValueLike, C: IntoIterator<Item = (String, T)> + ValueLike> MapTypedPredicate<T, C> {
     /// Creates a new typed predicate for [`Predicate::Any`]
     ///
     /// ### Examples
