@@ -1,4 +1,4 @@
-use super::{NumberType, PrimitiveValueType, Value};
+use super::{NumberType, PrimitiveType, Value};
 use strum::ParseError;
 
 /// Represents value types (primitive or complex). Assumes that complex
@@ -9,7 +9,7 @@ pub enum ValueType {
     List(Box<ValueType>),
     Map(Box<ValueType>),
     Optional(Box<ValueType>),
-    Primitive(PrimitiveValueType),
+    Primitive(PrimitiveType),
     Text,
     Custom,
 }
@@ -19,7 +19,7 @@ impl ValueType {
         matches!(self, Self::Primitive(_))
     }
 
-    pub fn to_primitive_type(&self) -> Option<PrimitiveValueType> {
+    pub fn to_primitive_type(&self) -> Option<PrimitiveType> {
         match self {
             Self::Primitive(x) => Some(*x),
             _ => None,
@@ -32,7 +32,7 @@ impl ValueType {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{ValueType as VT, PrimitiveValueType as PVT, NumberType as NT};
+    /// use entity::{ValueType as VT, PrimitiveType as PVT, NumberType as NT};
     ///
     /// assert_eq!(
     ///     VT::from_type_name("u8").expect("one"),
@@ -107,7 +107,7 @@ impl ValueType {
                 &inner_str,
             )?))),
             "string" => Ok(ValueType::Text),
-            x => Ok(ValueType::Primitive(PrimitiveValueType::from_type_name(x)?)),
+            x => Ok(ValueType::Primitive(PrimitiveType::from_type_name(x)?)),
         }
     }
 }
@@ -127,7 +127,7 @@ impl std::str::FromStr for ValueType {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{ValueType as VT, PrimitiveValueType as PVT, NumberType as NT};
+    /// use entity::{ValueType as VT, PrimitiveType as PVT, NumberType as NT};
     /// use strum::ParseError;
     /// use std::str::FromStr;
     ///
@@ -170,7 +170,7 @@ impl std::str::FromStr for ValueType {
                                 .ok_or(ParseError::VariantNotFound)?,
                         ))),
                         "text" => Ok(Some(ValueType::Text)),
-                        x => Ok(Some(ValueType::Primitive(PrimitiveValueType::from_str(x)?))),
+                        x => Ok(Some(ValueType::Primitive(PrimitiveType::from_str(x)?))),
                     }
                 }
                 None => Ok(None),
@@ -223,15 +223,15 @@ impl<'a> From<&'a Value> for ValueType {
                     .map(ValueType::from)
                     .unwrap_or_default(),
             )),
-            Value::Primitive(x) => Self::Primitive(PrimitiveValueType::from(x)),
+            Value::Primitive(x) => Self::Primitive(PrimitiveType::from(x)),
             Value::Text(_) => Self::Text,
         }
     }
 }
 
-impl From<PrimitiveValueType> for ValueType {
+impl From<PrimitiveType> for ValueType {
     /// Converts primitive value type to a value type
-    fn from(t: PrimitiveValueType) -> Self {
+    fn from(t: PrimitiveType) -> Self {
         Self::Primitive(t)
     }
 }
@@ -239,6 +239,6 @@ impl From<PrimitiveValueType> for ValueType {
 impl From<NumberType> for ValueType {
     /// Converts number type (subclass of primitive type) to a value type
     fn from(t: NumberType) -> Self {
-        Self::Primitive(PrimitiveValueType::Number(t))
+        Self::Primitive(PrimitiveType::Number(t))
     }
 }

@@ -3,7 +3,7 @@ mod primitive;
 mod r#type;
 
 pub use number::{Number, NumberLike, NumberSign, NumberType};
-pub use primitive::{PrimitiveValue, PrimitiveValueLike, PrimitiveValueType};
+pub use primitive::{Primitive, PrimitiveLike, PrimitiveType};
 pub use r#type::ValueType;
 
 use std::{
@@ -22,7 +22,7 @@ pub enum Value {
     List(Vec<Value>),
     Map(HashMap<String, Value>),
     Optional(Option<Box<Value>>),
-    Primitive(PrimitiveValue),
+    Primitive(Primitive),
     Text(String),
 }
 
@@ -59,7 +59,7 @@ impl Value {
 
     /// Converts into underlying primitive value if representing one
     #[inline]
-    pub fn to_primitive(&self) -> Option<PrimitiveValue> {
+    pub fn to_primitive(&self) -> Option<Primitive> {
         match self {
             Self::Primitive(x) => Some(*x),
             _ => None,
@@ -68,8 +68,8 @@ impl Value {
 
     /// Converts into underlying primitive type if representing one
     #[inline]
-    pub fn to_primitive_type(&self) -> Option<PrimitiveValueType> {
-        self.to_primitive().map(PrimitiveValueType::from)
+    pub fn to_primitive_type(&self) -> Option<PrimitiveType> {
+        self.to_primitive().map(PrimitiveType::from)
     }
 
     /// Attempts to convert the value to an underlying option type,
@@ -161,12 +161,8 @@ impl PartialOrd for Value {
 
             // Compare text-to-text, text-to-char, and char-to-text
             (Self::Text(a), Self::Text(b)) => a.partial_cmp(b),
-            (Self::Text(a), Self::Primitive(PrimitiveValue::Char(b))) => {
-                a.partial_cmp(&b.to_string())
-            }
-            (Self::Primitive(PrimitiveValue::Char(a)), Self::Text(b)) => {
-                a.to_string().partial_cmp(b)
-            }
+            (Self::Text(a), Self::Primitive(Primitive::Char(b))) => a.partial_cmp(&b.to_string()),
+            (Self::Primitive(Primitive::Char(a)), Self::Text(b)) => a.to_string().partial_cmp(b),
 
             // All other types do nothing
             _ => None,
@@ -194,14 +190,14 @@ impl ValueLike for Value {
     }
 }
 
-impl<T: PrimitiveValueLike> ValueLike for T {
+impl<T: PrimitiveLike> ValueLike for T {
     fn into_value(self) -> Value {
-        Value::Primitive(self.into_primitive_value())
+        Value::Primitive(self.into_primitive())
     }
 
     fn try_from_value(value: Value) -> Result<Self, Value> {
         match value {
-            Value::Primitive(x) => T::try_from_primitive_value(x).map_err(Value::Primitive),
+            Value::Primitive(x) => T::try_from_primitive(x).map_err(Value::Primitive),
             x => Err(x),
         }
     }
@@ -385,31 +381,25 @@ mod tests {
 
     #[test]
     fn bool_can_convert_to_value() {
-        assert_eq!(
-            true.into_value(),
-            Value::Primitive(PrimitiveValue::Bool(true))
-        );
+        assert_eq!(true.into_value(), Value::Primitive(Primitive::Bool(true)));
     }
 
     #[test]
     fn value_can_convert_to_bool() {
         assert_eq!(
-            bool::try_from_value(Value::Primitive(PrimitiveValue::Bool(true))),
+            bool::try_from_value(Value::Primitive(Primitive::Bool(true))),
             Ok(true),
         );
 
         assert_eq!(
-            bool::try_from_value(Value::Primitive(PrimitiveValue::Char('c'))),
-            Err(Value::Primitive(PrimitiveValue::Char('c'))),
+            bool::try_from_value(Value::Primitive(Primitive::Char('c'))),
+            Err(Value::Primitive(Primitive::Char('c'))),
         );
     }
 
     #[test]
     fn char_can_convert_to_value() {
-        assert_eq!(
-            'c'.into_value(),
-            Value::Primitive(PrimitiveValue::Char('c'))
-        );
+        assert_eq!('c'.into_value(), Value::Primitive(Primitive::Char('c')));
     }
 
     #[test]

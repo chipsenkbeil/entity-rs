@@ -10,41 +10,41 @@ use strum::ParseError;
 /// Represents a primitive value
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
-pub enum PrimitiveValue {
+pub enum Primitive {
     Bool(bool),
     Char(char),
     Number(Number),
     Unit,
 }
 
-impl Default for PrimitiveValueType {
+impl Default for PrimitiveType {
     /// Returns default primitive value type of unit
     fn default() -> Self {
         Self::Unit
     }
 }
 
-impl PrimitiveValue {
+impl Primitive {
     /// Returns true if this value is of the specified type
     #[inline]
-    pub fn is_type(&self, r#type: PrimitiveValueType) -> bool {
+    pub fn is_type(&self, r#type: PrimitiveType) -> bool {
         self.to_type() == r#type
     }
 
     /// Returns the type of this value
     #[inline]
-    pub fn to_type(&self) -> PrimitiveValueType {
-        PrimitiveValueType::from(self)
+    pub fn to_type(&self) -> PrimitiveType {
+        PrimitiveType::from(self)
     }
 
     /// Returns true if this value and the other value are of the same type
     #[inline]
-    pub fn has_same_type(&self, other: &PrimitiveValue) -> bool {
+    pub fn has_same_type(&self, other: &Primitive) -> bool {
         self.to_type() == other.to_type()
     }
 }
 
-impl Hash for PrimitiveValue {
+impl Hash for Primitive {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
             Self::Bool(x) => x.hash(state),
@@ -56,9 +56,9 @@ impl Hash for PrimitiveValue {
 }
 
 /// Value is considered equal, ignoring the fact that NaN != NaN for floats
-impl Eq for PrimitiveValue {}
+impl Eq for Primitive {}
 
-impl PartialEq for PrimitiveValue {
+impl PartialEq for Primitive {
     /// Compares two primitive values of same type for equality, otherwise
     /// returns false
     fn eq(&self, other: &Self) -> bool {
@@ -72,7 +72,7 @@ impl PartialEq for PrimitiveValue {
     }
 }
 
-impl PartialOrd for PrimitiveValue {
+impl PartialOrd for Primitive {
     /// Compares same variants of same type for ordering, otherwise returns none
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
@@ -85,60 +85,60 @@ impl PartialOrd for PrimitiveValue {
     }
 }
 
-/// Represents some data that can be converted to and from a [`PrimitiveValue`]
-pub trait PrimitiveValueLike: Sized {
-    /// Consumes this data, converting it into an abstract [`PrimitiveValue`]
-    fn into_primitive_value(self) -> PrimitiveValue;
+/// Represents some data that can be converted to and from a [`Primitive`]
+pub trait PrimitiveLike: Sized {
+    /// Consumes this data, converting it into an abstract [`Primitive`]
+    fn into_primitive(self) -> Primitive;
 
-    /// Attempts to convert an abstract [`PrimitiveValue`] into this data, returning
+    /// Attempts to convert an abstract [`Primitive`] into this data, returning
     /// the owned value back if unable to convert
-    fn try_from_primitive_value(primitive_value: PrimitiveValue) -> Result<Self, PrimitiveValue>;
+    fn try_from_primitive(primitive: Primitive) -> Result<Self, Primitive>;
 }
 
-impl PrimitiveValueLike for PrimitiveValue {
-    fn into_primitive_value(self) -> PrimitiveValue {
+impl PrimitiveLike for Primitive {
+    fn into_primitive(self) -> Primitive {
         self
     }
 
-    fn try_from_primitive_value(primitive_value: PrimitiveValue) -> Result<Self, PrimitiveValue> {
-        Ok(primitive_value)
+    fn try_from_primitive(primitive: Primitive) -> Result<Self, Primitive> {
+        Ok(primitive)
     }
 }
 
-impl PrimitiveValueLike for bool {
-    fn into_primitive_value(self) -> PrimitiveValue {
-        PrimitiveValue::Bool(self)
+impl PrimitiveLike for bool {
+    fn into_primitive(self) -> Primitive {
+        Primitive::Bool(self)
     }
 
-    fn try_from_primitive_value(primitive_value: PrimitiveValue) -> Result<Self, PrimitiveValue> {
-        match primitive_value {
-            PrimitiveValue::Bool(x) => Ok(x),
+    fn try_from_primitive(primitive: Primitive) -> Result<Self, Primitive> {
+        match primitive {
+            Primitive::Bool(x) => Ok(x),
             x => Err(x),
         }
     }
 }
 
-impl PrimitiveValueLike for char {
-    fn into_primitive_value(self) -> PrimitiveValue {
-        PrimitiveValue::Char(self)
+impl PrimitiveLike for char {
+    fn into_primitive(self) -> Primitive {
+        Primitive::Char(self)
     }
 
-    fn try_from_primitive_value(primitive_value: PrimitiveValue) -> Result<Self, PrimitiveValue> {
-        match primitive_value {
-            PrimitiveValue::Char(x) => Ok(x),
+    fn try_from_primitive(primitive: Primitive) -> Result<Self, Primitive> {
+        match primitive {
+            Primitive::Char(x) => Ok(x),
             x => Err(x),
         }
     }
 }
 
-impl<T: NumberLike> PrimitiveValueLike for T {
-    fn into_primitive_value(self) -> PrimitiveValue {
-        PrimitiveValue::Number(self.into_number())
+impl<T: NumberLike> PrimitiveLike for T {
+    fn into_primitive(self) -> Primitive {
+        Primitive::Number(self.into_number())
     }
 
-    fn try_from_primitive_value(primitive_value: PrimitiveValue) -> Result<Self, PrimitiveValue> {
-        match primitive_value {
-            PrimitiveValue::Number(x) => T::try_from_number(x).map_err(PrimitiveValue::Number),
+    fn try_from_primitive(primitive: Primitive) -> Result<Self, Primitive> {
+        match primitive {
+            Primitive::Number(x) => T::try_from_number(x).map_err(Primitive::Number),
             x => Err(x),
         }
     }
@@ -146,17 +146,17 @@ impl<T: NumberLike> PrimitiveValueLike for T {
 
 macro_rules! impl_conv {
     ($($type:ty)+) => {$(
-        impl From<$type> for PrimitiveValue {
+        impl From<$type> for Primitive {
             fn from(x: $type) -> Self {
-                <$type as PrimitiveValueLike>::into_primitive_value(x)
+                <$type as PrimitiveLike>::into_primitive(x)
             }
         }
 
-        impl TryFrom<PrimitiveValue> for $type {
-            type Error = PrimitiveValue;
+        impl TryFrom<Primitive> for $type {
+            type Error = Primitive;
 
-            fn try_from(x: PrimitiveValue) -> Result<Self, Self::Error> {
-                <$type as PrimitiveValueLike>::try_from_primitive_value(x)
+            fn try_from(x: Primitive) -> Result<Self, Self::Error> {
+                <$type as PrimitiveLike>::try_from_primitive(x)
             }
         }
     )+};
@@ -164,44 +164,44 @@ macro_rules! impl_conv {
 
 impl_conv!(bool char f32 f64 i128 i16 i32 i64 i8 isize u128 u16 u32 u64 u8 usize);
 
-impl PrimitiveValueLike for () {
-    fn into_primitive_value(self) -> PrimitiveValue {
-        PrimitiveValue::Unit
+impl PrimitiveLike for () {
+    fn into_primitive(self) -> Primitive {
+        Primitive::Unit
     }
 
-    fn try_from_primitive_value(primitive_value: PrimitiveValue) -> Result<Self, PrimitiveValue> {
-        match primitive_value {
-            PrimitiveValue::Unit => Ok(()),
+    fn try_from_primitive(primitive: Primitive) -> Result<Self, Primitive> {
+        match primitive {
+            Primitive::Unit => Ok(()),
             x => Err(x),
         }
     }
 }
 
-impl From<()> for PrimitiveValue {
+impl From<()> for Primitive {
     fn from(_: ()) -> Self {
         Self::Unit
     }
 }
 
-impl TryFrom<PrimitiveValue> for () {
-    type Error = PrimitiveValue;
+impl TryFrom<Primitive> for () {
+    type Error = Primitive;
 
-    fn try_from(x: PrimitiveValue) -> Result<Self, Self::Error> {
-        PrimitiveValueLike::try_from_primitive_value(x)
+    fn try_from(x: Primitive) -> Result<Self, Self::Error> {
+        PrimitiveLike::try_from_primitive(x)
     }
 }
 
 /// Represents primitive value types
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
-pub enum PrimitiveValueType {
+pub enum PrimitiveType {
     Bool,
     Char,
     Number(NumberType),
     Unit,
 }
 
-impl PrimitiveValueType {
+impl PrimitiveType {
     pub fn is_bool(&self) -> bool {
         matches!(self, Self::Bool)
     }
@@ -231,7 +231,7 @@ impl PrimitiveValueType {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{PrimitiveValueType as PVT, NumberType as NT};
+    /// use entity::{PrimitiveType as PVT, NumberType as NT};
     ///
     /// assert_eq!(
     ///     PVT::from_type_name("bool").unwrap(),
@@ -265,7 +265,7 @@ impl PrimitiveValueType {
     }
 }
 
-impl std::fmt::Display for PrimitiveValueType {
+impl std::fmt::Display for PrimitiveType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Bool => write!(f, "bool"),
@@ -276,24 +276,24 @@ impl std::fmt::Display for PrimitiveValueType {
     }
 }
 
-impl From<PrimitiveValue> for PrimitiveValueType {
-    fn from(v: PrimitiveValue) -> Self {
+impl From<Primitive> for PrimitiveType {
+    fn from(v: Primitive) -> Self {
         Self::from(&v)
     }
 }
 
-impl<'a> From<&'a PrimitiveValue> for PrimitiveValueType {
-    fn from(v: &'a PrimitiveValue) -> Self {
+impl<'a> From<&'a Primitive> for PrimitiveType {
+    fn from(v: &'a Primitive) -> Self {
         match v {
-            PrimitiveValue::Bool(_) => Self::Bool,
-            PrimitiveValue::Char(_) => Self::Char,
-            PrimitiveValue::Number(x) => Self::Number(x.to_type()),
-            PrimitiveValue::Unit => Self::Unit,
+            Primitive::Bool(_) => Self::Bool,
+            Primitive::Char(_) => Self::Char,
+            Primitive::Number(x) => Self::Number(x.to_type()),
+            Primitive::Unit => Self::Unit,
         }
     }
 }
 
-impl std::str::FromStr for PrimitiveValueType {
+impl std::str::FromStr for PrimitiveType {
     type Err = ParseError;
 
     /// Parses a primitive value type
@@ -301,7 +301,7 @@ impl std::str::FromStr for PrimitiveValueType {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{PrimitiveValueType as PVT, NumberType as NT};
+    /// use entity::{PrimitiveType as PVT, NumberType as NT};
     /// use strum::ParseError;
     /// use std::str::FromStr;
     ///
@@ -339,42 +339,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn primitive_value_like_can_convert_number_like_to_primitive_value() {
+    fn primitive_like_can_convert_number_like_to_primitive() {
         todo!()
     }
 
     #[test]
-    fn primitive_value_like_can_convert_primitive_value_to_number_like() {
+    fn primitive_like_can_convert_primitive_to_number_like() {
         todo!()
     }
 
     #[test]
-    fn primitive_value_like_can_convert_bool_to_primitive_value() {
+    fn primitive_like_can_convert_bool_to_primitive() {
         todo!()
     }
 
     #[test]
-    fn primitive_value_like_can_convert_primitive_value_to_bool() {
+    fn primitive_like_can_convert_primitive_to_bool() {
         todo!()
     }
 
     #[test]
-    fn primitive_value_like_can_convert_char_to_primitive_value() {
+    fn primitive_like_can_convert_char_to_primitive() {
         todo!()
     }
 
     #[test]
-    fn primitive_value_like_can_convert_primitive_value_to_char() {
+    fn primitive_like_can_convert_primitive_to_char() {
         todo!()
     }
 
     #[test]
-    fn primitive_value_like_can_convert_unit_to_primitive_value() {
+    fn primitive_like_can_convert_unit_to_primitive() {
         todo!()
     }
 
     #[test]
-    fn primitive_value_like_can_convert_primitive_value_to_unit() {
+    fn primitive_like_can_convert_primitive_to_unit() {
         todo!()
     }
 }
