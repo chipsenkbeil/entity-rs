@@ -423,261 +423,633 @@ mod tests {
 
     #[test]
     fn f32_can_convert_to_value() {
-        todo!();
+        // NOTE: Cannot match against specific value of float
+        assert!(matches!(
+            123f32.into_value(),
+            Value::Primitive(Primitive::Number(Number::F32(_))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_f32() {
-        todo!();
+        // NOTE: Cannot match against specific value of float
+        assert!(matches!(
+            f32::try_from_value(Value::Primitive(Primitive::Number(Number::F32(123.0)))),
+            Ok(_),
+        ));
+
+        assert!(matches!(
+            f32::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn f64_can_convert_to_value() {
-        todo!();
+        // NOTE: Cannot match against specific value of float
+        assert!(matches!(
+            123f64.into_value(),
+            Value::Primitive(Primitive::Number(Number::F64(_))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_f64() {
-        todo!();
+        // NOTE: Cannot match against specific value of float
+        assert!(matches!(
+            f64::try_from_value(Value::Primitive(Primitive::Number(Number::F64(123.0)))),
+            Ok(_),
+        ));
+
+        assert!(matches!(
+            f64::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn isize_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123isize.into_value(),
+            Value::Primitive(Primitive::Number(Number::Isize(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_isize() {
-        todo!();
+        assert!(matches!(
+            isize::try_from_value(Value::Primitive(Primitive::Number(Number::Isize(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            isize::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn i8_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123i8.into_value(),
+            Value::Primitive(Primitive::Number(Number::I8(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_i8() {
-        todo!();
+        assert!(matches!(
+            i8::try_from_value(Value::Primitive(Primitive::Number(Number::I8(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            i8::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn i16_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123i16.into_value(),
+            Value::Primitive(Primitive::Number(Number::I16(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_i16() {
-        todo!();
+        assert!(matches!(
+            i16::try_from_value(Value::Primitive(Primitive::Number(Number::I16(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            i16::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn i32_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123i32.into_value(),
+            Value::Primitive(Primitive::Number(Number::I32(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_i32() {
-        todo!();
+        assert!(matches!(
+            i32::try_from_value(Value::Primitive(Primitive::Number(Number::I32(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            i32::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn i64_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123i64.into_value(),
+            Value::Primitive(Primitive::Number(Number::I64(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_i64() {
-        todo!();
+        assert!(matches!(
+            i64::try_from_value(Value::Primitive(Primitive::Number(Number::I64(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            i64::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn i128_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123i128.into_value(),
+            Value::Primitive(Primitive::Number(Number::I128(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_i128() {
-        todo!();
+        assert!(matches!(
+            i128::try_from_value(Value::Primitive(Primitive::Number(Number::I128(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            i128::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn usize_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123usize.into_value(),
+            Value::Primitive(Primitive::Number(Number::Usize(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_usize() {
-        todo!();
+        assert!(matches!(
+            usize::try_from_value(Value::Primitive(Primitive::Number(Number::Usize(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            usize::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn u8_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123u8.into_value(),
+            Value::Primitive(Primitive::Number(Number::U8(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_u8() {
-        todo!();
+        assert!(matches!(
+            u8::try_from_value(Value::Primitive(Primitive::Number(Number::U8(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            u8::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn u16_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123u16.into_value(),
+            Value::Primitive(Primitive::Number(Number::U16(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_u16() {
-        todo!();
+        assert!(matches!(
+            u16::try_from_value(Value::Primitive(Primitive::Number(Number::U16(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            u16::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn u32_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123u32.into_value(),
+            Value::Primitive(Primitive::Number(Number::U32(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_u32() {
-        todo!();
+        assert!(matches!(
+            u32::try_from_value(Value::Primitive(Primitive::Number(Number::U32(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            u32::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn u64_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123u64.into_value(),
+            Value::Primitive(Primitive::Number(Number::U64(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_u64() {
-        todo!();
+        assert!(matches!(
+            u64::try_from_value(Value::Primitive(Primitive::Number(Number::U64(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            u64::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn u128_can_convert_to_value() {
-        todo!();
+        assert!(matches!(
+            123u128.into_value(),
+            Value::Primitive(Primitive::Number(Number::U128(123))),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_u128() {
-        todo!();
+        assert!(matches!(
+            u128::try_from_value(Value::Primitive(Primitive::Number(Number::U128(123)))),
+            Ok(123),
+        ));
+
+        assert!(matches!(
+            u128::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn option_can_convert_to_value() {
-        todo!();
+        match Some('c').into_value() {
+            Value::Optional(Some(x)) => {
+                assert!(matches!(*x, Value::Primitive(Primitive::Char('c'))))
+            }
+            x => panic!("Unexpected value: {:?}", x),
+        }
+
+        assert!(matches!(None::<char>.into_value(), Value::Optional(None)));
     }
 
     #[test]
     fn value_can_convert_to_option() {
-        todo!();
+        assert!(matches!(
+            Option::<char>::try_from_value(Value::Optional(Some(Box::new(Value::Primitive(
+                Primitive::Char('c')
+            ))))),
+            Ok(Some('c')),
+        ));
+
+        assert!(matches!(
+            Option::<char>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
+        assert!(matches!(
+            Option::<char>::try_from_value(Value::Optional(Some(Box::new(Value::Primitive(
+                Primitive::Bool(true)
+            ))))),
+            Err(Value::Optional(Some(_))),
+        ));
     }
 
     #[test]
     fn string_can_convert_to_value() {
-        todo!();
+        match String::from("test").into_value() {
+            Value::Text(x) => assert_eq!(x, "test"),
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_string() {
-        todo!();
+        match String::try_from_value(Value::Text(String::from("test"))) {
+            Ok(x) => assert_eq!(x, "test"),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            String::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn pathbuf_can_convert_to_value() {
-        todo!();
+        match PathBuf::from("test").into_value() {
+            Value::Text(x) => assert_eq!(x, "test"),
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_pathbuf() {
-        todo!();
+        match PathBuf::try_from_value(Value::Text(String::from("test"))) {
+            Ok(x) => assert_eq!(x.as_os_str(), "test"),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            PathBuf::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn osstring_can_convert_to_value() {
-        todo!();
+        match OsString::from("test").into_value() {
+            Value::Text(x) => assert_eq!(x, "test"),
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_osstring() {
-        todo!();
+        match OsString::try_from_value(Value::Text(String::from("test"))) {
+            Ok(x) => assert_eq!(x, "test"),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            OsString::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn vec_can_convert_to_value() {
-        todo!();
+        match vec![1, 2, 3].into_value() {
+            Value::List(x) => assert_eq!(x, vec![1.into_value(), 2.into_value(), 3.into_value()]),
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_vec() {
-        todo!();
+        match Vec::<u8>::try_from_value(vec![1, 2, 3].into_value()) {
+            Ok(x) => assert_eq!(x, vec![1, 2, 3]),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            Vec::<u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn vecdeque_can_convert_to_value() {
-        todo!();
+        let list: VecDeque<u8> = vec![1, 2, 3].into_iter().collect();
+        match list.into_value() {
+            Value::List(x) => assert_eq!(x, vec![1.into_value(), 2.into_value(), 3.into_value()]),
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_vecdeque() {
-        todo!();
+        match VecDeque::<u8>::try_from_value(vec![1, 2, 3].into_value()) {
+            Ok(x) => assert_eq!(x, vec![1, 2, 3]),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            VecDeque::<u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn linkedlist_can_convert_to_value() {
-        todo!();
+        let list: LinkedList<u8> = vec![1, 2, 3].into_iter().collect();
+        match list.into_value() {
+            Value::List(x) => assert_eq!(x, vec![1.into_value(), 2.into_value(), 3.into_value()]),
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_linkedlist() {
-        todo!();
+        match LinkedList::<u8>::try_from_value(vec![1, 2, 3].into_value()) {
+            Ok(x) => assert_eq!(x, vec![1, 2, 3].into_iter().collect::<LinkedList<u8>>()),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            LinkedList::<u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn binaryheap_can_convert_to_value() {
-        todo!();
+        let list: BinaryHeap<u8> = vec![1, 2, 3].into_iter().collect();
+        match list.into_value() {
+            Value::List(x) => assert_eq!(x, vec![3.into_value(), 2.into_value(), 1.into_value()]),
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_binaryheap() {
-        todo!();
+        match BinaryHeap::<u8>::try_from_value(vec![1, 2, 3].into_value()) {
+            Ok(mut x) => {
+                assert_eq!(x.pop(), Some(3));
+                assert_eq!(x.pop(), Some(2));
+                assert_eq!(x.pop(), Some(1));
+                assert_eq!(x.pop(), None);
+            }
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            BinaryHeap::<u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn hashset_can_convert_to_value() {
-        todo!();
+        let list: HashSet<u8> = vec![1, 2, 3].into_iter().collect();
+        match list.into_value() {
+            Value::List(mut x) => {
+                x.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+                assert_eq!(x, vec![1.into_value(), 2.into_value(), 3.into_value()]);
+            }
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_hashset() {
-        todo!();
+        match HashSet::<u8>::try_from_value(vec![1, 2, 3].into_value()) {
+            Ok(x) => assert_eq!(x, vec![1, 2, 3].into_iter().collect::<HashSet<u8>>()),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            HashSet::<u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn btreeset_can_convert_to_value() {
-        todo!();
+        let list: BTreeSet<u8> = vec![1, 2, 3].into_iter().collect();
+        match list.into_value() {
+            Value::List(mut x) => {
+                x.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+                assert_eq!(x, vec![1.into_value(), 2.into_value(), 3.into_value()]);
+            }
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_btreeset() {
-        todo!();
+        match BTreeSet::<u8>::try_from_value(vec![1, 2, 3].into_value()) {
+            Ok(x) => assert_eq!(x, vec![1, 2, 3].into_iter().collect::<BTreeSet<u8>>()),
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            BTreeSet::<u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn hashmap_can_convert_to_value() {
-        todo!();
+        let map: HashMap<String, u8> = vec![
+            (String::from("one"), 1),
+            (String::from("two"), 2),
+            (String::from("three"), 3),
+        ]
+        .into_iter()
+        .collect();
+
+        match map.into_value() {
+            Value::Map(mut x) => {
+                assert_eq!(x.len(), 3);
+                assert_eq!(x.remove("one"), Some(1.into_value()));
+                assert_eq!(x.remove("two"), Some(2.into_value()));
+                assert_eq!(x.remove("three"), Some(3.into_value()));
+            }
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_hashmap() {
-        todo!();
+        match HashMap::<String, u8>::try_from_value(
+            vec![
+                (String::from("one"), 1),
+                (String::from("two"), 2),
+                (String::from("three"), 3),
+            ]
+            .into_iter()
+            .collect::<HashMap<String, u8>>()
+            .into_value(),
+        ) {
+            Ok(mut x) => {
+                assert_eq!(x.len(), 3);
+                assert_eq!(x.remove("one"), Some(1));
+                assert_eq!(x.remove("two"), Some(2));
+                assert_eq!(x.remove("three"), Some(3));
+            }
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            HashMap::<String, u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]
     fn btreemap_can_convert_to_value() {
-        todo!();
+        let map: BTreeMap<String, u8> = vec![
+            (String::from("one"), 1),
+            (String::from("two"), 2),
+            (String::from("three"), 3),
+        ]
+        .into_iter()
+        .collect();
+
+        match map.into_value() {
+            Value::Map(mut x) => {
+                assert_eq!(x.len(), 3);
+                assert_eq!(x.remove("one"), Some(1.into_value()));
+                assert_eq!(x.remove("two"), Some(2.into_value()));
+                assert_eq!(x.remove("three"), Some(3.into_value()));
+            }
+            x => panic!("Unexpected value: {:?}", x),
+        }
     }
 
     #[test]
     fn value_can_convert_to_btreemap() {
-        todo!();
+        match BTreeMap::<String, u8>::try_from_value(
+            vec![
+                (String::from("one"), 1),
+                (String::from("two"), 2),
+                (String::from("three"), 3),
+            ]
+            .into_iter()
+            .collect::<HashMap<String, u8>>()
+            .into_value(),
+        ) {
+            Ok(mut x) => {
+                assert_eq!(x.len(), 3);
+                assert_eq!(x.remove("one"), Some(1));
+                assert_eq!(x.remove("two"), Some(2));
+                assert_eq!(x.remove("three"), Some(3));
+            }
+            x => panic!("{:?}", x),
+        }
+
+        assert!(matches!(
+            BTreeMap::<String, u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 }
