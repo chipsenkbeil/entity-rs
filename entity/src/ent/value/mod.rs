@@ -219,6 +219,12 @@ impl<T: ValueLike> ValueLike for Option<T> {
     }
 }
 
+impl<T: ValueLike> From<Option<T>> for Value {
+    fn from(x: Option<T>) -> Self {
+        <Option<T> as ValueLike>::into_value(x)
+    }
+}
+
 impl ValueLike for PathBuf {
     fn into_value(self) -> Value {
         Value::Text(self.to_string_lossy().to_string())
@@ -316,6 +322,20 @@ macro_rules! impl_list {
                 }
             }
         }
+
+        impl<T: ValueLike $(+ $type)*> From<$outer<T>> for Value {
+            fn from(x: $outer<T>) -> Self {
+                <$outer<T> as ValueLike>::into_value(x)
+            }
+        }
+
+        impl<T: ValueLike $(+ $type)*> TryFrom<Value> for $outer<T> {
+            type Error = Value;
+
+            fn try_from(x: Value) -> Result<Self, Self::Error> {
+                <$outer<T> as ValueLike>::try_from_value(x)
+            }
+        }
     };
 }
 
@@ -369,11 +389,48 @@ macro_rules! impl_map {
                 }
             }
         }
+
+        impl<T: ValueLike> From<$outer<String, T>> for Value {
+            fn from(x: $outer<String, T>) -> Self {
+                <$outer<String, T> as ValueLike>::into_value(x)
+            }
+        }
+
+        impl<T: ValueLike> TryFrom<Value> for $outer<String, T> {
+            type Error = Value;
+
+            fn try_from(x: Value) -> Result<Self, Self::Error> {
+                <$outer<String, T> as ValueLike>::try_from_value(x)
+            }
+        }
     };
 }
 
 impl_map!(HashMap);
 impl_map!(BTreeMap);
+
+macro_rules! impl_conv {
+    ($($type:ty)+) => {$(
+        impl From<$type> for Value {
+            fn from(x: $type) -> Self {
+                <$type as ValueLike>::into_value(x)
+            }
+        }
+
+        impl TryFrom<Value> for $type {
+            type Error = Value;
+
+            fn try_from(x: Value) -> Result<Self, Self::Error> {
+                <$type as ValueLike>::try_from_value(x)
+            }
+        }
+    )+};
+}
+
+impl_conv!(
+    String OsString PathBuf
+    bool char f32 f64 i128 i16 i32 i64 i8 isize u128 u16 u32 u64 u8 usize
+);
 
 #[cfg(test)]
 mod tests {

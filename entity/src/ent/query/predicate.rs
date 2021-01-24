@@ -2,7 +2,6 @@ use crate::{Value, ValueLike};
 use derivative::Derivative;
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
     marker::PhantomData,
     ops::RangeInclusive,
     rc::Rc,
@@ -2244,7 +2243,7 @@ impl<T: ValueLike> std::ops::Not for TypedPredicate<T> {
     }
 }
 
-impl<T: ValueLike + TryFrom<Value>> TypedPredicate<T> {
+impl<T: ValueLike> TypedPredicate<T> {
     /// Creates a new typed predicate for [`Predicate::Lambda`]
     ///
     /// ### Examples
@@ -2257,12 +2256,12 @@ impl<T: ValueLike + TryFrom<Value>> TypedPredicate<T> {
     /// assert_eq!(p.check(1), false);
     /// ```
     pub fn lambda<F: 'static + Fn(T) -> bool>(f: F) -> Self {
-        Self::new(Predicate::Lambda(Rc::new(move |v| {
-            match T::try_from(v.clone()) {
+        Self::new(Predicate::Lambda(Rc::new(
+            move |v| match T::try_from_value(v.clone()) {
                 Ok(x) => f(x),
                 Err(_) => false,
-            }
-        })))
+            },
+        )))
     }
 }
 
