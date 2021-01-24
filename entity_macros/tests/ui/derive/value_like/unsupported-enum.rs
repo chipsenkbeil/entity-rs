@@ -1,6 +1,6 @@
-use entity::Value;
+use entity::ValueLike;
 
-#[derive(Value)]
+#[derive(ValueLike)]
 enum TestValue {
     A(u32),
     B(String),

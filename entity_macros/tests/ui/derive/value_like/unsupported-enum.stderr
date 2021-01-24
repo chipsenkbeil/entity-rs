@@ -1,0 +1,8 @@
+error: Enums are unsupported
+ --> $DIR/unsupported-enum.rs:4:1
+  |
+4 | / enum TestValue {
+5 | |     A(u32),
+6 | |     B(String),
+7 | | }
+  | |_^
