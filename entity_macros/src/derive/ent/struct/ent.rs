@@ -103,11 +103,16 @@ pub fn do_derive_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
                             let old_value = ::std::clone::Clone::clone(&self.#field_names);
                             let converted: ::std::result::Result<
                                 #field_types,
-                                &'static ::std::primitive::str
+                                #root::Value,
                             > = #value_to_typed_field;
                             self.#field_names = converted.map_err(
-                                |x| #root::EntMutationError::WrongValueType {
-                                    description: ::std::string::ToString::to_string(&x)
+                                |_| #root::EntMutationError::WrongValueType {
+                                    description: ::std::string::ToString::to_string(
+                                        ::std::concat!(
+                                            "Value is not ",
+                                            ::std::stringify!(#field_types),
+                                        )
+                                    )
                                 }
                             )?;
                             ::std::result::Result::Ok(#root::ValueLike::into_value(old_value))

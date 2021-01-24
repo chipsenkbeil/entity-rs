@@ -43,6 +43,17 @@ struct TestValue3 {
     a: ::std::primitive::u64,
 }
 
+#[derive(::std::clone::Clone, ::entity::ValueLike, ::entity::IntoValue, ::entity::TryFromValue)]
+struct TestValue4;
+
+#[derive(::std::clone::Clone, ::entity::ValueLike, ::entity::IntoValue, ::entity::TryFromValue)]
+struct TestValue5(::std::primitive::u64);
+
+#[derive(::std::clone::Clone, ::entity::ValueLike, ::entity::IntoValue, ::entity::TryFromValue)]
+struct TestValue6 {
+    a: ::std::primitive::u64,
+}
+
 // These traits exist to make sure we properly import using
 // ::std::primitive::<TYPE> instead of purely <TYPE>
 //

@@ -174,7 +174,7 @@ fn last_updated_should_return_copy_of_marked_last_updated_field() {
 
 #[test]
 fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
-    #[derive(Clone, ValueLike)]
+    #[derive(Clone, ValueLike, IntoValue)]
     struct CustomValue;
 
     #[derive(Clone, Ent)]
@@ -249,7 +249,7 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
 
 #[test]
 fn field_should_return_abstract_value_if_exists() {
-    #[derive(Clone, Debug, ValueLike)]
+    #[derive(Clone, Debug, ValueLike, IntoValue)]
     struct CustomValue;
 
     #[derive(Clone, Ent)]
@@ -304,7 +304,7 @@ fn field_should_return_abstract_value_if_exists() {
 
 #[test]
 fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() {
-    #[derive(Clone, Debug, PartialEq, Eq, ValueLike)]
+    #[derive(Clone, Debug, PartialEq, Eq, ValueLike, IntoValue)]
     struct CustomValue(usize);
 
     #[derive(Clone, Ent)]
@@ -386,7 +386,7 @@ fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() 
     ));
 
     assert!(matches!(
-        ent.update_field("a", Value::from(999usize)).unwrap_err(),
+        ent.update_field("a", Value::from("test")).unwrap_err(),
         EntMutationError::WrongValueType { .. }
     ));
 }

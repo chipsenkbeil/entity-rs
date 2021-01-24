@@ -30,10 +30,10 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                 #(
                     map.insert(
                         ::std::string::ToString::to_string(::std::stringify!(#field_names)),
-                        <#root::Value as ::std::convert::From<#field_types>>::from(self.#field_names),
+                        <#field_types as #root::ValueLike>::into_value(self.#field_names),
                     );
                 )*
-                Self::Map(map)
+                #root::Value::Map(map)
             }
 
             fn try_from_value(value: #root::Value) -> ::std::result::Result<Self, #root::Value> {
@@ -56,12 +56,15 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                             match result {
                                 ::std::result::Result::Ok(x) => {
                                     map.insert(
-                                        ::std::stringify!(#field_names),
+                                        ::std::string::ToString::to_string(::std::stringify!(#field_names)),
                                         #root::ValueLike::into_value(x),
                                     );
                                 },
                                 ::std::result::Result::Err(value) => {
-                                    map.insert(::std::stringify!(#field_names), value);
+                                    map.insert(
+                                        ::std::string::ToString::to_string(::std::stringify!(#field_names)),
+                                        value,
+                                    );
                                     return ::std::result::Result::Err(#root::Value::Map(map));
                                 }
                             }
@@ -83,22 +86,6 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                         }
                     ),*
                 })
-            }
-        }
-
-        #[automatically_derived]
-        impl #impl_generics ::std::convert::From<#name #ty_generics> for #root::Value #where_clause {
-            fn from(x: #name) -> Self {
-                #root::ValueLike::into_value(x)
-            }
-        }
-
-        #[automatically_derived]
-        impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
-            type Error = #root::Value;
-
-            fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
-                #root::ValueLike::try_from_value(value)
             }
         }
     }

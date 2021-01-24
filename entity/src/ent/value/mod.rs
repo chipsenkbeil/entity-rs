@@ -181,6 +181,23 @@ impl<T: PrimitiveLike> ValueLike for T {
     }
 }
 
+impl From<Primitive> for Value {
+    fn from(x: Primitive) -> Self {
+        Self::Primitive(x)
+    }
+}
+
+impl TryFrom<Value> for Primitive {
+    type Error = Value;
+
+    fn try_from(x: Value) -> Result<Self, Self::Error> {
+        match x {
+            Value::Primitive(x) => Ok(x),
+            x => Err(x),
+        }
+    }
+}
+
 impl<T: ValueLike> ValueLike for Option<T> {
     fn into_value(self) -> Value {
         Value::Optional(self.map(|x| Box::new(x.into_value())))

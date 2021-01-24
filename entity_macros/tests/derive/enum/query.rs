@@ -1,6 +1,5 @@
 use derivative::Derivative;
 use entity::{TypedPredicate as P, *};
-use std::convert::TryFrom;
 
 #[derive(Clone, Derivative, Ent, EntType, EntQuery)]
 #[derivative(Debug)]

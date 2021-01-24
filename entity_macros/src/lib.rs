@@ -136,9 +136,19 @@ pub fn derive_ent_wrapper(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     utils::do_derive(derive::do_derive_ent_wrapper)(input)
 }
 
-#[proc_macro_derive(ValueLike, attributes(value))]
+#[proc_macro_derive(ValueLike)]
 pub fn derive_value_like(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     utils::do_derive(derive::do_derive_value_like)(input)
+}
+
+#[proc_macro_derive(IntoValue)]
+pub fn derive_into_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_into_value)(input)
+}
+
+#[proc_macro_derive(TryFromValue)]
+pub fn derive_try_from_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    utils::do_derive(derive::do_derive_try_from_value)(input)
 }
 
 /// Special wrapper to derive an async-graphql object based on the ent

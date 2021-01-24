@@ -6,12 +6,15 @@ fn no_fields() {
     #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue {}
 
-    assert_eq!(Value::from(CustomValue {}), Value::Map(HashMap::new()));
-    assert!(CustomValue::try_from(Value::Map(HashMap::new())).is_ok());
+    assert_eq!(
+        ValueLike::into_value(CustomValue {}),
+        Value::Map(HashMap::new())
+    );
+    assert!(CustomValue::try_from_value(Value::Map(HashMap::new())).is_ok());
 
     // Will ignore extra fields
     assert_eq!(
-        CustomValue::try_from(Value::Map({
+        CustomValue::try_from_value(Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("test"), Value::from(3u32));
             map
@@ -29,7 +32,7 @@ fn one_field() {
     }
 
     assert_eq!(
-        Value::from(CustomValue { a: 3 }),
+        ValueLike::into_value(CustomValue { a: 3 }),
         Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("a"), Value::from(3u32));
@@ -37,9 +40,9 @@ fn one_field() {
         })
     );
 
-    assert!(CustomValue::try_from(Value::Map(HashMap::new())).is_err());
+    assert!(CustomValue::try_from_value(Value::Map(HashMap::new())).is_err());
     assert_eq!(
-        CustomValue::try_from(Value::Map({
+        CustomValue::try_from_value(Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("a"), Value::from(3u32));
             map
@@ -49,7 +52,7 @@ fn one_field() {
     );
 
     // Will fail if field has wrong type
-    assert!(CustomValue::try_from(Value::Map({
+    assert!(CustomValue::try_from_value(Value::Map({
         let mut map = HashMap::new();
         map.insert(String::from("a"), Value::from("text"));
         map
@@ -58,7 +61,7 @@ fn one_field() {
 
     // Will ignore extra fields
     assert_eq!(
-        CustomValue::try_from(Value::Map({
+        CustomValue::try_from_value(Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("a"), Value::from(3u32));
             map.insert(String::from("b"), Value::from(3u32));
@@ -78,7 +81,7 @@ fn multiple_fields_of_same_type() {
     }
 
     assert_eq!(
-        Value::from(CustomValue { a: 3, b: 5 }),
+        ValueLike::into_value(CustomValue { a: 3, b: 5 }),
         Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("a"), Value::from(3u32));
@@ -87,9 +90,9 @@ fn multiple_fields_of_same_type() {
         })
     );
 
-    assert!(CustomValue::try_from(Value::Map(HashMap::new())).is_err());
+    assert!(CustomValue::try_from_value(Value::Map(HashMap::new())).is_err());
     assert_eq!(
-        CustomValue::try_from(Value::Map({
+        CustomValue::try_from_value(Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("a"), Value::from(3u32));
             map.insert(String::from("b"), Value::from(5u32));
@@ -98,7 +101,7 @@ fn multiple_fields_of_same_type() {
         .unwrap(),
         CustomValue { a: 3, b: 5 }
     );
-    assert!(CustomValue::try_from(Value::Map({
+    assert!(CustomValue::try_from_value(Value::Map({
         let mut map = HashMap::new();
         map.insert(String::from("a"), Value::from(3u32));
         map.insert(String::from("c"), Value::from(3u32));
@@ -116,7 +119,7 @@ fn multiple_fields_of_different_types() {
     }
 
     assert_eq!(
-        Value::from(CustomValue {
+        ValueLike::into_value(CustomValue {
             a: 3,
             b: String::from("test")
         }),
@@ -128,9 +131,9 @@ fn multiple_fields_of_different_types() {
         })
     );
 
-    assert!(CustomValue::try_from(Value::Map(HashMap::new())).is_err());
+    assert!(CustomValue::try_from_value(Value::Map(HashMap::new())).is_err());
     assert_eq!(
-        CustomValue::try_from(Value::Map({
+        CustomValue::try_from_value(Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("a"), Value::from(3u32));
             map.insert(String::from("b"), Value::from("test"));
@@ -142,7 +145,7 @@ fn multiple_fields_of_different_types() {
             b: String::from("test")
         }
     );
-    assert!(CustomValue::try_from(Value::Map({
+    assert!(CustomValue::try_from_value(Value::Map({
         let mut map = HashMap::new();
         map.insert(String::from("a"), Value::from(3u32));
         map.insert(String::from("b"), Value::from(3u32));
@@ -172,7 +175,7 @@ fn fields_that_also_derives_value() {
     }
 
     assert_eq!(
-        Value::from(CustomValue {
+        ValueLike::into_value(CustomValue {
             a: A(3),
             b: B {
                 inner: String::from("test")
@@ -195,9 +198,9 @@ fn fields_that_also_derives_value() {
         })
     );
 
-    assert!(CustomValue::try_from(Value::Map(HashMap::new())).is_err());
+    assert!(CustomValue::try_from_value(Value::Map(HashMap::new())).is_err());
     assert_eq!(
-        CustomValue::try_from(Value::Map({
+        CustomValue::try_from_value(Value::Map({
             let mut map = HashMap::new();
             map.insert(String::from("a"), Value::from(vec![3u32]));
             map.insert(
