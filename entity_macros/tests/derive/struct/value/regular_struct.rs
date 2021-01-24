@@ -1,9 +1,9 @@
-use entity::{PrimitiveValue, Value};
-use std::{collections::HashMap, convert::TryFrom};
+use entity::{Primitive, Value, ValueLike};
+use std::collections::HashMap;
 
 #[test]
 fn no_fields() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue {}
 
     assert_eq!(Value::from(CustomValue {}), Value::Map(HashMap::new()));
@@ -23,7 +23,7 @@ fn no_fields() {
 
 #[test]
 fn one_field() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue {
         a: u32,
     }
@@ -71,7 +71,7 @@ fn one_field() {
 
 #[test]
 fn multiple_fields_of_same_type() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue {
         a: u32,
         b: u32,
@@ -109,7 +109,7 @@ fn multiple_fields_of_same_type() {
 
 #[test]
 fn multiple_fields_of_different_types() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue {
         a: u32,
         b: String,
@@ -153,18 +153,18 @@ fn multiple_fields_of_different_types() {
 
 #[test]
 fn fields_that_also_derives_value() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct A(u32);
 
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct B {
         inner: String,
     }
 
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct C;
 
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue {
         a: A,
         b: B,
@@ -190,7 +190,7 @@ fn fields_that_also_derives_value() {
                     map
                 }),
             );
-            map.insert(String::from("c"), Value::from(PrimitiveValue::Unit));
+            map.insert(String::from("c"), Value::from(Primitive::Unit));
             map
         })
     );
@@ -208,7 +208,7 @@ fn fields_that_also_derives_value() {
                     map
                 }),
             );
-            map.insert(String::from("c"), Value::from(PrimitiveValue::Unit));
+            map.insert(String::from("c"), Value::from(Primitive::Unit));
             map
         }))
         .unwrap(),

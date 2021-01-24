@@ -9,7 +9,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics) -> TokenStream {
         #[automatically_derived]
         impl #impl_generics ::std::convert::From<#name #ty_generics> for #root::Value #where_clause {
             fn from(x: #name) -> Self {
-                <Self as ::std::convert::From<#root::PrimitiveValue>>::from(#root::PrimitiveValue::Unit)
+                <Self as ::std::convert::From<#root::Primitive>>::from(#root::Primitive::Unit)
             }
         }
 
@@ -19,7 +19,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics) -> TokenStream {
 
             fn try_from(x: #root::Value) -> ::std::result::Result<Self, Self::Error> {
                 match x {
-                    #root::Value::Primitive(#root::PrimitiveValue::Unit) =>
+                    #root::Value::Primitive(#root::Primitive::Unit) =>
                         ::std::result::Result::Ok(Self),
                     _ => ::std::result::Result::Err("Value is not unit"),
                 }

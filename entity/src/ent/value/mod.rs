@@ -71,28 +71,6 @@ impl Value {
     pub fn to_primitive_type(&self) -> Option<PrimitiveType> {
         self.to_primitive().map(PrimitiveType::from)
     }
-
-    /// Attempts to convert the value to an underlying option type,
-    /// succeeding if Value is the Optional variant and the inner
-    /// value can be converted to the specified type.
-    ///
-    /// This is only needed due to a blanket impl in the standard library
-    /// blocking the ability to implement `TryFrom<Value> for Option<T>`,
-    /// which will be available some day once specialization is implemented:
-    ///
-    /// https://github.com/rust-lang/rust/issues/31844
-    pub fn try_into_option<T: TryFrom<Value, Error = &'static str>>(
-        self,
-    ) -> Result<Option<T>, &'static str> {
-        match self {
-            Self::Optional(Some(boxed_value)) => {
-                let t = T::try_from(boxed_value.as_ref().clone())?;
-                Ok(Some(t))
-            }
-            Self::Optional(None) => Ok(None),
-            _ => Err("Only Optional can be converted to Option<T>"),
-        }
-    }
 }
 
 impl Hash for Value {
@@ -282,6 +260,29 @@ impl<'a> From<&'a str> for Value {
     }
 }
 
+macro_rules! impl_conv {
+    ($($type:ty)+) => {$(
+        impl From<$type> for Value {
+            fn from(x: $type) -> Self {
+                <$type as ValueLike>::into_value(x)
+            }
+        }
+
+        impl TryFrom<Value> for $type {
+            type Error = Value;
+
+            fn try_from(x: Value) -> Result<Self, Self::Error> {
+                <$type as ValueLike>::try_from_value(x)
+            }
+        }
+    )+};
+}
+
+impl_conv!(
+    String OsString PathBuf
+    bool char f32 f64 i128 i16 i32 i64 i8 isize u128 u16 u32 u64 u8 usize
+);
+
 macro_rules! impl_list {
     ($outer:ident $($type:tt)*) => {
         impl<T: ValueLike $(+ $type)*> ValueLike for $outer<T> {
@@ -408,29 +409,6 @@ macro_rules! impl_map {
 
 impl_map!(HashMap);
 impl_map!(BTreeMap);
-
-macro_rules! impl_conv {
-    ($($type:ty)+) => {$(
-        impl From<$type> for Value {
-            fn from(x: $type) -> Self {
-                <$type as ValueLike>::into_value(x)
-            }
-        }
-
-        impl TryFrom<Value> for $type {
-            type Error = Value;
-
-            fn try_from(x: Value) -> Result<Self, Self::Error> {
-                <$type as ValueLike>::try_from_value(x)
-            }
-        }
-    )+};
-}
-
-impl_conv!(
-    String OsString PathBuf
-    bool char f32 f64 i128 i16 i32 i64 i8 isize u128 u16 u32 u64 u8 usize
-);
 
 #[cfg(test)]
 mod tests {

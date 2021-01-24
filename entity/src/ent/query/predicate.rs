@@ -17,8 +17,8 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, ValueLike};
+    /// let v = 123.into_value();
     ///
     /// let p = Predicate::Always;
     /// assert_eq!(p.check(&v), true);
@@ -28,8 +28,8 @@ pub enum Predicate {
     /// Will always be false (not same as equals(false))
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, ValueLike};
+    /// let v = 123.into_value();
     ///
     /// let p = Predicate::Never;
     /// assert_eq!(p.check(&v), false);
@@ -41,24 +41,24 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
     /// let p = Predicate::And(vec![
-    ///     Predicate::GreaterThan(Value::from(122)),
-    ///     Predicate::LessThan(Value::from(124)),
+    ///     Predicate::GreaterThan(122.into_value()),
+    ///     Predicate::LessThan(124.into_value()),
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::And(vec![
-    ///     Predicate::GreaterThan(Value::from(122)),
+    ///     Predicate::GreaterThan(122.into_value()),
     ///     Predicate::Never,
     /// ]);
     /// assert_eq!(p.check(&v), false);
     ///
     /// let p = Predicate::And(vec![
     ///     Predicate::Never,
-    ///     Predicate::GreaterThan(Value::from(122)),
+    ///     Predicate::GreaterThan(122.into_value()),
     /// ]);
     /// assert_eq!(p.check(&v), false);
     ///
@@ -76,32 +76,32 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(vec![1, 2, 3]);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = vec![1, 2, 3].into_value();
     ///
-    /// let p = Predicate::Any(Box::new(Predicate::Equals(Value::from(2))));
+    /// let p = Predicate::Any(Box::new(Predicate::Equals(2.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::Any(Box::new(Predicate::Equals(Value::from(999))));
+    /// let p = Predicate::Any(Box::new(Predicate::Equals(999.into_value())));
     /// assert_eq!(p.check(&v), false);
     /// ```
     ///
     /// Also supports checking values of a map:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     /// use std::collections::HashMap;
     /// let map: HashMap<String, u32> = vec![
     ///     (String::from("a"), 1),
     ///     (String::from("b"), 2),
     ///     (String::from("c"), 3),
     /// ].into_iter().collect();
-    /// let v = Value::from(map);
+    /// let v = map.into_value();
     ///
-    /// let p = Predicate::Any(Box::new(Predicate::Equals(Value::from(2))));
+    /// let p = Predicate::Any(Box::new(Predicate::Equals(2.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::Any(Box::new(Predicate::Equals(Value::from(999))));
+    /// let p = Predicate::Any(Box::new(Predicate::Equals(999.into_value())));
     /// assert_eq!(p.check(&v), false);
     /// ```
     Any(Box<Predicate>),
@@ -112,32 +112,32 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(vec![1, 2, 3]);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = vec![1, 2, 3].into_value();
     ///
-    /// let p = Predicate::Contains(Value::from(2));
+    /// let p = Predicate::Contains(2.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::Contains(Value::from(999));
+    /// let p = Predicate::Contains(999.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     ///
     /// Also supports checking values of a map:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     /// use std::collections::HashMap;
     /// let map: HashMap<String, u32> = vec![
     ///     (String::from("a"), 1),
     ///     (String::from("b"), 2),
     ///     (String::from("c"), 3),
     /// ].into_iter().collect();
-    /// let v = Value::from(map);
+    /// let v = map.into_value();
     ///
-    /// let p = Predicate::Contains(Value::from(2));
+    /// let p = Predicate::Contains(2.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::Contains(Value::from(999));
+    /// let p = Predicate::Contains(999.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     Contains(Value),
@@ -148,32 +148,32 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(vec![1, 2, 3]);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = vec![1, 2, 3].into_value();
     ///
-    /// let p = Predicate::ContainsAll(vec![Value::from(2), Value::from(3)]);
+    /// let p = Predicate::ContainsAll(vec![2.into_value(), 3.into_value()]);
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::ContainsAll(vec![Value::from(2), Value::from(999)]);
+    /// let p = Predicate::ContainsAll(vec![2.into_value(), 999.into_value()]);
     /// assert_eq!(p.check(&v), false);
     /// ```
     ///
     /// Also supports checking values of a map:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     /// use std::collections::HashMap;
     /// let map: HashMap<String, u32> = vec![
     ///     (String::from("a"), 1),
     ///     (String::from("b"), 2),
     ///     (String::from("c"), 3),
     /// ].into_iter().collect();
-    /// let v = Value::from(map);
+    /// let v = map.into_value();
     ///
-    /// let p = Predicate::ContainsAll(vec![Value::from(2), Value::from(3)]);
+    /// let p = Predicate::ContainsAll(vec![2.into_value(), 3.into_value()]);
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::ContainsAll(vec![Value::from(2), Value::from(999)]);
+    /// let p = Predicate::ContainsAll(vec![2.into_value(), 999.into_value()]);
     /// assert_eq!(p.check(&v), false);
     /// ```
     ContainsAll(Vec<Value>),
@@ -184,32 +184,32 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(vec![1, 2, 3]);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = vec![1, 2, 3].into_value();
     ///
-    /// let p = Predicate::ContainsAny(vec![Value::from(2), Value::from(999)]);
+    /// let p = Predicate::ContainsAny(vec![2.into_value(), 999.into_value()]);
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::ContainsAny(vec![Value::from(998), Value::from(999)]);
+    /// let p = Predicate::ContainsAny(vec![998.into_value(), 999.into_value()]);
     /// assert_eq!(p.check(&v), false);
     /// ```
     ///
     /// Also supports checking values of a map:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     /// use std::collections::HashMap;
     /// let map: HashMap<String, u32> = vec![
     ///     (String::from("a"), 1),
     ///     (String::from("b"), 2),
     ///     (String::from("c"), 3),
     /// ].into_iter().collect();
-    /// let v = Value::from(map);
+    /// let v = map.into_value();
     ///
-    /// let p = Predicate::ContainsAny(vec![Value::from(2), Value::from(999)]);
+    /// let p = Predicate::ContainsAny(vec![2.into_value(), 999.into_value()]);
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::ContainsAny(vec![Value::from(998), Value::from(999)]);
+    /// let p = Predicate::ContainsAny(vec![998.into_value(), 999.into_value()]);
     /// assert_eq!(p.check(&v), false);
     /// ```
     ContainsAny(Vec<Value>),
@@ -219,13 +219,13 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::Equals(Value::from(123));
+    /// let p = Predicate::Equals(123.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::Equals(Value::from(456));
+    /// let p = Predicate::Equals(456.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     Equals(Value),
@@ -235,16 +235,16 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::GreaterThan(Value::from(100));
+    /// let p = Predicate::GreaterThan(100.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::GreaterThan(Value::from(123));
+    /// let p = Predicate::GreaterThan(123.into_value());
     /// assert_eq!(p.check(&v), false);
     ///
-    /// let p = Predicate::GreaterThan(Value::from(456));
+    /// let p = Predicate::GreaterThan(456.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     GreaterThan(Value),
@@ -255,16 +255,16 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::GreaterThanOrEquals(Value::from(100));
+    /// let p = Predicate::GreaterThanOrEquals(100.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::GreaterThanOrEquals(Value::from(123));
+    /// let p = Predicate::GreaterThanOrEquals(123.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::GreaterThanOrEquals(Value::from(456));
+    /// let p = Predicate::GreaterThanOrEquals(456.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     GreaterThanOrEquals(Value),
@@ -274,14 +274,14 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     /// use std::collections::HashMap;
     /// let map: HashMap<String, u32> = vec![
     ///     (String::from("a"), 1),
     ///     (String::from("b"), 2),
     ///     (String::from("c"), 3),
     /// ].into_iter().collect();
-    /// let v = Value::from(map);
+    /// let v = map.into_value();
     ///
     /// let p = Predicate::HasKey(String::from("a"));
     /// assert_eq!(p.check(&v), true);
@@ -297,30 +297,30 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     /// use std::collections::HashMap;
     /// let map: HashMap<String, u32> = vec![
     ///     (String::from("a"), 1),
     ///     (String::from("b"), 2),
     ///     (String::from("c"), 3),
     /// ].into_iter().collect();
-    /// let v = Value::from(map);
+    /// let v = map.into_value();
     ///
     /// let p = Predicate::HasKeyWhereValue(
     ///     String::from("a"),
-    ///     Box::new(Predicate::Equals(Value::from(1))),
+    ///     Box::new(Predicate::Equals(1.into_value())),
     /// );
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::HasKeyWhereValue(
     ///     String::from("b"),
-    ///     Box::new(Predicate::Equals(Value::from(1))),
+    ///     Box::new(Predicate::Equals(1.into_value())),
     /// );
     /// assert_eq!(p.check(&v), false);
     ///
     /// let p = Predicate::HasKeyWhereValue(
     ///     String::from("d"),
-    ///     Box::new(Predicate::Equals(Value::from(1))),
+    ///     Box::new(Predicate::Equals(1.into_value())),
     /// );
     /// assert_eq!(p.check(&v), false);
     /// ```
@@ -331,13 +331,13 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::InRange(Value::from(100)..=Value::from(200));
+    /// let p = Predicate::InRange(100.into_value()..=200.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::InRange(Value::from(200)..=Value::from(300));
+    /// let p = Predicate::InRange(200.into_value()..=300.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     InRange(RangeInclusive<Value>),
@@ -347,20 +347,20 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
     /// let p = Predicate::InSet(vec![
-    ///     Value::from(122),
-    ///     Value::from(123),
-    ///     Value::from(124),
+    ///     122.into_value(),
+    ///     123.into_value(),
+    ///     124.into_value(),
     /// ].into_iter().collect());
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::InSet(vec![
-    ///     Value::from(222),
-    ///     Value::from(223),
-    ///     Value::from(224),
+    ///     222.into_value(),
+    ///     223.into_value(),
+    ///     224.into_value(),
     /// ].into_iter().collect());
     /// assert_eq!(p.check(&v), false);
     /// ```
@@ -371,13 +371,13 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
-    /// let v = Value::from(None::<u8>);
+    /// let v = None::<u8>.into_value();
     /// let p = Predicate::IsNone;
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let v = Value::from(Some(123));
+    /// let v = Some(123).into_value();
     /// let p = Predicate::IsNone;
     /// assert_eq!(p.check(&v), false);
     /// ```
@@ -389,14 +389,14 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     /// use std::rc::Rc;
-    /// let v = Value::from(123);
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::Lambda(Rc::new(|v| v == &Value::from(123)));
+    /// let p = Predicate::Lambda(Rc::new(|v| v == &123.into_value()));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::Lambda(Rc::new(|v| v == &Value::from(456)));
+    /// let p = Predicate::Lambda(Rc::new(|v| v == &456.into_value()));
     /// assert_eq!(p.check(&v), false);
     /// ```
     Lambda(#[derivative(Debug = "ignore", PartialEq = "ignore")] Rc<dyn Fn(&Value) -> bool>),
@@ -406,16 +406,16 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::LessThan(Value::from(200));
+    /// let p = Predicate::LessThan(200.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::LessThan(Value::from(123));
+    /// let p = Predicate::LessThan(123.into_value());
     /// assert_eq!(p.check(&v), false);
     ///
-    /// let p = Predicate::LessThan(Value::from(100));
+    /// let p = Predicate::LessThan(100.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     LessThan(Value),
@@ -426,16 +426,16 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::LessThanOrEquals(Value::from(200));
+    /// let p = Predicate::LessThanOrEquals(200.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::LessThanOrEquals(Value::from(123));
+    /// let p = Predicate::LessThanOrEquals(123.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::LessThanOrEquals(Value::from(100));
+    /// let p = Predicate::LessThanOrEquals(100.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     LessThanOrEquals(Value),
@@ -445,13 +445,13 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::Not(Box::new(Predicate::Equals(Value::from(200))));
+    /// let p = Predicate::Not(Box::new(Predicate::Equals(200.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::Not(Box::new(Predicate::Equals(Value::from(123))));
+    /// let p = Predicate::Not(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), false);
     /// ```
     Not(Box<Predicate>),
@@ -461,13 +461,13 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::NotEquals(Value::from(456));
+    /// let p = Predicate::NotEquals(456.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::NotEquals(Value::from(123));
+    /// let p = Predicate::NotEquals(123.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     NotEquals(Value),
@@ -477,13 +477,13 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
-    /// let p = Predicate::NotInRange(Value::from(200)..=Value::from(300));
+    /// let p = Predicate::NotInRange(200.into_value()..=300.into_value());
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let p = Predicate::NotInRange(Value::from(100)..=Value::from(200));
+    /// let p = Predicate::NotInRange(100.into_value()..=200.into_value());
     /// assert_eq!(p.check(&v), false);
     /// ```
     NotInRange(RangeInclusive<Value>),
@@ -493,20 +493,20 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
     /// let p = Predicate::NotInSet(vec![
-    ///     Value::from(222),
-    ///     Value::from(223),
-    ///     Value::from(224),
+    ///     222.into_value(),
+    ///     223.into_value(),
+    ///     224.into_value(),
     /// ].into_iter().collect());
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::NotInSet(vec![
-    ///     Value::from(122),
-    ///     Value::from(123),
-    ///     Value::from(124),
+    ///     122.into_value(),
+    ///     123.into_value(),
+    ///     124.into_value(),
     /// ].into_iter().collect());
     /// assert_eq!(p.check(&v), false);
     /// ```
@@ -518,26 +518,26 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
-    /// let v = Value::from(Some(123));
-    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = Some(123).into_value();
+    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let v = Value::from(123);
-    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = 123.into_value();
+    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let v = Value::from(Some(456));
-    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = Some(456).into_value();
+    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), false);
     ///
-    /// let v = Value::from(456);
-    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = 456.into_value();
+    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), false);
     ///
-    /// let v = Value::from(None::<u8>);
-    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = None::<u8>.into_value();
+    /// let p = Predicate::NotNoneAnd(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), false);
     /// ```
     NotNoneAnd(Box<Predicate>),
@@ -548,22 +548,22 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
-    /// let v = Value::from(None::<u8>);
-    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = None::<u8>.into_value();
+    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let v = Value::from(Some(123));
-    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = Some(123).into_value();
+    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let v = Value::from(123);
-    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = 123.into_value();
+    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), true);
     ///
-    /// let v = Value::from(Some(456));
-    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(Value::from(123))));
+    /// let v = Some(456).into_value();
+    /// let p = Predicate::NoneOr(Box::new(Predicate::Equals(123.into_value())));
     /// assert_eq!(p.check(&v), false);
     /// ```
     NoneOr(Box<Predicate>),
@@ -573,24 +573,24 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
     /// let p = Predicate::Or(vec![
-    ///     Predicate::GreaterThan(Value::from(122)),
-    ///     Predicate::LessThan(Value::from(124)),
+    ///     Predicate::GreaterThan(122.into_value()),
+    ///     Predicate::LessThan(124.into_value()),
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::Or(vec![
-    ///     Predicate::Equals(Value::from(123)),
+    ///     Predicate::Equals(123.into_value()),
     ///     Predicate::Never,
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::Or(vec![
     ///     Predicate::Never,
-    ///     Predicate::Equals(Value::from(123)),
+    ///     Predicate::Equals(123.into_value()),
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
@@ -609,7 +609,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("substring"));
+    /// let v = Value::from("substring");
     ///
     /// let p = Predicate::TextContainedIn(String::from("my substring of text"));
     /// assert_eq!(p.check(&v), true);
@@ -626,7 +626,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("substring"));
+    /// let v = Value::from("substring");
     ///
     /// let p = Predicate::TextContainedInCaseInsensitive(String::from("MY SUBSTRING OF TEXT"));
     /// assert_eq!(p.check(&v), true);
@@ -643,7 +643,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextContainsAll(vec![
     ///     String::from("my"),
@@ -668,7 +668,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextContainsAllCaseInsensitive(vec![
     ///     String::from("MY"),
@@ -693,7 +693,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextContainsAny(vec![
     ///     String::from("something"),
@@ -718,7 +718,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextContainsAnyCaseInsensitive(vec![
     ///     String::from("SOMETHING"),
@@ -743,7 +743,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("some text"));
+    /// let v = Value::from("some text");
     ///
     /// let p = Predicate::TextEndsWith(String::from("text"));
     /// assert_eq!(p.check(&v), true);
@@ -760,7 +760,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("some text"));
+    /// let v = Value::from("some text");
     ///
     /// let p = Predicate::TextEndsWithCaseInsensitive(String::from("TEXT"));
     /// assert_eq!(p.check(&v), true);
@@ -777,7 +777,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextEndsWithAny(vec![
     ///     String::from("something"),
@@ -802,7 +802,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextEndsWithAnyCaseInsensitive(vec![
     ///     String::from("SOMETHING"),
@@ -827,7 +827,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("some text"));
+    /// let v = Value::from("some text");
     ///
     /// let p = Predicate::TextEqualsCaseInsensitive(String::from("SOME TEXT"));
     /// assert_eq!(p.check(&v), true);
@@ -844,7 +844,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("some text"));
+    /// let v = Value::from("some text");
     ///
     /// let p = Predicate::TextNotEqualsCaseInsensitive(String::from("other text"));
     /// assert_eq!(p.check(&v), true);
@@ -886,7 +886,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("some text"));
+    /// let v = Value::from("some text");
     ///
     /// let p = Predicate::TextStartsWith(String::from("some"));
     /// assert_eq!(p.check(&v), true);
@@ -903,7 +903,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("some text"));
+    /// let v = Value::from("some text");
     ///
     /// let p = Predicate::TextStartsWithCaseInsensitive(String::from("SOME"));
     /// assert_eq!(p.check(&v), true);
@@ -920,7 +920,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextStartsWithAny(vec![
     ///     String::from("something"),
@@ -945,7 +945,7 @@ pub enum Predicate {
     ///
     /// ```
     /// use entity::{Predicate, Value};
-    /// let v = Value::from(String::from("my text that is compared"));
+    /// let v = Value::from("my text that is compared");
     ///
     /// let p = Predicate::TextStartsWithAnyCaseInsensitive(vec![
     ///     String::from("SOMETHING"),
@@ -968,24 +968,24 @@ pub enum Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
-    /// let v = Value::from(123);
+    /// use entity::{Predicate, Value, ValueLike};
+    /// let v = 123.into_value();
     ///
     /// let p = Predicate::Xor(vec![
     ///     Predicate::Never,
-    ///     Predicate::Equals(Value::from(123)),
+    ///     Predicate::Equals(123.into_value()),
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::Xor(vec![
-    ///     Predicate::Equals(Value::from(123)),
+    ///     Predicate::Equals(123.into_value()),
     ///     Predicate::Never,
     /// ]);
     /// assert_eq!(p.check(&v), true);
     ///
     /// let p = Predicate::Xor(vec![
-    ///     Predicate::GreaterThan(Value::from(122)),
-    ///     Predicate::LessThan(Value::from(124)),
+    ///     Predicate::GreaterThan(122.into_value()),
+    ///     Predicate::LessThan(124.into_value()),
     /// ]);
     /// assert_eq!(p.check(&v), false);
     ///
@@ -1881,13 +1881,13 @@ impl std::ops::BitXor for Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
-    ///     Predicate::Equals(Value::from(123)) ^ Predicate::Equals(Value::from(124)),
+    ///     Predicate::Equals(123.into_value()) ^ Predicate::Equals(124.into_value()),
     ///     Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -1896,17 +1896,17 @@ impl std::ops::BitXor for Predicate {
     /// predicate will be an updated instance:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
     ///     Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///     ]) ^ Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///     ]) ^ Predicate::Equals(124.into_value()),
     ///     Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -1915,17 +1915,17 @@ impl std::ops::BitXor for Predicate {
     /// predicate will be an updated instance:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
-    ///     Predicate::Equals(Value::from(122)) ^ Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///     Predicate::Equals(122.into_value()) ^ Predicate::Xor(vec![
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     ///     Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -1934,21 +1934,21 @@ impl std::ops::BitXor for Predicate {
     /// predicate will be a merge:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
     ///     Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(121)),
-    ///         Predicate::Equals(Value::from(122)),
+    ///         Predicate::Equals(121.into_value()),
+    ///         Predicate::Equals(122.into_value()),
     ///     ]) ^ Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     ///     Predicate::Xor(vec![
-    ///         Predicate::Equals(Value::from(121)),
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(121.into_value()),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -1980,13 +1980,13 @@ impl std::ops::BitAnd for Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
-    ///     Predicate::Equals(Value::from(123)) & Predicate::Equals(Value::from(124)),
+    ///     Predicate::Equals(123.into_value()) & Predicate::Equals(124.into_value()),
     ///     Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -1995,17 +1995,17 @@ impl std::ops::BitAnd for Predicate {
     /// predicate will be an updated instance:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
     ///     Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///     ]) & Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///     ]) & Predicate::Equals(124.into_value()),
     ///     Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -2014,17 +2014,17 @@ impl std::ops::BitAnd for Predicate {
     /// predicate will be an updated instance:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
-    ///     Predicate::Equals(Value::from(122)) & Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///     Predicate::Equals(122.into_value()) & Predicate::And(vec![
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     ///     Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -2033,21 +2033,21 @@ impl std::ops::BitAnd for Predicate {
     /// predicate will be a merge:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
     ///     Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(121)),
-    ///         Predicate::Equals(Value::from(122)),
+    ///         Predicate::Equals(121.into_value()),
+    ///         Predicate::Equals(122.into_value()),
     ///     ]) & Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     ///     Predicate::And(vec![
-    ///         Predicate::Equals(Value::from(121)),
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(121.into_value()),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -2079,13 +2079,13 @@ impl std::ops::BitOr for Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
-    ///     Predicate::Equals(Value::from(123)) | Predicate::Equals(Value::from(124)),
+    ///     Predicate::Equals(123.into_value()) | Predicate::Equals(124.into_value()),
     ///     Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -2094,17 +2094,17 @@ impl std::ops::BitOr for Predicate {
     /// predicate will be an updated instance:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
     ///     Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///     ]) | Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///     ]) | Predicate::Equals(124.into_value()),
     ///     Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -2113,17 +2113,17 @@ impl std::ops::BitOr for Predicate {
     /// predicate will be an updated instance:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
-    ///     Predicate::Equals(Value::from(122)) | Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///     Predicate::Equals(122.into_value()) | Predicate::Or(vec![
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     ///     Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -2132,21 +2132,21 @@ impl std::ops::BitOr for Predicate {
     /// predicate will be a merge:
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
     ///     Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(121)),
-    ///         Predicate::Equals(Value::from(122)),
+    ///         Predicate::Equals(121.into_value()),
+    ///         Predicate::Equals(122.into_value()),
     ///     ]) | Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     ///     Predicate::Or(vec![
-    ///         Predicate::Equals(Value::from(121)),
-    ///         Predicate::Equals(Value::from(122)),
-    ///         Predicate::Equals(Value::from(123)),
-    ///         Predicate::Equals(Value::from(124)),
+    ///         Predicate::Equals(121.into_value()),
+    ///         Predicate::Equals(122.into_value()),
+    ///         Predicate::Equals(123.into_value()),
+    ///         Predicate::Equals(124.into_value()),
     ///     ]),
     /// );
     /// ```
@@ -2178,11 +2178,11 @@ impl std::ops::Not for Predicate {
     /// ### Examples
     ///
     /// ```
-    /// use entity::{Predicate, Value};
+    /// use entity::{Predicate, Value, ValueLike};
     ///
     /// assert_eq!(
-    ///     !Predicate::Equals(Value::from(123)),
-    ///     Predicate::Not(Box::new(Predicate::Equals(Value::from(123)))),
+    ///     !Predicate::Equals(123.into_value()),
+    ///     Predicate::Not(Box::new(Predicate::Equals(123.into_value()))),
     /// );
     /// ```
     fn not(self) -> Self::Output {

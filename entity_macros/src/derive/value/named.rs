@@ -30,7 +30,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                 #(
                     map.insert(
                         ::std::string::ToString::to_string(::std::stringify!(#field_names)),
-                        <#root::Value as ::std::convert::From<#field_types>>::from(x.#field_names),
+                        <#root::Value as ::std::convert::From<#field_types>>::from(self.#field_names),
                     );
                 )*
                 Self::Map(map)

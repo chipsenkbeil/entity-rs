@@ -144,26 +144,6 @@ impl<T: NumberLike> PrimitiveLike for T {
     }
 }
 
-macro_rules! impl_conv {
-    ($($type:ty)+) => {$(
-        impl From<$type> for Primitive {
-            fn from(x: $type) -> Self {
-                <$type as PrimitiveLike>::into_primitive(x)
-            }
-        }
-
-        impl TryFrom<Primitive> for $type {
-            type Error = Primitive;
-
-            fn try_from(x: Primitive) -> Result<Self, Self::Error> {
-                <$type as PrimitiveLike>::try_from_primitive(x)
-            }
-        }
-    )+};
-}
-
-impl_conv!(bool char f32 f64 i128 i16 i32 i64 i8 isize u128 u16 u32 u64 u8 usize);
-
 impl PrimitiveLike for () {
     fn into_primitive(self) -> Primitive {
         Primitive::Unit
@@ -190,6 +170,26 @@ impl TryFrom<Primitive> for () {
         PrimitiveLike::try_from_primitive(x)
     }
 }
+
+macro_rules! impl_conv {
+    ($($type:ty)+) => {$(
+        impl From<$type> for Primitive {
+            fn from(x: $type) -> Self {
+                <$type as PrimitiveLike>::into_primitive(x)
+            }
+        }
+
+        impl TryFrom<Primitive> for $type {
+            type Error = Primitive;
+
+            fn try_from(x: Primitive) -> Result<Self, Self::Error> {
+                <$type as PrimitiveLike>::try_from_primitive(x)
+            }
+        }
+    )+};
+}
+
+impl_conv!(bool char f32 f64 i128 i16 i32 i64 i8 isize u128 u16 u32 u64 u8 usize);
 
 /// Represents primitive value types
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

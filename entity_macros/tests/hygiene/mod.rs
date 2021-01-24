@@ -32,13 +32,13 @@ enum TestEnt3 {
     Two(TestEnt2),
 }
 
-#[derive(::std::clone::Clone, ::entity::Value)]
+#[derive(::std::clone::Clone, ::entity::ValueLike)]
 struct TestValue1;
 
-#[derive(::std::clone::Clone, ::entity::Value)]
+#[derive(::std::clone::Clone, ::entity::ValueLike)]
 struct TestValue2(::std::primitive::u64);
 
-#[derive(::std::clone::Clone, ::entity::Value)]
+#[derive(::std::clone::Clone, ::entity::ValueLike)]
 struct TestValue3 {
     a: ::std::primitive::u64,
 }

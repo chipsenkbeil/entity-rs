@@ -1,6 +1,5 @@
 use derivative::Derivative;
 use entity::*;
-use std::convert::TryFrom;
 
 #[test]
 fn supports_generic_fields() {
@@ -9,7 +8,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent)]
     struct TestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,
@@ -175,7 +174,7 @@ fn last_updated_should_return_copy_of_marked_last_updated_field() {
 
 #[test]
 fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
-    #[derive(Clone, Value)]
+    #[derive(Clone, ValueLike)]
     struct CustomValue;
 
     #[derive(Clone, Ent)]
@@ -233,10 +232,10 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
                 ValueType::Text,
                 vec![FieldAttribute::Indexed, FieldAttribute::Immutable]
             ),
-            FieldDefinition::new_with_attributes("c", PrimitiveValueType::Char, vec![]),
+            FieldDefinition::new_with_attributes("c", PrimitiveType::Char, vec![]),
             FieldDefinition::new_with_attributes(
                 "d",
-                PrimitiveValueType::Bool,
+                PrimitiveType::Bool,
                 vec![FieldAttribute::Indexed]
             ),
             FieldDefinition::new_with_attributes(
@@ -250,7 +249,7 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
 
 #[test]
 fn field_should_return_abstract_value_if_exists() {
-    #[derive(Clone, Debug, Value)]
+    #[derive(Clone, Debug, ValueLike)]
     struct CustomValue;
 
     #[derive(Clone, Ent)]
@@ -305,7 +304,7 @@ fn field_should_return_abstract_value_if_exists() {
 
 #[test]
 fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() {
-    #[derive(Clone, Debug, PartialEq, Eq, Value)]
+    #[derive(Clone, Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue(usize);
 
     #[derive(Clone, Ent)]

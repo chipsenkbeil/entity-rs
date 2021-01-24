@@ -1,10 +1,5 @@
 use derivative::Derivative;
-use entity::{
-    DatabaseError, DatabaseRc, EdgeDefinition, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent,
-    EntMutationError, FieldAttribute, FieldDefinition, Id, InmemoryDatabase, NumberType, Value,
-    WeakDatabaseRc, EPHEMERAL_ID,
-};
-use std::convert::TryFrom;
+use entity::*;
 
 #[derive(Clone, Derivative, Ent)]
 #[derivative(Debug, PartialEq)]
@@ -75,7 +70,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent)]
     struct GenericTestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,
@@ -96,7 +91,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent)]
     enum GenericTestEntEnum<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         Choice(GenericTestEnt<T>),
     }

@@ -1,5 +1,4 @@
 use entity::*;
-use std::convert::TryFrom;
 
 #[test]
 fn produces_getters_for_fields_that_returns_references() {
@@ -86,7 +85,7 @@ fn supports_generic_ent_fields() {
     #[derive(Clone, Ent, EntTypedFields)]
     struct TestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,

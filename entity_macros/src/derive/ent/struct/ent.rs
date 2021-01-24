@@ -332,7 +332,7 @@ fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStr
         Type::Path(x) => {
             if let Some(seg) = x.path.segments.last() {
                 match seg.ident.to_string().to_lowercase().as_str() {
-                    "vec" => {
+                    "vec" | "vecdeque" | "linkedlist" | "binaryheap" | "hashset" | "btreeset" => {
                         let inner = utils::get_inner_type_from_segment(seg, 0, 1)?;
                         let inner_t = make_field_value_type(root, inner)?;
 
@@ -340,7 +340,7 @@ fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStr
                             #root::ValueType::List(::std::boxed::Box::from(#inner_t))
                         }
                     }
-                    "hashmap" => {
+                    "hashmap" | "btreemap" => {
                         let inner = utils::get_inner_type_from_segment(seg, 1, 2)?;
                         let inner_t = make_field_value_type(root, inner)?;
 
@@ -356,10 +356,10 @@ fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStr
                             #root::ValueType::Optional(::std::boxed::Box::from(#inner_t))
                         }
                     }
-                    "string" => quote! { #root::ValueType::Text },
-                    "()" => quote! { #root::PrimitiveValueType::Unit },
-                    "bool" => quote! { #root::PrimitiveValueType::Bool },
-                    "char" => quote! { #root::PrimitiveValueType::Char },
+                    "string" | "pathbuf" | "osstring" => quote! { #root::ValueType::Text },
+                    "()" => quote! { #root::PrimitiveType::Unit },
+                    "bool" => quote! { #root::PrimitiveType::Bool },
+                    "char" => quote! { #root::PrimitiveType::Char },
                     "f32" => quote! { #root::NumberType::F32 },
                     "f64" => quote! { #root::NumberType::F64 },
                     "i128" => quote! { #root::NumberType::I128 },

@@ -386,7 +386,7 @@ impl UntypedEnt {
     /// the old previous value if the field exists
     ///
     /// If the field does not exist, does NOT insert the value as a new field
-    pub fn update_field<N: Into<String>, V: Into<Value>>(
+    pub fn update_field<N: Into<String>, V: ValueLike>(
         &mut self,
         into_name: N,
         into_value: V,
@@ -547,12 +547,12 @@ impl Ent for UntypedEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, UntypedEnt, Field, FieldDefinition, ValueType};
+    /// use entity::{Ent, UntypedEnt, Field, FieldDefinition, Value, ValueType};
     /// use std::str::FromStr;
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///
@@ -576,11 +576,11 @@ impl Ent for UntypedEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, UntypedEnt, Field};
+    /// use entity::{Ent, UntypedEnt, Field, Value};
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///
@@ -602,7 +602,7 @@ impl Ent for UntypedEnt {
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///
@@ -623,7 +623,7 @@ impl Ent for UntypedEnt {
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let mut ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///

@@ -1,15 +1,15 @@
+use derive_more::From;
 use doc_comment::doc_comment;
 use paste::paste;
 use std::{
     cmp::Ordering,
-    convert::TryFrom,
     hash::{Hash, Hasher},
 };
 use strum::{Display, EnumDiscriminants, EnumString};
 
 /// Represents a generic number that maintains an internal Rust representation
 /// of the actual number
-#[derive(Copy, Clone, Debug, EnumDiscriminants)]
+#[derive(Copy, Clone, Debug, EnumDiscriminants, From)]
 #[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 #[strum_discriminants(derive(Display, EnumString))]
 #[strum_discriminants(name(NumberType), strum(serialize_all = "snake_case"))]
@@ -363,20 +363,6 @@ impl NumberLike for f32 {
     }
 }
 
-impl From<f32> for Number {
-    fn from(x: f32) -> Self {
-        <f32 as NumberLike>::into_number(x)
-    }
-}
-
-impl TryFrom<Number> for f32 {
-    type Error = Number;
-
-    fn try_from(x: Number) -> Result<Self, Self::Error> {
-        <f32 as NumberLike>::try_from_number(x)
-    }
-}
-
 impl NumberLike for f64 {
     fn into_number(self) -> Number {
         Number::F64(self)
@@ -402,20 +388,6 @@ impl NumberLike for f64 {
     }
 }
 
-impl From<f64> for Number {
-    fn from(x: f64) -> Self {
-        <f64 as NumberLike>::into_number(x)
-    }
-}
-
-impl TryFrom<Number> for f64 {
-    type Error = Number;
-
-    fn try_from(x: Number) -> Result<Self, Self::Error> {
-        <f64 as NumberLike>::try_from_number(x)
-    }
-}
-
 macro_rules! impl_number_like {
     ($type:ty, $variant:ident) => {
         impl NumberLike for $type {
@@ -427,6 +399,7 @@ macro_rules! impl_number_like {
             /// finite bounds of target type, otherwise failing and returning
             /// back ownership of generic number
             fn try_from_number(number: Number) -> Result<Self, Number> {
+                use std::convert::TryFrom;
                 match number {
                     Number::F32(x) => try_from_both_bounded!(x, F32, f32, $type),
                     Number::F64(x) => try_from_both_bounded!(x, F64, f64, $type),
@@ -443,20 +416,6 @@ macro_rules! impl_number_like {
                     Number::U8(x) => <$type>::try_from(x).map_err(|_| Number::U8(x)),
                     Number::Usize(x) => <$type>::try_from(x).map_err(|_| Number::Usize(x)),
                 }
-            }
-        }
-
-        impl From<$type> for Number {
-            fn from(x: $type) -> Self {
-                <$type as NumberLike>::into_number(x)
-            }
-        }
-
-        impl TryFrom<Number> for $type {
-            type Error = Number;
-
-            fn try_from(x: Number) -> Result<Self, Self::Error> {
-                <$type as NumberLike>::try_from_number(x)
             }
         }
     };

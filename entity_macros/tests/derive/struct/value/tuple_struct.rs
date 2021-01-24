@@ -1,9 +1,8 @@
-use entity::Value;
-use std::convert::TryFrom;
+use entity::{Value, ValueLike};
 
 #[test]
 fn no_fields() {
-    #[derive(Value)]
+    #[derive(ValueLike)]
     struct CustomValue();
 
     assert_eq!(Value::from(CustomValue()), Value::List(vec![]));
@@ -13,7 +12,7 @@ fn no_fields() {
 
 #[test]
 fn one_field() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue(u32);
 
     assert_eq!(
@@ -32,7 +31,7 @@ fn one_field() {
 
 #[test]
 fn multiple_fields_of_same_type() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue(u32, u32);
 
     assert_eq!(
@@ -54,7 +53,7 @@ fn multiple_fields_of_same_type() {
 
 #[test]
 fn multiple_fields_of_different_types() {
-    #[derive(Debug, PartialEq, Eq, Value)]
+    #[derive(Debug, PartialEq, Eq, ValueLike)]
     struct CustomValue(u32, String);
 
     assert_eq!(

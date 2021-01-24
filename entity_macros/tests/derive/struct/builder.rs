@@ -1,6 +1,5 @@
 use derivative::Derivative;
 use entity::*;
-use std::convert::TryFrom;
 
 #[test]
 fn build_method_on_ent_will_populate_with_global_database() {
@@ -318,7 +317,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent, EntBuilder)]
     struct TestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,

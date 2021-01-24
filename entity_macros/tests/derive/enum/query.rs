@@ -229,7 +229,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent, EntQuery, EntType)]
     struct GenericTestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,
@@ -250,7 +250,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent, EntQuery, EntType, EntWrapper)]
     enum GenericTestEntEnum<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         Choice(GenericTestEnt<T>),
     }
