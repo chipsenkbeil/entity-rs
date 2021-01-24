@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
-  schedule: [cron: "40 1 * * *"]
+    branches:
+      - main
 
 env:
   RUST_BACKTRACE: 1
