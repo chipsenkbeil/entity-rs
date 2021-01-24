@@ -381,30 +381,44 @@ mod tests {
 
     #[test]
     fn bool_can_convert_to_value() {
-        assert_eq!(true.into_value(), Value::Primitive(Primitive::Bool(true)));
+        assert!(matches!(
+            true.into_value(),
+            Value::Primitive(Primitive::Bool(true)),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_bool() {
-        assert_eq!(
+        assert!(matches!(
             bool::try_from_value(Value::Primitive(Primitive::Bool(true))),
             Ok(true),
-        );
+        ));
 
-        assert_eq!(
+        assert!(matches!(
             bool::try_from_value(Value::Primitive(Primitive::Char('c'))),
             Err(Value::Primitive(Primitive::Char('c'))),
-        );
+        ));
     }
 
     #[test]
     fn char_can_convert_to_value() {
-        assert_eq!('c'.into_value(), Value::Primitive(Primitive::Char('c')));
+        assert!(matches!(
+            'c'.into_value(),
+            Value::Primitive(Primitive::Char('c')),
+        ));
     }
 
     #[test]
     fn value_can_convert_to_char() {
-        todo!();
+        assert!(matches!(
+            char::try_from_value(Value::Primitive(Primitive::Char('c'))),
+            Ok('c'),
+        ));
+
+        assert!(matches!(
+            char::try_from_value(Value::Primitive(Primitive::Bool(true))),
+            Err(Value::Primitive(Primitive::Bool(true))),
+        ));
     }
 
     #[test]

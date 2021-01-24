@@ -340,41 +340,73 @@ mod tests {
 
     #[test]
     fn primitive_like_can_convert_number_like_to_primitive() {
-        todo!()
+        assert!(matches!(
+            1u8.into_primitive(),
+            Primitive::Number(Number::U8(1)),
+        ));
     }
 
     #[test]
     fn primitive_like_can_convert_primitive_to_number_like() {
-        todo!()
+        assert!(matches!(
+            Number::try_from_primitive(Primitive::Number(Number::U8(1))),
+            Ok(Number::U8(1)),
+        ));
+
+        assert!(matches!(
+            Number::try_from_primitive(Primitive::Char('c')),
+            Err(Primitive::Char('c')),
+        ));
     }
 
     #[test]
     fn primitive_like_can_convert_bool_to_primitive() {
-        todo!()
+        assert!(matches!(true.into_primitive(), Primitive::Bool(true),));
     }
 
     #[test]
     fn primitive_like_can_convert_primitive_to_bool() {
-        todo!()
+        assert!(matches!(
+            bool::try_from_primitive(Primitive::Bool(true)),
+            Ok(true)
+        ));
+
+        assert!(matches!(
+            bool::try_from_primitive(Primitive::Char('c')),
+            Err(Primitive::Char('c')),
+        ));
     }
 
     #[test]
     fn primitive_like_can_convert_char_to_primitive() {
-        todo!()
+        assert!(matches!('c'.into_primitive(), Primitive::Char('c')));
     }
 
     #[test]
     fn primitive_like_can_convert_primitive_to_char() {
-        todo!()
+        assert!(matches!(
+            char::try_from_primitive(Primitive::Char('c')),
+            Ok('c')
+        ));
+
+        assert!(matches!(
+            char::try_from_primitive(Primitive::Bool(true)),
+            Err(Primitive::Bool(true)),
+        ));
     }
 
     #[test]
     fn primitive_like_can_convert_unit_to_primitive() {
-        todo!()
+        assert!(matches!(().into_primitive(), Primitive::Unit));
     }
 
     #[test]
     fn primitive_like_can_convert_primitive_to_unit() {
-        todo!()
+        assert!(matches!(<()>::try_from_primitive(Primitive::Unit), Ok(())));
+
+        assert!(matches!(
+            <()>::try_from_primitive(Primitive::Bool(true)),
+            Err(Primitive::Bool(true)),
+        ));
     }
 }

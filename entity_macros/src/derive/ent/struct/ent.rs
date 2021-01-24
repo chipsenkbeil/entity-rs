@@ -24,7 +24,7 @@ pub fn do_derive_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
         .iter()
         .map(|f| {
             let value_ident = Ident::new("value", Span::call_site());
-            let assign_value = utils::convert_from_value(&value_ident, &f.ty);
+            let assign_value = utils::convert_from_value(&root, &value_ident, &f.ty);
             quote! { #assign_value }
         })
         .collect();
@@ -83,7 +83,7 @@ pub fn do_derive_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
                 match name {
                     #(
                         ::std::stringify!(#field_names) => ::std::option::Option::Some(
-                            ::std::convert::Into::<#root::Value>::into(
+                            #root::ValueLike::into_value(
                                 ::std::clone::Clone::clone(&self.#field_names)
                             )
                         ),
@@ -110,11 +110,7 @@ pub fn do_derive_ent(root: Path, ent: Ent) -> darling::Result<TokenStream> {
                                     description: ::std::string::ToString::to_string(&x)
                                 }
                             )?;
-                            ::std::result::Result::Ok(
-                                ::std::convert::Into::<#root::Value>::into(
-                                    old_value
-                                )
-                            )
+                            ::std::result::Result::Ok(#root::ValueLike::into_value(old_value))
                         },
                     )*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoField {

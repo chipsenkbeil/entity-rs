@@ -65,19 +65,12 @@ pub fn make_type_str(name: &Ident) -> Macro {
 
 /// Transforms some value with the given name (ident) to the specified type,
 /// producing an expression
-pub fn convert_from_value(name: &Ident, ty: &Type) -> Expr {
-    if let Ok(inner_ty) = strip_option(ty) {
-        parse_quote! {
-            #name.try_into_option::<#inner_ty>()
-        }
-    } else {
-        parse_quote! {
-            {
-                use ::std::convert::TryInto;
-                #name.try_into()
-            }
-        }
-    }
+pub fn convert_from_value(root: &Path, name: &Ident, ty: &Type) -> Expr {
+    parse_quote!({
+        let tmp: ::std::result::Result<#ty, #root::Value> =
+            #root::ValueLike::try_from_value(#name);
+        tmp
+    })
 }
 
 /// Returns true if given type appears to be any of the following:

@@ -652,6 +652,94 @@ mod tests {
         }};
     }
 
+    macro_rules! check_try_from_number {
+        ($dst:ident supports any value of $($src:ident)+) => {$(
+            let result = $dst::try_from_number($src::MAX.into_number());
+            match result {
+                Ok(x) => assert_eq!($src::MAX as $dst, x, "Value changed from {} to {}", $src::MAX, x),
+                Err(_) => panic!(
+                    "[SUPPORTS MAX] Cannot convert {} of {} to {}",
+                    $src::MAX,
+                    stringify!($src),
+                    stringify!($dst)
+                ),
+            }
+
+            let result = $dst::try_from_number($src::MIN.into_number());
+            match result {
+                Ok(x) => assert_eq!($src::MIN as $dst, x, "Value changed from {} to {}", $src::MIN, x),
+                Err(_) => panic!(
+                    "[SUPPORTS MIN] Cannot convert {} of {} to {}",
+                    $src::MIN,
+                    stringify!($src),
+                    stringify!($dst)
+                ),
+            }
+        )+};
+        ($dst:ident fails with biggest value of $($src:ident)+) => {$(
+            let result = $dst::try_from_number($src::MAX.into_number());
+            match result {
+                Err(_) => {},
+                Ok(_) => panic!("[BIGGEST] Unexpectedly had {} of {} fit in {}",
+                    $src::MAX,
+                    stringify!($src),
+                    stringify!($dst)
+                ),
+            }
+        )+};
+        ($dst:ident fails with smallest value of $($src:ident)+) => {$(
+            let result = $dst::try_from_number($src::MIN.into_number());
+            match result {
+                Err(_) => {},
+                Ok(_) => panic!("[SMALLEST] Unexpectedly had {} of {} fit in {}",
+                    $src::MIN,
+                    stringify!($src),
+                    stringify!($dst)
+                ),
+            }
+        )+};
+        ($dst:ident min can be pulled from $($src:ident)+) => {$(
+            let result = $dst::try_from_number(($dst::MIN as $src).into_number());
+            match result {
+                Ok(x) => assert_eq!(
+                    $dst::MIN,
+                    x,
+                    "[MIN FIT] Value changed from {} to {} ({} -> {})",
+                    $dst::MIN,
+                    x,
+                    stringify!($src),
+                    stringify!($dst)
+                ),
+                Err(_) => panic!(
+                    "[MIN FIT] Cannot convert {} of {} to {}",
+                    $dst::MIN,
+                    stringify!($src),
+                    stringify!($dst)
+                ),
+            }
+        )+};
+        ($dst:ident max can be pulled from $($src:ident)+) => {$(
+            let result = $dst::try_from_number(($dst::MAX as $src).into_number());
+            match result {
+                Ok(x) => assert_eq!(
+                    $dst::MAX,
+                    x,
+                    "[MAX FIT] Value changed from {} to {} ({} -> {})",
+                    $dst::MAX,
+                    x,
+                    stringify!($src),
+                    stringify!($dst),
+                ),
+                Err(_) => panic!(
+                    "[MAX FIT] Cannot convert {} of {} to {}",
+                    $dst::MAX,
+                    stringify!($src),
+                    stringify!($dst)
+                ),
+            }
+        )+};
+    }
+
     #[test]
     fn partial_cmp_should_return_none_if_either_number_is_nan() {
         let a = Number::from(1);
@@ -889,146 +977,328 @@ mod tests {
 
     #[test]
     fn number_like_can_convert_number_to_number() {
-        todo!()
+        assert!(matches!(Number::F32(123.123).into_number(), Number::F32(_)));
+        assert!(matches!(Number::F64(123.123).into_number(), Number::F64(_)));
+        assert!(matches!(Number::I128(123).into_number(), Number::I128(123)));
+        assert!(matches!(Number::I16(123).into_number(), Number::I16(123)));
+        assert!(matches!(Number::I32(123).into_number(), Number::I32(123)));
+        assert!(matches!(Number::I64(123).into_number(), Number::I64(123)));
+        assert!(matches!(Number::I8(123).into_number(), Number::I8(123)));
+        assert!(matches!(
+            Number::Isize(123).into_number(),
+            Number::Isize(123)
+        ));
+        assert!(matches!(Number::U128(123).into_number(), Number::U128(123)));
+        assert!(matches!(Number::U16(123).into_number(), Number::U16(123)));
+        assert!(matches!(Number::U32(123).into_number(), Number::U32(123)));
+        assert!(matches!(Number::U64(123).into_number(), Number::U64(123)));
+        assert!(matches!(Number::U8(123).into_number(), Number::U8(123)));
+        assert!(matches!(
+            Number::Usize(123).into_number(),
+            Number::Usize(123)
+        ));
+
+        assert!(matches!(
+            NumberLike::try_from_number(Number::F32(123.123)).unwrap(),
+            Number::F32(_)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::F64(123.123)).unwrap(),
+            Number::F64(_)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::I128(123)).unwrap(),
+            Number::I128(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::I16(123)).unwrap(),
+            Number::I16(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::I32(123)).unwrap(),
+            Number::I32(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::I64(123)).unwrap(),
+            Number::I64(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::I8(123)).unwrap(),
+            Number::I8(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::Isize(123)).unwrap(),
+            Number::Isize(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::U128(123)).unwrap(),
+            Number::U128(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::U16(123)).unwrap(),
+            Number::U16(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::U32(123)).unwrap(),
+            Number::U32(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::U64(123)).unwrap(),
+            Number::U64(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::U8(123)).unwrap(),
+            Number::U8(123)
+        ));
+        assert!(matches!(
+            NumberLike::try_from_number(Number::Usize(123)).unwrap(),
+            Number::Usize(123)
+        ));
     }
 
     #[test]
     fn number_like_can_convert_f32_to_number() {
-        todo!()
+        match 123.123f32.into_number() {
+            Number::F32(x) => assert!(
+                (x - 123.123).abs() <= f32::EPSILON,
+                "Unexpected change in value: {:?}",
+                x
+            ),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_f32() {
-        todo!()
+        // NOTE: f32 can only losslessly convert from u8/u16/i8/i16
+        //       but other value ranges also fit inside
+        check_try_from_number!(f32 supports any value of f32 i8 i16 i32 i64 i128 u8 u16 u32 u64);
+        check_try_from_number!(f32 fails with biggest value of f64 u128);
+        check_try_from_number!(f32 fails with smallest value of f64);
+        check_try_from_number!(f32 min can be pulled from f32 f64);
+        check_try_from_number!(f32 max can be pulled from f32 f64 u128);
     }
 
     #[test]
     fn number_like_can_convert_f64_to_number() {
-        todo!()
+        match 123.123f64.into_number() {
+            Number::F64(x) => assert!(
+                (x - 123.123).abs() <= f64::EPSILON,
+                "Unexpected change in value: {:?}",
+                x
+            ),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_f64() {
-        todo!()
+        // NOTE: f64 can only losslessly convert from f32/u8/u16/u32/i8/i16/i32
+        //       but other value ranges also fit inside
+        check_try_from_number!(f64 supports any value of f32 i8 i16 i32 i64 i128 u8 u16 u32 u64 u128);
+        check_try_from_number!(f64 min can be pulled from f64);
+        check_try_from_number!(f64 max can be pulled from f64);
     }
 
     #[test]
     fn number_like_can_convert_isize_to_number() {
-        todo!()
+        match 123isize.into_number() {
+            Number::Isize(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_isize() {
-        todo!()
+        check_try_from_number!(isize supports any value of i8 i16 i32 i64 isize u8 u16 u32);
+        check_try_from_number!(isize fails with biggest value of u64 u128 usize i128);
+        check_try_from_number!(isize fails with smallest value of i128);
+        check_try_from_number!(isize min can be pulled from f64 i64 i128 isize);
+        check_try_from_number!(isize max can be pulled from f64 u64 u128 usize i64 i128 isize);
     }
 
     #[test]
     fn number_like_can_convert_i128_to_number() {
-        todo!()
+        match 123i128.into_number() {
+            Number::I128(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_i128() {
-        todo!()
+        check_try_from_number!(i128 supports any value of i8 i16 i32 i64 i128 u8 u16 u32 u64);
+        check_try_from_number!(i128 fails with biggest value of u128);
+        check_try_from_number!(i128 min can be pulled from i128);
+        check_try_from_number!(i128 max can be pulled from u128 i128);
     }
 
     #[test]
     fn number_like_can_convert_i64_to_number() {
-        todo!()
+        match 123i64.into_number() {
+            Number::I64(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_i64() {
-        todo!()
+        check_try_from_number!(i64 supports any value of i8 i16 i32 i64 isize u8 u16 u32);
+        check_try_from_number!(i64 fails with biggest value of u64 u128 usize i128);
+        check_try_from_number!(i64 fails with smallest value of i128);
+        check_try_from_number!(i64 min can be pulled from f64 i64 i128 isize);
+        check_try_from_number!(i64 max can be pulled from f64 u64 u128 usize i64 i128 isize);
     }
 
     #[test]
     fn number_like_can_convert_i32_to_number() {
-        todo!()
+        match 123i32.into_number() {
+            Number::I32(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_i32() {
-        todo!()
+        check_try_from_number!(i32 supports any value of i8 i16 i32 u8 u16);
+        check_try_from_number!(i32 fails with biggest value of f64 u32 u64 u128 usize i64 i128 isize);
+        check_try_from_number!(i32 fails with smallest value of f64 i64 i128 isize);
+        check_try_from_number!(i32 min can be pulled from f32 f64 i32 i64 i128 isize);
+        check_try_from_number!(i32 max can be pulled from f32 f64 u32 u64 u128 usize i32 i64 i128 isize);
     }
 
     #[test]
     fn number_like_can_convert_i16_to_number() {
-        todo!()
+        match 123i16.into_number() {
+            Number::I16(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_i16() {
-        todo!()
+        check_try_from_number!(i16 supports any value of i8 i16 u8);
+        check_try_from_number!(i16 fails with biggest value of f32 f64 u16 u32 u64 u128 usize i32 i64 i128 isize);
+        check_try_from_number!(i16 fails with smallest value of f32 f64 i32 i64 i128 isize);
+        check_try_from_number!(i16 min can be pulled from f32 f64 i16 i32 i64 i128 isize);
+        check_try_from_number!(i16 max can be pulled from f32 f64 u16 u32 u64 u128 usize i16 i32 i64 i128 isize);
     }
 
     #[test]
     fn number_like_can_convert_i8_to_number() {
-        todo!()
+        match 123i8.into_number() {
+            Number::I8(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_i8() {
-        todo!()
+        check_try_from_number!(i8 supports any value of i8);
+        check_try_from_number!(i8 fails with biggest value of f32 f64 u8 u16 u32 u64 u128 usize i16 i32 i64 i128 isize);
+        check_try_from_number!(i8 fails with smallest value of f32 f64 i16 i32 i64 i128 isize);
+        check_try_from_number!(i8 min can be pulled from f32 f64 i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(i8 max can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
     }
 
     #[test]
     fn number_like_can_convert_usize_to_number() {
-        todo!()
+        match 123usize.into_number() {
+            Number::Usize(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_usize() {
-        todo!()
+        check_try_from_number!(usize supports any value of u8 u16 u32 u64 usize);
+        check_try_from_number!(usize fails with biggest value of u128 i128);
+        check_try_from_number!(usize fails with smallest value of f32 f64 i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(usize min can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(usize max can be pulled from f32 f64 u64 u128 usize i128);
     }
 
     #[test]
     fn number_like_can_convert_u128_to_number() {
-        todo!()
+        match 123u128.into_number() {
+            Number::U128(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_u128() {
-        todo!()
+        check_try_from_number!(u128 supports any value of u8 u16 u32 u64 usize u128);
+        check_try_from_number!(u128 fails with smallest value of f32 f64 i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u128 min can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u128 max can be pulled from f32 f64 u128);
     }
 
     #[test]
     fn number_like_can_convert_u64_to_number() {
-        todo!()
+        match 123u64.into_number() {
+            Number::U64(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_u64() {
-        todo!()
+        check_try_from_number!(u64 supports any value of u8 u16 u32 u64 usize);
+        check_try_from_number!(u64 fails with biggest value of u128 i128);
+        check_try_from_number!(u64 fails with smallest value of f32 f64 i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u64 min can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u64 max can be pulled from f32 f64 u64 u128 usize i128);
     }
 
     #[test]
     fn number_like_can_convert_u32_to_number() {
-        todo!()
+        match 123u32.into_number() {
+            Number::U32(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_u32() {
-        todo!()
+        check_try_from_number!(u32 supports any value of u8 u16 u32);
+        check_try_from_number!(u32 fails with biggest value of f64 u64 u128 usize i64 i128 isize);
+        check_try_from_number!(u32 fails with smallest value of f32 f64 i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u32 min can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u32 max can be pulled from f32 f64 u32 u64 u128 usize i64 i128 isize);
     }
 
     #[test]
     fn number_like_can_convert_u16_to_number() {
-        todo!()
+        match 123u16.into_number() {
+            Number::U16(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_u16() {
-        todo!()
+        check_try_from_number!(u16 supports any value of u8 u16);
+        check_try_from_number!(u16 fails with biggest value of f32 f64 u32 u64 u128 usize i32 i64 i128 isize);
+        check_try_from_number!(u16 fails with smallest value of f32 f64 i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u16 min can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u16 max can be pulled from f32 f64 u16 u32 u64 u128 usize i32 i64 i128 isize);
     }
 
     #[test]
     fn number_like_can_convert_u8_to_number() {
-        todo!()
+        match 123u8.into_number() {
+            Number::U8(x) => assert_eq!(x, 123, "Unexpected change in value: {:?}", x),
+            x => panic!("Unexpected conversion: {:?}", x),
+        }
     }
 
     #[test]
     fn number_like_can_convert_number_to_u8() {
-        todo!()
+        check_try_from_number!(u8 supports any value of u8);
+        check_try_from_number!(u8 fails with biggest value of f32 f64 u16 u32 u64 u128 usize i16 i32 i64 i128 isize);
+        check_try_from_number!(u8 fails with smallest value of f32 f64 i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u8 min can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
+        check_try_from_number!(u8 max can be pulled from f32 f64 u8 u16 u32 u64 u128 usize i16 i32 i64 i128 isize);
     }
 }

@@ -17,15 +17,15 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
     let converted_values: Vec<Expr> = temp_field_names
         .iter()
         .zip(fields.named.iter().map(|f| &f.ty))
-        .map(|(name, ty)| utils::convert_from_value(name, ty))
+        .map(|(name, ty)| utils::convert_from_value(root, name, ty))
         .collect();
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote! {
         #[automatically_derived]
-        impl #impl_generics ::std::convert::From<#name #ty_generics> for #root::Value #where_clause {
-            fn from(x: #name) -> Self {
+        impl #impl_generics #root::ValueLike for #name #ty_generics #where_clause {
+            fn into_value(self) -> #root::Value {
                 let mut map = ::std::collections::HashMap::new();
                 #(
                     map.insert(
@@ -35,34 +35,70 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsNamed
                 )*
                 Self::Map(map)
             }
-        }
 
-        #[automatically_derived]
-        impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
-            type Error = &'static ::std::primitive::str;
-
-            fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
+            fn try_from_value(value: #root::Value) -> ::std::result::Result<Self, #root::Value> {
                 let mut map = match value {
                     #root::Value::Map(x) => x,
-                    _ => return ::std::result::Result::Err(::std::concat!(
-                        "Only Value::Map can be converted to ",
-                        ::std::stringify!(#name),
-                    )),
+                    x => return ::std::result::Result::Err(x),
                 };
+
+                // Validate that each of our fields exists and can be converted
+                // into the specific type
+                #({
+                    match map.remove(::std::stringify!(#field_names)) {
+                        ::std::option::Option::Some(#temp_field_names) => {
+                            let result = #converted_values;
+
+                            // If the field exists, we see if it can be converted
+                            // into the right underlying type. Either way, we
+                            // re-add it back to the map, but if it fails to
+                            // convert then we return the map as an error
+                            match result {
+                                ::std::result::Result::Ok(x) => {
+                                    map.insert(
+                                        ::std::stringify!(#field_names),
+                                        #root::ValueLike::into_value(x),
+                                    );
+                                },
+                                ::std::result::Result::Err(value) => {
+                                    map.insert(::std::stringify!(#field_names), value);
+                                    return ::std::result::Result::Err(#root::Value::Map(map));
+                                }
+                            }
+                        }
+                        ::std::option::Option::None => return ::std::result::Result::Err(
+                            #root::Value::Map(map),
+                        ),
+                    }
+                })*
 
                 ::std::result::Result::Ok(Self {
                     #(
                         #field_names: {
                             let #temp_field_names = map.remove(
                                 ::std::stringify!(#field_names)
-                            ).ok_or(::std::concat!(
-                                "Missing field ", ::std::stringify!(#field_names)
-                            ))?;
+                            ).unwrap();
 
-                            #converted_values?
+                            #converted_values.unwrap()
                         }
                     ),*
                 })
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_generics ::std::convert::From<#name #ty_generics> for #root::Value #where_clause {
+            fn from(x: #name) -> Self {
+                #root::ValueLike::into_value(x)
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
+            type Error = #root::Value;
+
+            fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
+                #root::ValueLike::try_from_value(value)
             }
         }
     }

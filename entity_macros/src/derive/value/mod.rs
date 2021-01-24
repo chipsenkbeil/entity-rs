@@ -5,7 +5,7 @@ mod unnamed;
 use proc_macro2::TokenStream;
 use syn::{Data, DeriveInput, Fields, Path};
 
-pub fn do_derive_value(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
+pub fn do_derive_value_like(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
     let name = &input.ident;
     let generics = &input.generics;
 
