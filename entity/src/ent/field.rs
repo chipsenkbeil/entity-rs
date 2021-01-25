@@ -1,4 +1,4 @@
-use super::{Value, ValueType};
+use super::{Value, ValueLike, ValueType};
 use std::collections::HashSet;
 
 /// Represents a definition of a field, which is comprised of its name, type
@@ -95,14 +95,14 @@ pub struct Field {
 
 impl Field {
     /// Creates a new field with the given name and value and no attributes
-    pub fn new<N: Into<String>, V: Into<Value>>(name: N, value: V) -> Self {
+    pub fn new<N: Into<String>, V: ValueLike>(name: N, value: V) -> Self {
         Self::new_with_attributes(name, value, HashSet::new())
     }
 
     /// Creates a new field with the given name, value, and attributes
     pub fn new_with_attributes<
         N: Into<String>,
-        V: Into<Value>,
+        V: ValueLike,
         A: IntoIterator<Item = FieldAttribute>,
     >(
         name: N,
@@ -116,7 +116,7 @@ impl Field {
 
         Self {
             name: name.into(),
-            value: value.into(),
+            value: value.into_value(),
             attributes,
         }
     }

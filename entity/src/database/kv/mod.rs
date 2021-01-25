@@ -11,7 +11,7 @@ pub use sled_db::SledDatabase;
 
 use crate::{
     database::{Database, DatabaseResult},
-    Ent, Filter, Id, Predicate, PrimitiveValue, Query, Value,
+    Ent, Filter, Id, Predicate, Primitive, Query, Value,
 };
 use std::collections::HashSet;
 
@@ -107,7 +107,7 @@ fn prefill_ids<D: KeyValueDatabase>(db: &D, filter: &Filter) -> EntIdSet {
         mut ids: EntIdSet,
     ) -> Option<EntIdSet> {
         match p {
-            Predicate::Equals(Value::Primitive(PrimitiveValue::Number(id))) => Some({
+            Predicate::Equals(Value::Primitive(Primitive::Number(id))) => Some({
                 ids.insert(id.to_usize());
                 ids
             }),

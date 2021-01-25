@@ -304,7 +304,9 @@ fn infer_edge_kind_from_ty(ty: &Type) -> darling::Result<EntEdgeKind> {
             };
             Ok(match segment.ident.to_string().to_lowercase().as_str() {
                 "option" => EntEdgeKind::Maybe,
-                "vec" => EntEdgeKind::Many,
+                "vec" | "vecdeque" | "linkedlist" | "binaryheap" | "hashset" | "btreeset" => {
+                    EntEdgeKind::Many
+                }
                 _ => EntEdgeKind::One,
             })
         }

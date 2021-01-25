@@ -177,6 +177,17 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
     /// Returns a copy of the value of the field with the specified name
     fn field(&self, name: &str) -> Option<Value>;
 
+    /// Returns a copy of the type of the field with the specified name
+    fn field_type(&self, name: &str) -> Option<ValueType> {
+        self.field_definitions().into_iter().find_map(|f| {
+            if f.name() == name {
+                Some(f.r#type().clone())
+            } else {
+                None
+            }
+        })
+    }
+
     /// Returns a copy of all fields contained by the ent and their associated values
     fn fields(&self) -> Vec<Field> {
         let mut fields = Vec::new();
@@ -206,6 +217,17 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
 
     /// Returns a copy of the value of the edge with the specified name
     fn edge(&self, name: &str) -> Option<EdgeValue>;
+
+    /// Returns a copy of the type of the edge with the specified name
+    fn edge_type(&self, name: &str) -> Option<EdgeValueType> {
+        self.edge_definitions().into_iter().find_map(|e| {
+            if e.name() == name {
+                Some(*e.r#type())
+            } else {
+                None
+            }
+        })
+    }
 
     /// Returns a copy of all edges contained by the ent and their associated values
     fn edges(&self) -> Vec<Edge> {
@@ -386,7 +408,7 @@ impl UntypedEnt {
     /// the old previous value if the field exists
     ///
     /// If the field does not exist, does NOT insert the value as a new field
-    pub fn update_field<N: Into<String>, V: Into<Value>>(
+    pub fn update_field<N: Into<String>, V: ValueLike>(
         &mut self,
         into_name: N,
         into_value: V,
@@ -547,12 +569,12 @@ impl Ent for UntypedEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, UntypedEnt, Field, FieldDefinition, ValueType};
+    /// use entity::{Ent, UntypedEnt, Field, FieldDefinition, Value, ValueType};
     /// use std::str::FromStr;
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///
@@ -576,11 +598,11 @@ impl Ent for UntypedEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{Ent, UntypedEnt, Field};
+    /// use entity::{Ent, UntypedEnt, Field, Value};
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///
@@ -602,7 +624,7 @@ impl Ent for UntypedEnt {
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///
@@ -623,7 +645,7 @@ impl Ent for UntypedEnt {
     ///
     /// let fields = vec![
     ///     Field::new("field1", 123u8),
-    ///     Field::new("field2", "some text"),
+    ///     Field::new("field2", Value::from("some text")),
     /// ];
     /// let mut ent = UntypedEnt::from_collections(0, fields.iter().cloned(), vec![]);
     ///

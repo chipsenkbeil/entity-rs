@@ -12,7 +12,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnam
     let converted_values: Vec<Expr> = temp_field_names
         .iter()
         .zip(fields.unnamed.iter().map(|f| &f.ty))
-        .map(|(name, ty)| utils::convert_from_value(name, ty))
+        .map(|(name, ty)| utils::convert_from_value(root, name, ty))
         .collect();
     let cnt = temp_field_names.len();
     let lit_cnt: LitInt = parse_quote!(#cnt);
@@ -21,36 +21,44 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnam
 
     quote! {
         #[automatically_derived]
-        impl #impl_generics ::std::convert::From<#name #ty_generics> for #root::Value #where_clause {
-            fn from(x: #name) -> Self {
+        impl #impl_generics #root::ValueLike for #name #ty_generics #where_clause {
+            fn into_value(self) -> #root::Value {
                 let mut list = ::std::vec::Vec::new();
                 #(
                     list.push(
-                        <#root::Value as ::std::convert::From<#field_types>>::from(x.#field_names),
+                        <#field_types as #root::ValueLike>::into_value(self.#field_names),
                     );
                 )*
-                Self::List(list)
+                #root::Value::List(list)
             }
-        }
 
-        #[automatically_derived]
-        impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
-            type Error = &'static ::std::primitive::str;
-
-            fn try_from(value: #root::Value) -> ::std::result::Result<Self, Self::Error> {
-                let list = match value {
+            fn try_from_value(value: #root::Value) -> ::std::result::Result<Self, #root::Value> {
+                let mut list = match value {
                     #root::Value::List(x) if x.len() == #lit_cnt => x,
-                    #root::Value::List(_) => return ::std::result::Result::Err(::std::concat!(
-                        "Only Value::List of len ",
-                        ::std::stringify!(#lit_cnt),
-                        " can be converted to ",
-                        ::std::stringify!(#name),
-                    )),
-                    _ => return ::std::result::Result::Err(::std::concat!(
-                        "Only Value::List can be converted to ",
-                        ::std::stringify!(#name),
-                    )),
+                    x => return ::std::result::Result::Err(x),
                 };
+
+                // Validate that each of our fields exists and can be converted
+                // into the specific type
+                #({
+                    let #temp_field_names = list.remove(#field_names);
+                    let result = #converted_values;
+
+                    // We re-add it back to the map, but if it fails to
+                    // convert then we return the list as an error
+                    match result {
+                        ::std::result::Result::Ok(x) => {
+                            list.insert(
+                                #field_names,
+                                #root::ValueLike::into_value(x),
+                            );
+                        },
+                        ::std::result::Result::Err(value) => {
+                            list.insert(#field_names, value);
+                            return ::std::result::Result::Err(#root::Value::List(list));
+                        }
+                    }
+                })*
 
                 let mut list_it = ::std::iter::IntoIterator::into_iter(list);
 
@@ -58,7 +66,7 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics, fields: &FieldsUnnam
                     #(
                         {
                             let #temp_field_names = ::std::iter::Iterator::next(&mut list_it).unwrap();
-                            #converted_values?
+                            #converted_values.unwrap()
                         }
                     ),*
                 ))

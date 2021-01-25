@@ -65,19 +65,12 @@ pub fn make_type_str(name: &Ident) -> Macro {
 
 /// Transforms some value with the given name (ident) to the specified type,
 /// producing an expression
-pub fn convert_from_value(name: &Ident, ty: &Type) -> Expr {
-    if let Ok(inner_ty) = strip_option(ty) {
-        parse_quote! {
-            #name.try_into_option::<#inner_ty>()
-        }
-    } else {
-        parse_quote! {
-            {
-                use ::std::convert::TryInto;
-                #name.try_into()
-            }
-        }
-    }
+pub fn convert_from_value(root: &Path, name: &Ident, ty: &Type) -> Expr {
+    parse_quote!({
+        let tmp: ::std::result::Result<#ty, #root::Value> =
+            #root::ValueLike::try_from_value(#name);
+        tmp
+    })
 }
 
 /// Returns true if given type appears to be any of the following:
@@ -121,7 +114,7 @@ pub fn swap_inner_type(input: &Type, new_inner: Type) -> (Type, Type) {
             old_inner.clone(),
             parse_quote!(::std::option::Option<#new_inner>),
         )
-    } else if let Ok(old_inner) = strip_vec(input) {
+    } else if let Ok(old_inner) = strip_list(input) {
         (old_inner.clone(), parse_quote!(::std::vec::Vec<#new_inner>))
     } else {
         (input.clone(), new_inner)
@@ -134,10 +127,15 @@ pub fn strip_option(input: &Type) -> darling::Result<&Type> {
     strip_for_type_str(input, "Option")
 }
 
-/// If given a type of Vec<T>, will strip the outer type and return
-/// a reference to type of T, returning an error if anything else
-pub fn strip_vec(input: &Type) -> darling::Result<&Type> {
+/// If given a type of list (Vec<T>, VecDeque<T>, ...), will strip the outer
+/// type and return a reference to type of T, returning an error if anything else
+pub fn strip_list(input: &Type) -> darling::Result<&Type> {
     strip_for_type_str(input, "Vec")
+        .or_else(|_| strip_for_type_str(input, "VecDeque"))
+        .or_else(|_| strip_for_type_str(input, "LinkedList"))
+        .or_else(|_| strip_for_type_str(input, "BinaryHeap"))
+        .or_else(|_| strip_for_type_str(input, "HashSet"))
+        .or_else(|_| strip_for_type_str(input, "BTreeSet"))
 }
 
 fn strip_for_type_str<'a, 'b>(input: &'a Type, ty_str: &'b str) -> darling::Result<&'a Type> {

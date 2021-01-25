@@ -1,5 +1,4 @@
 use entity::{TypedPredicate as P, *};
-use std::convert::TryFrom;
 
 #[test]
 fn produces_method_to_filter_by_id() {
@@ -233,7 +232,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent, EntQuery, EntType)]
     struct TestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,

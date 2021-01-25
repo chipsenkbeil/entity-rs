@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
-  schedule: [cron: "40 1 * * *"]
+    branches:
+      - main
 
 env:
   RUST_BACKTRACE: 1
@@ -22,9 +25,9 @@ jobs:
           - { rust: stable, os: ubuntu-latest }
           - { rust: stable, os: macos-latest }
           - { rust: stable, os: windows-latest }
-          - { rust: 1.46.0, os: ubuntu-latest }
-          - { rust: 1.46.0, os: macos-latest }
-          - { rust: 1.46.0, os: windows-latest }
+          - { rust: 1.48.0, os: ubuntu-latest }
+          - { rust: 1.48.0, os: macos-latest }
+          - { rust: 1.48.0, os: windows-latest }
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1

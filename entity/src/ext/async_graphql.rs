@@ -1,7 +1,7 @@
 ///! Requires async-graphql 2.4.6+
 use crate::{
     Edge, EdgeDeletionPolicy, EdgeValue, EdgeValueType, Ent, Field, Filter, Id, Number, Predicate,
-    PrimitiveValue, Query, Value,
+    Primitive, Query, Value,
 };
 use async_graphql::{
     Error, InputObject, InputValueError, InputValueResult, Name, Number as AsyncGraphqlNumber,
@@ -424,10 +424,10 @@ impl ScalarType for Value {
             ),
             Self::Optional(None) => AsyncGraphqlValue::Null,
             Self::Optional(Some(x)) => x.to_value(),
-            Self::Primitive(PrimitiveValue::Bool(x)) => AsyncGraphqlValue::Boolean(*x),
-            Self::Primitive(PrimitiveValue::Char(x)) => AsyncGraphqlValue::String(x.to_string()),
-            Self::Primitive(PrimitiveValue::Unit) => AsyncGraphqlValue::from(()),
-            Self::Primitive(PrimitiveValue::Number(x)) => match x {
+            Self::Primitive(Primitive::Bool(x)) => AsyncGraphqlValue::Boolean(*x),
+            Self::Primitive(Primitive::Char(x)) => AsyncGraphqlValue::String(x.to_string()),
+            Self::Primitive(Primitive::Unit) => AsyncGraphqlValue::from(()),
+            Self::Primitive(Primitive::Number(x)) => match x {
                 Number::F32(x) => AsyncGraphqlNumber::from_f64(*x as f64)
                     .map(AsyncGraphqlValue::Number)
                     .unwrap_or(AsyncGraphqlValue::Null),

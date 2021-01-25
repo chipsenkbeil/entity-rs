@@ -7,21 +7,16 @@ pub fn make(root: &Path, name: &Ident, generics: &Generics) -> TokenStream {
 
     quote! {
         #[automatically_derived]
-        impl #impl_generics ::std::convert::From<#name #ty_generics> for #root::Value #where_clause {
-            fn from(x: #name) -> Self {
-                <Self as ::std::convert::From<#root::PrimitiveValue>>::from(#root::PrimitiveValue::Unit)
+        impl #impl_generics #root::ValueLike for #name #ty_generics #where_clause {
+            fn into_value(self) -> #root::Value {
+                #root::ValueLike::into_value(#root::Primitive::Unit)
             }
-        }
 
-        #[automatically_derived]
-        impl #impl_generics ::std::convert::TryFrom<#root::Value> for #name #ty_generics #where_clause {
-            type Error = &'static ::std::primitive::str;
-
-            fn try_from(x: #root::Value) -> ::std::result::Result<Self, Self::Error> {
-                match x {
-                    #root::Value::Primitive(#root::PrimitiveValue::Unit) =>
+            fn try_from_value(value: #root::Value) -> ::std::result::Result<Self, #root::Value> {
+                match value {
+                    #root::Value::Primitive(#root::Primitive::Unit) =>
                         ::std::result::Result::Ok(Self),
-                    _ => ::std::result::Result::Err("Value is not unit"),
+                    x => ::std::result::Result::Err(x),
                 }
             }
         }

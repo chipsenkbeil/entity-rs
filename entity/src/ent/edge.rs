@@ -1,6 +1,9 @@
 use crate::Id;
 use derive_more::{From, TryInto};
-use std::collections::HashSet;
+use std::{
+    collections::{BTreeSet, BinaryHeap, HashSet, LinkedList, VecDeque},
+    convert::TryFrom,
+};
 use strum::{Display, EnumDiscriminants, EnumString};
 
 /// Represents a definition of an edge, which is comprised of its name, type
@@ -529,6 +532,91 @@ impl EdgeValue {
         match self {
             Self::MaybeOne(_) | Self::One(_) => 1,
             Self::Many(_) => usize::MAX,
+        }
+    }
+}
+
+impl From<VecDeque<Id>> for EdgeValue {
+    fn from(x: VecDeque<Id>) -> Self {
+        Self::Many(x.into_iter().collect())
+    }
+}
+
+impl TryFrom<EdgeValue> for VecDeque<Id> {
+    type Error = &'static str;
+
+    fn try_from(x: EdgeValue) -> Result<Self, Self::Error> {
+        match x {
+            EdgeValue::Many(x) => Ok(x.into_iter().collect()),
+            _ => Err("Only edge type of many may become a VecDeque"),
+        }
+    }
+}
+
+impl From<LinkedList<Id>> for EdgeValue {
+    fn from(x: LinkedList<Id>) -> Self {
+        Self::Many(x.into_iter().collect())
+    }
+}
+
+impl TryFrom<EdgeValue> for LinkedList<Id> {
+    type Error = &'static str;
+
+    fn try_from(x: EdgeValue) -> Result<Self, Self::Error> {
+        match x {
+            EdgeValue::Many(x) => Ok(x.into_iter().collect()),
+            _ => Err("Only edge type of many may become a LinkedList"),
+        }
+    }
+}
+
+impl From<BinaryHeap<Id>> for EdgeValue {
+    fn from(x: BinaryHeap<Id>) -> Self {
+        Self::Many(x.into_iter().collect())
+    }
+}
+
+impl TryFrom<EdgeValue> for BinaryHeap<Id> {
+    type Error = &'static str;
+
+    fn try_from(x: EdgeValue) -> Result<Self, Self::Error> {
+        match x {
+            EdgeValue::Many(x) => Ok(x.into_iter().collect()),
+            _ => Err("Only edge type of many may become a BinaryHeap"),
+        }
+    }
+}
+
+impl From<HashSet<Id>> for EdgeValue {
+    fn from(x: HashSet<Id>) -> Self {
+        Self::Many(x.into_iter().collect())
+    }
+}
+
+impl TryFrom<EdgeValue> for HashSet<Id> {
+    type Error = &'static str;
+
+    fn try_from(x: EdgeValue) -> Result<Self, Self::Error> {
+        match x {
+            EdgeValue::Many(x) => Ok(x.into_iter().collect()),
+            _ => Err("Only edge type of many may become a HashSet"),
+        }
+    }
+}
+
+impl From<BTreeSet<Id>> for EdgeValue {
+    fn from(x: BTreeSet<Id>) -> Self {
+        Self::Many(x.into_iter().collect())
+    }
+}
+
+impl TryFrom<EdgeValue> for BTreeSet<Id> {
+    type Error = &'static str;
+
+    fn try_from(x: EdgeValue) -> Result<Self, Self::Error> {
+        match x {
+            EdgeValue::Many(x) => Ok(x.into_iter().collect()),
+            _ => Err("Only edge type of many may become a BTreeSet"),
         }
     }
 }

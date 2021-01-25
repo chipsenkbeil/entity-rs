@@ -1,6 +1,5 @@
 use derivative::Derivative;
 use entity::{TypedPredicate as P, *};
-use std::convert::TryFrom;
 
 #[derive(Clone, Derivative, Ent, EntType, EntQuery)]
 #[derivative(Debug)]
@@ -229,7 +228,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent, EntQuery, EntType)]
     struct GenericTestEnt<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         #[ent(id)]
         id: Id,
@@ -250,7 +249,7 @@ fn supports_generic_fields() {
     #[derive(Clone, Ent, EntQuery, EntType, EntWrapper)]
     enum GenericTestEntEnum<T>
     where
-        T: TryFrom<Value, Error = &'static str> + Into<Value> + Clone + Send + Sync + 'static,
+        T: ValueLike + Clone + Send + Sync + 'static,
     {
         Choice(GenericTestEnt<T>),
     }

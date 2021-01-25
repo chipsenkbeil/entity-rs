@@ -1,6 +1,6 @@
-use entity::Value;
+use entity::ValueLike;
 
-#[derive(Value)]
+#[derive(ValueLike)]
 union TestValue {
     a: u32,
     b: char,
