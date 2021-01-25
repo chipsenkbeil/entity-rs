@@ -332,6 +332,7 @@ fn make_field_definitions(root: &Path, fields: &[EntField]) -> darling::Result<V
     }
 }
 
+/// Given some syn [`Type`], will produce an entity `ValueType`
 fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStream> {
     Ok(match r#type {
         Type::Path(x) => {
@@ -342,7 +343,7 @@ fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStr
                         let inner_t = make_field_value_type(root, inner)?;
 
                         quote! {
-                            #root::ValueType::List(::std::boxed::Box::from(#inner_t))
+                            #root::ValueType::List(::std::boxed::Box::new(#inner_t))
                         }
                     }
                     "hashmap" | "btreemap" => {
@@ -350,7 +351,7 @@ fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStr
                         let inner_t = make_field_value_type(root, inner)?;
 
                         quote! {
-                            #root::ValueType::Map(::std::boxed::Box::from(#inner_t))
+                            #root::ValueType::Map(::std::boxed::Box::new(#inner_t))
                         }
                     }
                     "option" => {
@@ -358,27 +359,55 @@ fn make_field_value_type(root: &Path, r#type: &Type) -> darling::Result<TokenStr
                         let inner_t = make_field_value_type(root, inner)?;
 
                         quote! {
-                            #root::ValueType::Optional(::std::boxed::Box::from(#inner_t))
+                            #root::ValueType::Optional(::std::boxed::Box::new(#inner_t))
                         }
                     }
                     "string" | "pathbuf" | "osstring" => quote! { #root::ValueType::Text },
-                    "()" => quote! { #root::PrimitiveType::Unit },
-                    "bool" => quote! { #root::PrimitiveType::Bool },
-                    "char" => quote! { #root::PrimitiveType::Char },
-                    "f32" => quote! { #root::NumberType::F32 },
-                    "f64" => quote! { #root::NumberType::F64 },
-                    "i128" => quote! { #root::NumberType::I128 },
-                    "i16" => quote! { #root::NumberType::I16 },
-                    "i32" => quote! { #root::NumberType::I32 },
-                    "i64" => quote! { #root::NumberType::I64 },
-                    "i8" => quote! { #root::NumberType::I8 },
-                    "isize" => quote! { #root::NumberType::Isize },
-                    "u128" => quote! { #root::NumberType::U128 },
-                    "u16" => quote! { #root::NumberType::U16 },
-                    "u32" => quote! { #root::NumberType::U32 },
-                    "u64" => quote! { #root::NumberType::U64 },
-                    "u8" => quote! { #root::NumberType::U8 },
-                    "usize" => quote! { #root::NumberType::Usize },
+                    "()" => quote! { #root::ValueType::Primitive(#root::PrimitiveType::Unit) },
+                    "bool" => quote! { #root::ValueType::Primitive(#root::PrimitiveType::Bool) },
+                    "char" => quote! { #root::ValueType::Primitive(#root::PrimitiveType::Char) },
+                    "f32" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::F32)) }
+                    }
+                    "f64" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::F64)) }
+                    }
+                    "i128" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::I128)) }
+                    }
+                    "i16" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::I16)) }
+                    }
+                    "i32" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::I32)) }
+                    }
+                    "i64" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::I64)) }
+                    }
+                    "i8" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::I8)) }
+                    }
+                    "isize" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::Isize)) }
+                    }
+                    "u128" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::U128)) }
+                    }
+                    "u16" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::U16)) }
+                    }
+                    "u32" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::U32)) }
+                    }
+                    "u64" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::U64)) }
+                    }
+                    "u8" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::U8)) }
+                    }
+                    "usize" => {
+                        quote! { #root::ValueType::Primitive(#root::PrimitiveType::Number(#root::NumberType::Usize)) }
+                    }
                     _ => quote! { #root::ValueType::Custom },
                 }
             } else {

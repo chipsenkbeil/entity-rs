@@ -2,41 +2,6 @@ use derivative::Derivative;
 use entity::*;
 
 #[test]
-fn supports_generic_fields() {
-    #![allow(clippy::float_cmp)]
-
-    #[derive(Clone, Ent)]
-    struct TestEnt<T>
-    where
-        T: ValueLike + Clone + Send + Sync + 'static,
-    {
-        #[ent(id)]
-        id: Id,
-
-        #[ent(database)]
-        database: WeakDatabaseRc,
-
-        #[ent(created)]
-        created: u64,
-
-        #[ent(last_updated)]
-        last_updated: u64,
-
-        #[ent(field)]
-        generic_field: T,
-    }
-
-    let ent = TestEnt {
-        id: 999,
-        database: WeakDatabaseRc::new(),
-        created: 123,
-        last_updated: 456,
-        generic_field: 0.5,
-    };
-    assert_eq!(ent.generic_field, 0.5);
-}
-
-#[test]
 fn id_should_return_copy_of_marked_id_field() {
     #[derive(Clone, Ent)]
     struct TestEnt {
@@ -1036,5 +1001,777 @@ fn remove_should_delete_ent_from_database() {
         database.get(999).expect("Failed to get ent").is_none(),
         true,
         "Ent unexpectedly in database",
+    );
+}
+
+#[test]
+fn supports_generic_fields() {
+    #![allow(clippy::float_cmp)]
+
+    #[derive(Clone, Ent)]
+    struct TestEnt<T>
+    where
+        T: ValueLike + Clone + Send + Sync + 'static,
+    {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        generic_field: T,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        generic_field: 0.5,
+    };
+    assert_eq!(ent.field_type("generic_field").unwrap(), ValueType::Custom);
+    assert_eq!(ent.generic_field, 0.5);
+}
+
+#[test]
+fn supports_os_string_field() {
+    use std::ffi::OsString;
+
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        a: OsString,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        a: OsString::from("test"),
+    };
+    assert_eq!(ent.field_type("a").unwrap(), ValueType::Text);
+    assert_eq!(ent.a, "test");
+}
+
+#[test]
+fn supports_pathbuf_field() {
+    use std::path::PathBuf;
+
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        a: PathBuf,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        a: PathBuf::from("test"),
+    };
+    assert_eq!(ent.field_type("a").unwrap(), ValueType::Text);
+    assert_eq!(ent.a.as_os_str(), "test");
+}
+
+#[test]
+fn supports_all_std_collection_types_for_fields() {
+    use std::collections::*;
+
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        a: Vec<String>,
+
+        #[ent(field)]
+        b: VecDeque<String>,
+
+        #[ent(field)]
+        c: LinkedList<String>,
+
+        #[ent(field)]
+        d: BinaryHeap<String>,
+
+        #[ent(field)]
+        e: HashSet<String>,
+
+        #[ent(field)]
+        f: BTreeSet<String>,
+
+        #[ent(field)]
+        g: HashMap<String, String>,
+
+        #[ent(field)]
+        h: BTreeMap<String, String>,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        a: Vec::new(),
+        b: VecDeque::new(),
+        c: LinkedList::new(),
+        d: BinaryHeap::new(),
+        e: HashSet::new(),
+        f: BTreeSet::new(),
+        g: HashMap::new(),
+        h: BTreeMap::new(),
+    };
+
+    assert_eq!(
+        ent.field_type("a").unwrap(),
+        ValueType::List(Box::new(ValueType::Text)),
+    );
+    assert_eq!(
+        ent.field_type("b").unwrap(),
+        ValueType::List(Box::new(ValueType::Text)),
+    );
+    assert_eq!(
+        ent.field_type("c").unwrap(),
+        ValueType::List(Box::new(ValueType::Text)),
+    );
+    assert_eq!(
+        ent.field_type("d").unwrap(),
+        ValueType::List(Box::new(ValueType::Text)),
+    );
+    assert_eq!(
+        ent.field_type("e").unwrap(),
+        ValueType::List(Box::new(ValueType::Text)),
+    );
+    assert_eq!(
+        ent.field_type("f").unwrap(),
+        ValueType::List(Box::new(ValueType::Text)),
+    );
+    assert_eq!(
+        ent.field_type("g").unwrap(),
+        ValueType::Map(Box::new(ValueType::Text)),
+    );
+    assert_eq!(
+        ent.field_type("h").unwrap(),
+        ValueType::Map(Box::new(ValueType::Text)),
+    );
+}
+
+#[test]
+fn supports_option_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: Option<String>,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Optional(Box::new(ValueType::Text)),
+    );
+}
+
+#[test]
+fn supports_bool_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: bool,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Bool),
+    );
+}
+
+#[test]
+fn supports_char_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: char,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Char),
+    );
+}
+
+#[test]
+fn supports_f32_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: f32,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::F32)),
+    );
+}
+
+#[test]
+fn supports_f64_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: f64,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::F64)),
+    );
+}
+
+#[test]
+fn supports_i8_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: i8,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::I8)),
+    );
+}
+
+#[test]
+fn supports_i16_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: i16,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::I16)),
+    );
+}
+
+#[test]
+fn supports_i32_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: i32,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::I32)),
+    );
+}
+
+#[test]
+fn supports_i64_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: i64,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::I64)),
+    );
+}
+
+#[test]
+fn supports_i128_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: i128,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::I128)),
+    );
+}
+
+#[test]
+fn supports_isize_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: isize,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::Isize)),
+    );
+}
+
+#[test]
+fn supports_u8_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: u8,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::U8)),
+    );
+}
+
+#[test]
+fn supports_u16_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: u16,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::U16)),
+    );
+}
+
+#[test]
+fn supports_u32_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: u32,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::U32)),
+    );
+}
+
+#[test]
+fn supports_u64_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: u64,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::U64)),
+    );
+}
+
+#[test]
+fn supports_u128_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: u128,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::U128)),
+    );
+}
+
+#[test]
+fn supports_usize_as_field_type() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        field: usize,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        field: Default::default(),
+    };
+
+    assert_eq!(
+        ent.field_type("field").unwrap(),
+        ValueType::Primitive(PrimitiveType::Number(NumberType::Usize)),
     );
 }

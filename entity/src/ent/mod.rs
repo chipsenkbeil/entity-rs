@@ -177,6 +177,17 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
     /// Returns a copy of the value of the field with the specified name
     fn field(&self, name: &str) -> Option<Value>;
 
+    /// Returns a copy of the type of the field with the specified name
+    fn field_type(&self, name: &str) -> Option<ValueType> {
+        self.field_definitions().into_iter().find_map(|f| {
+            if f.name() == name {
+                Some(f.r#type().clone())
+            } else {
+                None
+            }
+        })
+    }
+
     /// Returns a copy of all fields contained by the ent and their associated values
     fn fields(&self) -> Vec<Field> {
         let mut fields = Vec::new();
