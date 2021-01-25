@@ -32,7 +32,7 @@ transform your data to be compatible with supported databases and queries.
 
 ```toml
 [dependencies]
-entity = "0.1"
+entity = "0.2"
 ```
 
 For most use cases, you can import all features using the `full` flag, or for
@@ -40,7 +40,7 @@ a more tailored experience can import individual features:
 
 ```toml
 [dependencies]
-entity = { version = "0.1", features = ["global", "macros", "inmemory_db"] }
+entity = { version = "0.2", features = ["global", "macros", "inmemory_db"] }
 ```
 
 ### Example of defining data

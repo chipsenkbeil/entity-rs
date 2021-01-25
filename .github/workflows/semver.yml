@@ -2,11 +2,8 @@ name: Semver
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches-ignore:
+      - '**'
 
 env:
   RUST_BACKTRACE: 1
