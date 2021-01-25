@@ -59,6 +59,7 @@ pub struct EntEdge {
     pub ent_ty: Type,
     pub ent_query_ty: Option<Type>,
     pub wrap: bool,
+    pub use_id_slice: bool,
     pub kind: EntEdgeKind,
     pub deletion_policy: EntEdgeDeletionPolicy,
     pub ext: EntExtAttr,
@@ -222,7 +223,8 @@ impl FromDeriveInput for Ent {
                     ent_query_ty: attr
                         .query_ty
                         .and_then(|type_str| syn::parse_str(&type_str).ok()),
-                    wrap: attr.wrap,
+                    wrap: attr.wrap.is_some(),
+                    use_id_slice: attr.use_id_slice.is_some(),
                     kind,
                     deletion_policy: attr.deletion_policy,
                     ext: EntExtAttr {

@@ -35,10 +35,11 @@ fn fn_typed_id_getter(edge: &EntEdge) -> TokenStream {
     };
     let return_type = match edge.kind {
         EntEdgeKind::Maybe | EntEdgeKind::One => quote! { #ty },
-        EntEdgeKind::Many => {
+        EntEdgeKind::Many if edge.use_id_slice => {
             let inner_t = utils::get_innermost_type(ty);
             quote! { &[#inner_t] }
         }
+        EntEdgeKind::Many => quote! { &#ty },
     };
     let inner_return = match edge.kind {
         EntEdgeKind::Maybe | EntEdgeKind::One => quote! { self.#name },

@@ -121,7 +121,9 @@ pub struct EdgeAttr {
     #[darling(default, rename = "query_type")]
     pub query_ty: Option<String>,
     #[darling(default)]
-    pub wrap: bool,
+    pub wrap: Flag,
+    #[darling(default)]
+    pub use_id_slice: Flag,
     #[darling(default, rename = "policy")]
     pub deletion_policy: EntEdgeDeletionPolicy,
 }
