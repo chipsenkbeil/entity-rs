@@ -1005,6 +1005,64 @@ fn remove_should_delete_ent_from_database() {
 }
 
 #[test]
+fn supports_all_std_collection_list_types_for_edge_ids() {
+    use std::collections::*;
+
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(edge(type = "TestEnt"))]
+        a: Vec<Id>,
+
+        #[ent(edge(type = "TestEnt"))]
+        b: VecDeque<Id>,
+
+        #[ent(edge(type = "TestEnt"))]
+        c: LinkedList<Id>,
+
+        #[ent(edge(type = "TestEnt"))]
+        d: BinaryHeap<Id>,
+
+        #[ent(edge(type = "TestEnt"))]
+        e: HashSet<Id>,
+
+        #[ent(edge(type = "TestEnt"))]
+        f: BTreeSet<Id>,
+    }
+
+    let ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 123,
+        last_updated: 456,
+        a: Vec::new(),
+        b: VecDeque::new(),
+        c: LinkedList::new(),
+        d: BinaryHeap::new(),
+        e: HashSet::new(),
+        f: BTreeSet::new(),
+    };
+
+    assert_eq!(ent.edge_type("a").unwrap(), EdgeValueType::Many);
+    assert_eq!(ent.edge_type("b").unwrap(), EdgeValueType::Many);
+    assert_eq!(ent.edge_type("c").unwrap(), EdgeValueType::Many);
+    assert_eq!(ent.edge_type("d").unwrap(), EdgeValueType::Many);
+    assert_eq!(ent.edge_type("e").unwrap(), EdgeValueType::Many);
+    assert_eq!(ent.edge_type("f").unwrap(), EdgeValueType::Many);
+}
+
+#[test]
 fn supports_generic_fields() {
     #![allow(clippy::float_cmp)]
 

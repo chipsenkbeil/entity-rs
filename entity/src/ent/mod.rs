@@ -218,6 +218,17 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
     /// Returns a copy of the value of the edge with the specified name
     fn edge(&self, name: &str) -> Option<EdgeValue>;
 
+    /// Returns a copy of the type of the edge with the specified name
+    fn edge_type(&self, name: &str) -> Option<EdgeValueType> {
+        self.edge_definitions().into_iter().find_map(|e| {
+            if e.name() == name {
+                Some(*e.r#type())
+            } else {
+                None
+            }
+        })
+    }
+
     /// Returns a copy of all edges contained by the ent and their associated values
     fn edges(&self) -> Vec<Edge> {
         let mut edges = Vec::new();
