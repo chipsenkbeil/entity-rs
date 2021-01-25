@@ -13,7 +13,7 @@ use crate::{DatabaseError, DatabaseResult, Id, WeakDatabaseRc, EPHEMERAL_ID};
 use derive_more::{Display, Error};
 use dyn_clone::DynClone;
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap},
     fmt,
     time::{SystemTime, SystemTimeError, UNIX_EPOCH},
 };
@@ -402,83 +402,6 @@ impl UntypedEnt {
                 .map(|e| (e.name().to_string(), e))
                 .collect(),
         )
-    }
-
-    /// Replaces the ent's local field's value with the given value, returning
-    /// the old previous value if the field exists
-    ///
-    /// If the field does not exist, does NOT insert the value as a new field
-    pub fn update_field<N: Into<String>, V: ValueLike>(
-        &mut self,
-        into_name: N,
-        into_value: V,
-    ) -> Result<Value, EntMutationError> {
-        self.mark_updated()?;
-
-        let name = into_name.into();
-        let field = Field::new(name.to_string(), into_value);
-        match self.fields.entry(name.to_string()) {
-            Entry::Occupied(mut x) => Ok(x.insert(field).into_value()),
-            Entry::Vacant(_) => Err(EntMutationError::NoField { name }),
-        }
-    }
-
-    /// Updates the ent's local edge's list to contain the provided ids
-    ///
-    /// If there are too many ids (in the case of >1 for MaybeOne/One), this
-    /// method will fail.
-    pub fn add_ents_to_edge<N: Into<String>, I: IntoIterator<Item = Id>>(
-        &mut self,
-        name: N,
-        ids: I,
-    ) -> Result<(), EntMutationError> {
-        let edge_name = name.into();
-        match self.edges.entry(edge_name.to_string()) {
-            Entry::Occupied(mut x) => x
-                .get_mut()
-                .value_mut()
-                .add_ids(ids)
-                .map_err(|err| EntMutationError::BadEdgeValueMutation { source: err }),
-            Entry::Vacant(_) => Err(EntMutationError::NoEdge { name: edge_name }),
-        }
-    }
-
-    /// Updates the ent's local edge's list to remove the provided ids
-    ///
-    /// If this would result in an invalid edge (One being empty), this
-    /// method will fail.
-    pub fn remove_ents_from_edge<N: Into<String>, I: IntoIterator<Item = Id>>(
-        &mut self,
-        name: N,
-        ids: I,
-    ) -> Result<(), EntMutationError> {
-        let edge_name = name.into();
-        match self.edges.entry(edge_name.to_string()) {
-            Entry::Occupied(mut x) => x
-                .get_mut()
-                .value_mut()
-                .remove_ids(ids)
-                .map_err(|err| EntMutationError::BadEdgeValueMutation { source: err }),
-            Entry::Vacant(_) => Err(EntMutationError::NoEdge { name: edge_name }),
-        }
-    }
-
-    /// Updates all of the ent's local edges to remove the provided ids
-    ///
-    /// If this would result in an invalid edge (One being empty), this
-    /// method will fail.
-    pub fn remove_ents_from_all_edges<I: IntoIterator<Item = Id>>(
-        &mut self,
-        ids: I,
-    ) -> Result<(), EntMutationError> {
-        let edge_ids = ids.into_iter().collect::<HashSet<Id>>();
-        let edge_names = self.edges.keys().cloned().collect::<HashSet<String>>();
-
-        for name in edge_names {
-            self.remove_ents_from_edge(name, edge_ids.clone())?;
-        }
-
-        Ok(())
     }
 }
 
