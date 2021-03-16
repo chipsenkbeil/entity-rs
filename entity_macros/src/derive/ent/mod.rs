@@ -65,10 +65,9 @@ pub fn do_derive_ent_debug(root: Path, input: DeriveInput) -> darling::Result<To
 
 pub fn do_derive_ent_query(root: Path, input: DeriveInput) -> darling::Result<TokenStream> {
     match &input.data {
-        Data::Struct(_) => Ok(r#struct::do_derive_ent_query(
-            root,
-            StructEnt::from_derive_input(&input)?,
-        )),
+        Data::Struct(_) => {
+            r#struct::do_derive_ent_query(root, StructEnt::from_derive_input(&input)?)
+        }
         Data::Enum(_) => Ok(r#enum::do_derive_ent_query(
             root,
             EnumEnt::from_derive_input(&input)?,

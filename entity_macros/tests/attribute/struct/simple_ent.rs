@@ -305,3 +305,37 @@ fn supports_using_struct_field_type_for_ent_type() {
     assert_eq!(ent.many_edges, vec![1, 2, 3, 4]);
     assert_eq!(ent.explicit_edge, 789);
 }
+
+#[test]
+fn supports_common_field_types() {
+    use std::collections::*;
+
+    // Validate via compilation, no need to test anything else
+    #[simple_ent]
+    struct TestEnt {
+        a1: bool,
+        a2: char,
+        a3: u8,
+        a4: u16,
+        a5: u32,
+        a6: u64,
+        a7: u128,
+        a8: usize,
+        a9: i8,
+        a10: i16,
+        a11: i32,
+        a12: i64,
+        a13: i128,
+        a14: isize,
+        a15: f32,
+        a16: f64,
+        b1: Vec<String>,
+        b2: VecDeque<String>,
+        b3: LinkedList<String>,
+        b4: BinaryHeap<String>,
+        b5: HashSet<String>,
+        b6: BTreeSet<String>,
+        b7: HashMap<String, String>,
+        b8: BTreeMap<String, String>,
+    }
+}

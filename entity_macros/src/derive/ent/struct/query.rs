@@ -3,7 +3,8 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_quote, Expr, Path, Type};
 
-pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
+pub fn do_derive_ent_query(root: Path, ent: Ent) -> darling::Result<TokenStream> {
+    let mut errors = Vec::new();
     let name = &ent.ident;
     let vis = &ent.vis;
     let query_name = format_ident!("{}Query", name);
@@ -52,7 +53,23 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
 
         let method_name = format_ident!("where_{}", name);
         let predicate_type = if utils::is_map_type(ty) {
-            quote! { #root::MapTypedPredicate<#ty> }
+            let value_ty = match ty {
+                Type::Path(x) if !x.path.segments.is_empty() => {
+                    match utils::get_inner_type_from_segment(x.path.segments.last().unwrap(), 1, 2)
+                    {
+                        Ok(x) => x,
+                        Err(x) => {
+                            errors.push(x);
+                            continue;
+                        }
+                    }
+                }
+                _ => {
+                    errors.push(darling::Error::custom("Empty path encountered"));
+                    continue;
+                }
+            };
+            quote! { #root::MapTypedPredicate<#value_ty, #ty> }
         } else {
             quote! { #root::TypedPredicate<#ty> }
         };
@@ -130,7 +147,7 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
 
     let default_doc_str = format!("Creates new query that selects all {} by default", name);
 
-    quote! {
+    let token_stream = quote! {
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
         #[automatically_derived]
         #vis struct #query_name #impl_generics(
@@ -196,5 +213,11 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
                 )
             }
         }
+    };
+
+    if errors.is_empty() {
+        Ok(token_stream)
+    } else {
+        Err(darling::Error::multiple(errors))
     }
 }
