@@ -304,12 +304,14 @@ fn update_edge_should_change_the_edge_with_given_name_if_it_exists_to_value() {
     }
 
     assert!(matches!(
-        ent.update_edge("missing", EdgeValue::from(123)).unwrap_err(),
+        ent.update_edge("missing", EdgeValue::from(123))
+            .unwrap_err(),
         EntMutationError::NoEdge { .. }
     ));
 
     assert!(matches!(
-        ent.update_edge("other", EdgeValue::from(vec![1, 2, 3])).unwrap_err(),
+        ent.update_edge("other", EdgeValue::from(vec![1, 2, 3]))
+            .unwrap_err(),
         EntMutationError::WrongEdgeValueType { .. }
     ));
 }

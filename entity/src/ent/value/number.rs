@@ -174,11 +174,11 @@ impl Number {
         matches!(
             self,
             Self::I128(_)
-            | Self::I16(_)
-            | Self::I32(_)
-            | Self::I64(_)
-            | Self::I8(_)
-            | Self::Isize(_)
+                | Self::I16(_)
+                | Self::I32(_)
+                | Self::I64(_)
+                | Self::I8(_)
+                | Self::Isize(_)
         )
     }
 
@@ -197,11 +197,11 @@ impl Number {
         matches!(
             self,
             Self::U128(_)
-            | Self::U16(_)
-            | Self::U32(_)
-            | Self::U64(_)
-            | Self::U8(_)
-            | Self::Usize(_)
+                | Self::U16(_)
+                | Self::U32(_)
+                | Self::U64(_)
+                | Self::U8(_)
+                | Self::Usize(_)
         )
     }
 
