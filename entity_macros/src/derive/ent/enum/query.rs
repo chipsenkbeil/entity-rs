@@ -32,6 +32,14 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
         .collect::<Vec<&Type>>();
 
     quote! {
+        #[automatically_derived]
+        impl #impl_generics #name #ty_generics #where_clause {
+            /// Begin building a new ent query
+            pub fn query() -> #query_name #ty_generics #where_clause {
+                <#query_name #ty_generics as ::std::default::Default>::default()
+            }
+        }
+
         #[derive(::std::clone::Clone, ::std::fmt::Debug)]
         #[automatically_derived]
         #vis struct #query_name #impl_generics(

@@ -60,6 +60,13 @@ enum TestEnt {
 }
 
 #[test]
+fn produces_query_method_on_ent() {
+    let _ = TestEnt::query();
+    let _ = TestEnt1::query();
+    let _ = TestEnt2::query();
+}
+
+#[test]
 fn produces_method_to_filter_by_id() {
     let database = InmemoryDatabase::default();
 

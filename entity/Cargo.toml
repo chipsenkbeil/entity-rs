@@ -2,7 +2,7 @@
 name = "entity"
 description = "Library that provides entity-like constructs"
 categories = ["data-structures"]
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
 homepage = "https://github.com/chipsenkbeil/entity-rs"
@@ -33,7 +33,7 @@ lazy_static = { version = "1.4.0", optional = true }
 serde = { version = "1.0.117", features = ["derive"], optional = true }
 sled = { version = "0.34.6", optional = true }
 typetag = { version = "0.1.6", optional = true }
-entity_macros = { version = "0.2.1", path = "../entity_macros", optional = true }
+entity_macros = { version = "0.2.2", path = "../entity_macros", optional = true }
 
 [dev-dependencies]
 futures = "0.3.9"

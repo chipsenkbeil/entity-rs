@@ -119,14 +119,17 @@ pub fn do_derive_ent_builder(root: Path, ent: Ent) -> TokenStream {
             #(#error_variants),*
         }
 
+        #[automatically_derived]
         impl ::std::fmt::Display for #builder_error_name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 #display_fmt_inner
             }
         }
 
+        #[automatically_derived]
         impl ::std::error::Error for #builder_error_name {}
 
+        #[automatically_derived]
         impl #impl_generics #ent_name #ty_generics #where_clause {
             /// Begin building a new ent, initialized using the global database
             /// if it is available
