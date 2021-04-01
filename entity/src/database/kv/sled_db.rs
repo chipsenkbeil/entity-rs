@@ -140,13 +140,25 @@ impl Database for SledDatabase {
                 source: Box::from(e),
             })?;
 
-        maybe_ivec
+        let result: Result<Option<Box<dyn Ent>>, DatabaseError> = maybe_ivec
             .map(|ivec| bincode::deserialize(ivec.as_ref()))
             .transpose()
             .map_err(|e| DatabaseError::CorruptedEnt {
                 id,
                 source: Box::from(e),
-            })
+            });
+
+        // If we found an ent without a database connection, attempt to fill
+        // it in with the global database if it exists
+        match result {
+            Ok(Some(mut ent)) => {
+                if !ent.is_connected() {
+                    ent.connect(crate::global::db());
+                }
+                Ok(Some(ent))
+            }
+            x => x,
+        }
     }
 
     fn remove(&self, id: Id) -> DatabaseResult<bool> {
@@ -392,6 +404,7 @@ mod tests {
 
     #[test]
     fn get_should_return_an_ent_by_id() {
+        use crate::DatabaseRc;
         let db = new_db();
 
         let result = db.get(999).expect("Failed to get ent");
@@ -407,6 +420,17 @@ mod tests {
             !result.unwrap().is_connected(),
             "Ent unexpectedly connected to database"
         );
+
+        // Verify that if a global database is available, it will populate
+        let db = DatabaseRc::new(Box::new(db));
+        crate::global::with_db_from_rc(DatabaseRc::clone(&db), || {
+            let result = db.get(999).expect("Failed to get ent");
+            assert!(result.is_some(), "Unexpectedly missing ent");
+            assert!(
+                result.unwrap().is_connected(),
+                "Ent unexpectedly not connected to database"
+            );
+        });
     }
 
     #[test]
