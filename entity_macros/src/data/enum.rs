@@ -1,4 +1,4 @@
-use darling::{ast, FromDeriveInput, FromVariant};
+use darling::{ast, util::Flag, FromDeriveInput, FromVariant};
 use syn::{Generics, Ident, Type, Visibility};
 
 /// Information about an enum deriving ent
@@ -13,7 +13,10 @@ pub struct Ent {
 
 /// Information for a variant of an enum deriving ent
 #[derive(Debug, FromVariant)]
+#[darling(attributes(ent))]
 pub struct EntVariant {
     pub ident: Ident,
     pub fields: ast::Fields<Type>,
+    #[darling(default)]
+    pub wrap: Flag,
 }

@@ -81,6 +81,10 @@ pub trait EntWrapper: Sized {
     /// Returns Some(impl EntWrapper) if the wrapper is able to wrap around
     /// the given [`Ent`] trait object, otherwise returns None
     fn wrap_ent(ent: Box<dyn Ent>) -> Option<Self>;
+
+    /// Returns true if able to wrap the given ent trait object, otherwise
+    /// returns false
+    fn can_wrap_ent(ent: &dyn Ent) -> bool;
 }
 
 /// Represents a builder interface for some ent, capable of building a new
