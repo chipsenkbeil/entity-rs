@@ -293,3 +293,59 @@ fn supports_generic_fields() {
     assert_eq!(results.len(), 1, "Unexpected total results");
     assert!(results.contains(&2));
 }
+
+#[test]
+fn supports_nested_enum_queries() {
+    let database = InmemoryDatabase::default();
+
+    database
+        .insert(Box::from(TestEnt1 {
+            id: 1,
+            database: WeakDatabaseRc::new(),
+            created: 0,
+            last_updated: 0,
+            field1: 999,
+            other: 2,
+        }))
+        .expect("Failed to insert a test ent");
+
+    database
+        .insert(Box::from(TestEnt2 {
+            id: 2,
+            database: WeakDatabaseRc::new(),
+            created: 0,
+            last_updated: 0,
+            field1: 1000,
+            field2: String::from("test"),
+            maybe_other: Some(1),
+            dups: Vec::new(),
+        }))
+        .expect("Failed to insert a test ent");
+
+    #[derive(Clone, Debug, Ent, EntQuery, EntType, EntWrapper)]
+    enum NestedTestEnt {
+        One(TestEnt1),
+        #[ent(wrap)]
+        Nested(TestEnt),
+    }
+
+    let results: Vec<Id> = NestedTestEntQuery::default()
+        .where_id(P::equals(1))
+        .execute(&database)
+        .expect("Failed to query for ents")
+        .iter()
+        .map(Ent::id)
+        .collect();
+    assert_eq!(results.len(), 1);
+    assert!(results.contains(&1));
+
+    let results: Vec<Id> = NestedTestEntQuery::default()
+        .where_id(P::equals(2))
+        .execute(&database)
+        .expect("Failed to query for ents")
+        .iter()
+        .map(Ent::id)
+        .collect();
+    assert_eq!(results.len(), 1);
+    assert!(results.contains(&2));
+}

@@ -74,9 +74,25 @@ pub fn do_derive_ent_query(root: Path, ent: Ent) -> TokenStream {
                             {
                                 let mut list = ::std::vec::Vec::with_capacity(#total_variants);
                                 #(
-                                    list.push(#root::TypedPredicate::equals(
-                                        ::std::string::ToString::to_string(<#variant_types as #root::EntType>::type_str())
-                                    ));
+                                    if let ::std::option::Option::Some(tys) =
+                                        <#variant_types as #root::EntType>::wrapped_tys()
+                                    {
+                                        ::std::iter::Extend::<#root::TypedPredicate<_>>::extend(
+                                            &mut list,
+                                            ::std::iter::Iterator::map(
+                                                ::std::iter::IntoIterator::into_iter(tys),
+                                                |s| #root::TypedPredicate::equals(
+                                                    ::std::string::ToString::to_string(s)
+                                                ),
+                                            ),
+                                        );
+                                    } else {
+                                        list.push(#root::TypedPredicate::equals(
+                                            ::std::string::ToString::to_string(
+                                                <#variant_types as #root::EntType>::type_str()
+                                            )
+                                        ));
+                                    }
                                 )*
                                 list
                             }
