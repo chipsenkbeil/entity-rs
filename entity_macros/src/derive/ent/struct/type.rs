@@ -11,8 +11,8 @@ pub fn do_derive_ent_type(root: Path, ent: Ent) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl #impl_generics #root::EntType for #name #ty_generics #where_clause {
-            fn type_str() -> &'static ::std::primitive::str {
-                #type_str_t
+            fn type_data() -> #root::EntTypeData {
+                #root::EntTypeData::Concrete { ty: #type_str_t }
             }
         }
     }

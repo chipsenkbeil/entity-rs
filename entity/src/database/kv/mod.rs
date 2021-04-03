@@ -567,8 +567,10 @@ mod tests {
     }
 
     impl EntType for TestEnt {
-        fn type_str() -> &'static str {
-            concat!(module_path!(), "::TestEnt")
+        fn type_data() -> EntTypeData {
+            EntTypeData::Concrete {
+                ty: concat!(module_path!(), "::TestEnt"),
+            }
         }
     }
 

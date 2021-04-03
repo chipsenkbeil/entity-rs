@@ -13,7 +13,7 @@ use crate::{DatabaseError, DatabaseResult, Id, WeakDatabaseRc, EPHEMERAL_ID};
 use derive_more::{Display, Error};
 use dyn_clone::DynClone;
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, HashMap, HashSet},
     fmt,
     time::{SystemTime, SystemTimeError, UNIX_EPOCH},
 };
@@ -66,12 +66,49 @@ pub enum EntConversionError {
     },
 }
 
+/// Represents data about an ent type
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum EntTypeData {
+    /// Indicates an ent is a concrete type with the given static str
+    /// being unique to its type
+    Concrete { ty: &'static str },
+
+    /// Indicates an ent is a wrapper around other ent types with the given
+    /// static slice of static strs representing the types it wraps
+    Wrapper {
+        ty: &'static str,
+        wrapped_tys: HashSet<&'static str>,
+    },
+}
+
 /// Represents the interface for an Ent to report its type. This should align
 /// with [`Ent::r#type()`] method and is used when we must know the type
 /// without having an instance of an ent.
 pub trait EntType {
+    /// Represents data about the ent's type
+    fn type_data() -> EntTypeData;
+
     /// Returns a static str that represents the unique type for an ent
-    fn type_str() -> &'static str;
+    fn type_str() -> &'static str {
+        match Self::type_data() {
+            EntTypeData::Concrete { ty } => ty,
+            EntTypeData::Wrapper { ty, wrapped_tys: _ } => ty,
+        }
+    }
+
+    /// Indicates whether the ent represents a concrete type (like a struct)
+    /// or a wrapper around one of many types (like an enum)
+    fn is_concrete_type() -> bool {
+        matches!(Self::type_data(), EntTypeData::Concrete { .. })
+    }
+
+    /// Represents the types that this ent wraps if it is not a concrete ent
+    fn wrapped_tys() -> Option<HashSet<&'static str>> {
+        match Self::type_data() {
+            EntTypeData::Concrete { .. } => None,
+            EntTypeData::Wrapper { ty: _, wrapped_tys } => Some(wrapped_tys),
+        }
+    }
 }
 
 /// Represents a wrapper around some set of ents that implement [`Ent`],
@@ -423,12 +460,17 @@ impl EntType for UntypedEnt {
     /// ## Examples
     ///
     /// ```
-    /// use entity::{UntypedEnt, EntType};
+    /// use entity::{UntypedEnt, EntType, EntTypeData};
     ///
-    /// assert_eq!(UntypedEnt::type_str(), "entity::ent::UntypedEnt");
+    /// assert!(matches!(
+    ///     UntypedEnt::type_data(),
+    ///     EntTypeData::Concrete { ty: "entity::ent::UntypedEnt" },
+    /// ));
     /// ```
-    fn type_str() -> &'static str {
-        concat!(module_path!(), "::UntypedEnt")
+    fn type_data() -> EntTypeData {
+        EntTypeData::Concrete {
+            ty: concat!(module_path!(), "::UntypedEnt"),
+        }
     }
 }
 
