@@ -1,0 +1,18 @@
+[package]
+name = "entity-inmemory"
+version = "0.2.5"
+authors = ["Chip Senkbeil <chip@senkbeil.org>"]
+edition = "2018"
+
+[features]
+serde-1 = ["serde", "serde/rc", "entity/serde-1"]
+
+[dependencies]
+entity = { version = "=0.2.5", path = "../.." }
+
+dyn-clone = "1.0.3"
+serde = { version = "1.0.117", features = ["derive"], optional = true }
+
+[dev-dependencies]
+entity = { version = "=0.2.5", path = "../..", features = ["global", "macros"] }
+typetag = { version = "0.1.6" }

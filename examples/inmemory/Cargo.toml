@@ -5,4 +5,5 @@ publish = false
 edition = "2018"
 
 [dependencies]
-entity = { version = "0.2.0", path = "../../entity", features = ["global", "inmemory_db", "macros"] }
+entity = { version = "=0.2.5", path = "../..", features = ["global", "macros"] }
+entity-inmemory = { version = "=0.2.5", path = "../../integrations/entity-inmemory" }

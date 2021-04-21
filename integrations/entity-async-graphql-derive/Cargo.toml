@@ -1,0 +1,32 @@
+[package]
+name = "entity-async-graphql-derive"
+version = "0.2.5"
+authors = ["Chip Senkbeil <chip@senkbeil.org>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+entity_macros_data = { version = "=0.2.5", path = "../../macros/entity_macros_data" }
+
+darling = "0.12.0"
+heck = "0.3.1"
+proc-macro2 = "1.0.24"
+proc-macro-crate = "0.1.5"
+quote = "1.0.7"
+syn = { version = "1.0.53", features = ["full"] }
+
+[dev-dependencies]
+entity = { version = "=0.2.5", path = "../..", features = ["global", "macros"] }
+entity-inmemory = { version = "=0.2.5", path = "../entity-inmemory" }
+entity-async-graphql = { version = "=0.2.5", path = "../entity-async-graphql" }
+
+async-graphql = "2.7.4"
+derivative = "2.1.1"
+futures = "0.3.9"
+rustversion = "1.0.4"
+serde = { version = "1.0.117", features = ["derive"] }
+serde_json = "1.0.61"
+trybuild = "1.0.35"
+typetag = "0.1.6"

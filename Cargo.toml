@@ -1,7 +1,46 @@
+[package]
+name = "entity"
+description = "Library that provides entity-like constructs"
+categories = ["data-structures"]
+version = "0.2.5"
+authors = ["Chip Senkbeil <chip@senkbeil.org>"]
+edition = "2018"
+homepage = "https://github.com/chipsenkbeil/entity-rs"
+repository = "https://github.com/chipsenkbeil/entity-rs"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[features]
+full = ["global", "macros", "serde-1"]
+global = ["lazy_static"]
+macros = ["entity_macros"]
+serde-1 = ["serde", "serde/rc", "typetag"]
+
+[dependencies]
+derivative = "2.1.1"
+derive_more = { version = "0.99.11", default-features = false, features = ["as_ref", "as_mut", "constructor", "deref", "deref_mut", "display", "error", "from", "into", "into_iterator", "try_into"] }
+doc-comment = "0.3.3"
+dyn-clone = "1.0.3"
+paste = "1.0.4"
+strum = { version = "0.19", features = ["derive"] }
+entity_noop_macros = { version = "=0.2.5", path = "macros/entity_noop_macros" }
+
+lazy_static = { version = "1.4.0", optional = true }
+serde = { version = "1.0.117", features = ["derive"], optional = true }
+typetag = { version = "0.1.6", optional = true }
+entity_macros = { version = "=0.2.5", path = "macros/entity_macros", optional = true }
+
+[dev-dependencies]
+futures = "0.3.9"
+
 [workspace]
 members = [
-    "entity",
-    "entity_macros",
-    "entity_noop_macros",
+    "macros/entity_macros",
+    "macros/entity_macros_data",
+    "macros/entity_noop_macros",
+    "integrations/entity-async-graphql",
+    "integrations/entity-async-graphql-derive",
+    "integrations/entity-inmemory",
+    "integrations/entity-sled",
 ]
 exclude = ["examples"]
