@@ -9,7 +9,7 @@ derive = ["entity-async-graphql-derive"]
 
 [[example]]
 name = "user"
-required-features = ["derive", "entity/macros"]
+required-features = ["derive", "entity/global", "entity/macros"]
 
 [dependencies]
 entity = { version = "=0.2.5", path = "../.." }

@@ -1,35 +1,34 @@
 use proc_macro2::{Span, TokenStream};
-use proc_macro_crate::crate_name;
+use proc_macro_crate::{crate_name, FoundCrate};
 use syn::{
     parse_macro_input, parse_quote, DeriveInput, GenericArgument, Ident, Path, PathArguments, Type,
 };
 
 /// Produces a token stream in the form of `::entity` or renamed version
 pub fn entity_crate() -> darling::Result<Path> {
-    crate_name("entity")
-        .map(|name| {
-            let crate_ident = Ident::new(&name, Span::mixed_site());
-            parse_quote!(::#crate_ident)
-        })
-        .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
+    get_crate("entity")
 }
 
 /// Produces a token stream in the form of `::entity_async_graphql` or renamed version
 pub fn entity_async_graphql_crate() -> darling::Result<Path> {
-    crate_name("entity-async-graphql")
-        .map(|name| {
-            let crate_ident = Ident::new(&name, Span::mixed_site());
-            parse_quote!(::#crate_ident)
-        })
-        .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
+    get_crate("entity-async-graphql")
 }
 
 /// Produces a token stream in the form of `::async_graphql` or renamed version
 pub fn async_graphql_crate() -> darling::Result<Path> {
-    crate_name("async-graphql")
-        .map(|name| {
-            let crate_ident = Ident::new(&name, Span::mixed_site());
-            parse_quote!(::#crate_ident)
+    get_crate("async-graphql")
+}
+
+fn get_crate(cname: &str) -> darling::Result<Path> {
+    crate_name(cname)
+        .map(|found_crate| match found_crate {
+            FoundCrate::Itself => {
+                parse_quote!(crate)
+            }
+            FoundCrate::Name(name) => {
+                let crate_ident = Ident::new(&name, Span::mixed_site());
+                parse_quote!(::#crate_ident)
+            }
         })
         .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
 }

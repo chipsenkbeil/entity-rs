@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use proc_macro_crate::crate_name;
+use proc_macro_crate::{crate_name, FoundCrate};
 use syn::{
     parse_macro_input, parse_quote, DeriveInput, Expr, GenericArgument, Ident, Macro, Path,
     PathArguments, PathSegment, Type,
@@ -7,12 +7,7 @@ use syn::{
 
 /// Produces a token stream in the form of `::entity` or renamed version
 pub fn entity_crate() -> darling::Result<Path> {
-    crate_name("entity")
-        .map(|name| {
-            let crate_ident = Ident::new(&name, Span::mixed_site());
-            parse_quote!(::#crate_ident)
-        })
-        .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
+    get_crate("entity")
 }
 
 /// Produces a token stream in the form of `::serde` or renamed version
@@ -25,6 +20,20 @@ pub fn serde_crate() -> darling::Result<Path> {
 pub fn typetag_crate() -> darling::Result<Path> {
     let root = entity_crate()?;
     Ok(parse_quote!(#root::vendor::macros::typetag))
+}
+
+fn get_crate(cname: &str) -> darling::Result<Path> {
+    crate_name(cname)
+        .map(|found_crate| match found_crate {
+            FoundCrate::Itself => {
+                parse_quote!(crate)
+            }
+            FoundCrate::Name(name) => {
+                let crate_ident = Ident::new(&name, Span::mixed_site());
+                parse_quote!(::#crate_ident)
+            }
+        })
+        .map_err(|msg| darling::Error::custom(msg).with_span(&Span::mixed_site()))
 }
 
 /// Main helper called within each derive macro

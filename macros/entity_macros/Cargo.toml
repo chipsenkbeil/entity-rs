@@ -17,7 +17,7 @@ proc-macro = true
 darling = "0.12.0"
 heck = "0.3.1"
 proc-macro2 = "1.0.24"
-proc-macro-crate = "0.1.5"
+proc-macro-crate = "1.0.0"
 quote = "1.0.7"
 syn = { version = "1.0.53", features = ["full"] }
 entity_macros_data = { version = "=0.2.5", path = "../entity_macros_data" }
