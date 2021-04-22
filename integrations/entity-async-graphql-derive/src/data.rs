@@ -27,8 +27,6 @@ impl GqlEntFieldAttrMap {
 
 impl From<GqlEnt> for GqlEntFieldAttrMap {
     fn from(gql_ent: GqlEnt) -> Self {
-        // Build our map, collapsing field & edge attributes as a struct field
-        // can only be one but not both
         Self(
             gql_ent
                 .data
@@ -36,13 +34,21 @@ impl From<GqlEnt> for GqlEntFieldAttrMap {
                 .unwrap()
                 .fields
                 .into_iter()
-                .filter_map(|f| {
-                    f.ident.zip(
-                        f.field
-                            .and_then(Override::explicit)
-                            .and_then(|f| f.graphql)
-                            .or(f.edge.and_then(Override::explicit).and_then(|e| e.graphql)),
-                    )
+                .filter_map(|mut f| {
+                    // Build our map, collapsing field & edge attributes as a
+                    // struct field can only be one but not both
+                    let field = f
+                        .field
+                        .take()
+                        .and_then(Override::explicit)
+                        .and_then(|f| f.graphql);
+                    let edge = f
+                        .edge
+                        .take()
+                        .and_then(Override::explicit)
+                        .and_then(|e| e.graphql);
+
+                    f.ident.zip(field.or(edge))
                 })
                 .collect(),
         )
