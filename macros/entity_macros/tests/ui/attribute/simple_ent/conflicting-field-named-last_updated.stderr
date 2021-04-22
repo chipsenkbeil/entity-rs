@@ -20,17 +20,6 @@ error[E0124]: field `last_updated` is already declared
   |
   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0201]: duplicate definitions with name `last_updated`:
- --> $DIR/conflicting-field-named-last_updated.rs:3:1
-  |
-3 | #[simple_ent]
-  | ^^^^^^^^^^^^^
-  | |
-  | previous definition of `last_updated` here
-  | duplicate definition
-  |
-  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
-
 error[E0201]: duplicate definitions with name `where_last_updated`:
  --> $DIR/conflicting-field-named-last_updated.rs:3:1
   |
@@ -38,6 +27,17 @@ error[E0201]: duplicate definitions with name `where_last_updated`:
   | ^^^^^^^^^^^^^
   | |
   | previous definition of `where_last_updated` here
+  | duplicate definition
+  |
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0201]: duplicate definitions with name `last_updated`:
+ --> $DIR/conflicting-field-named-last_updated.rs:3:1
+  |
+3 | #[simple_ent]
+  | ^^^^^^^^^^^^^
+  | |
+  | previous definition of `last_updated` here
   | duplicate definition
   |
   = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)
