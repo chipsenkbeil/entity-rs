@@ -57,7 +57,14 @@ jobs:
       - name: Install cargo-hack
         run: cargo install cargo-hack
       - uses: Swatinem/rust-cache@v1
-      - run: cargo hack build --verbose --workspace --examples
+      - name: Build all examples
+        run: cargo hack build --verbose --workspace --examples
+      - name: Build special example for entity-async-graphql that requires features
+        run: |
+          cargo build \
+            --manifest-path integrations/entity-async-graphql/Cargo.toml \
+            --example user \
+            --features="derive entity/global entity/macros"
 
 # See https://github.com/chipsenkbeil/entity-rs/issues/38
 #   minimal-versions:
