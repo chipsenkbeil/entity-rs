@@ -31,15 +31,15 @@ transform your data to be compatible with supported databases and queries.
 
 ```toml
 [dependencies]
-entity = "0.2"
+entity = "0.3.0"
 ```
 
-For most use cases, you can import all features using the `full` flag, or for
-a more tailored experience can import individual features:
+For most use cases, you will want to also import the macros, which will bring
+in the `entity_macros` crate:
 
 ```toml
 [dependencies]
-entity = { version = "0.2", features = ["global", "macros", "inmemory_db"] }
+entity = { version = "0.3.0", features = ["macros"] }
 ```
 
 ### Example of defining data
@@ -61,16 +61,10 @@ struct User {
 
 Entity provides a few feature flags:
 
-* **`full`** - Enables all features.
 * **`global`** - Enables use of a database stored as a global variable,
   providing shortcuts in creating and retrieving ents.
 * **`macros`** - Enables macros for deriving ents and exposing a cleaner
   declarative API for ents. (Imports `entity_macros` directly)
-* **`inmemory_db`** - Enables the in-memory database for use with ent objects.
-  This does not bring in `serde-1` by default, but including that feature will
-  also support persisting the database to the filesystem.
-* **`sled_db`** - Enables the sled database for use with ent objects. Because
-  of the nature of sled, this will also pull in `serde-1`.
 * **`serde-1`** - Provides serde serialization module and associated functionality for ents
   through the use of [typetag](https://github.com/dtolnay/typetag). This will
   require that all ents implement [Serialize](https://docs.serde.rs/serde/trait.Serialize.html)
