@@ -1,9 +1,0 @@
-[package]
-name = "inmemory-example"
-version = "0.0.0"
-publish = false
-edition = "2018"
-
-[dependencies]
-entity = { version = "=0.2.5", path = "../..", features = ["global", "macros"] }
-entity-inmemory = { version = "=0.2.5", path = "../../integrations/entity-inmemory" }

@@ -43,4 +43,3 @@ members = [
     "integrations/entity-inmemory",
     "integrations/entity-sled",
 ]
-exclude = ["examples"]

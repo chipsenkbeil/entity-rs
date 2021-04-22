@@ -39,8 +39,10 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - name: Check Cargo availability
         run: cargo --version
-      - run: cargo hack test --verbose --workspace
-      - run: cargo hack test --verbose -p entity --all-features
+      - name: Run tests with default features
+        run: cargo hack test --verbose --workspace
+      - name: Run tests with all features
+        run: cargo hack test --verbose --workspace --all-features
 
   examples:
     name: Examples
@@ -55,9 +57,7 @@ jobs:
       - name: Install cargo-hack
         run: cargo install cargo-hack
       - uses: Swatinem/rust-cache@v1
-      - run: cargo check --manifest-path examples/inmemory/Cargo.toml
-      - run: cargo check --manifest-path examples/sled/Cargo.toml
-      - run: cargo check --manifest-path examples/async-graphql/Cargo.toml
+      - run: cargo hack build --verbose --workspace --examples
 
 # See https://github.com/chipsenkbeil/entity-rs/issues/38
 #   minimal-versions:
