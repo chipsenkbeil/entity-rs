@@ -18,7 +18,7 @@ pub fn do_derive_ent_loader(root: Path, ent: StructEnt) -> TokenStream {
                 let database = #root::WeakDatabaseRc::upgrade(&db)
                     .ok_or(#root::DatabaseError::Disconnected)?;
                 let maybe_ent = #root::Database::get(
-                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                    ::std::convert::AsRef::<dyn #root::Database>::as_ref(
                         ::std::convert::AsRef::<
                             ::std::boxed::Box<dyn #root::Database>
                         >::as_ref(&database),

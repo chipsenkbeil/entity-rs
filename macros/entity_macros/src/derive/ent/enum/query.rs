@@ -129,15 +129,25 @@ pub fn do_derive_ent_query(root: Path, ent: EnumEnt) -> TokenStream {
         impl #impl_generics #root::EntQuery for #query_name #ty_generics #where_clause {
             type Output = ::std::vec::Vec<#name #ty_generics>;
 
-            fn execute<D: #root::Database>(
+            fn execute_with_db(
                 self,
-                database: &D,
+                db: #root::WeakDatabaseRc,
             ) -> #root::DatabaseResult<Self::Output> {
+                let database = #root::WeakDatabaseRc::upgrade(&db)
+                    .ok_or(#root::DatabaseError::Disconnected)?;
+
                 ::std::result::Result::Ok(
                     ::std::iter::Iterator::collect(
                         ::std::iter::Iterator::filter_map(
                             ::std::iter::IntoIterator::into_iter(
-                                database.find_all(self.0)?
+                                #root::Database::find_all(
+                                    ::std::convert::AsRef::<dyn #root::Database>::as_ref(
+                                        ::std::convert::AsRef::<
+                                            ::std::boxed::Box<dyn #root::Database>
+                                        >::as_ref(&database),
+                                    ),
+                                    self.0,
+                                )?
                             ),
                             <#name #ty_generics as #root::EntWrapper>::wrap_ent,
                         )

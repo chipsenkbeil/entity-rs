@@ -8,6 +8,12 @@ use std::sync::{Arc, Weak};
 /// Represents a thread-safe reference to a boxed database trait object
 pub type DatabaseRc = Arc<Box<dyn Database>>;
 
+/// Converts a typed database into a `DatabaseRc`
+#[inline]
+pub fn db_to_rc<D: Database>(db: D) -> DatabaseRc {
+    Arc::new(Box::new(db))
+}
+
 /// Represents a weak thread-safe reference to a boxed database trait object
 pub type WeakDatabaseRc = Weak<Box<dyn Database>>;
 

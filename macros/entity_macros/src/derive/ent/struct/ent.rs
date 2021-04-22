@@ -197,7 +197,7 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
                             ::std::iter::Iterator::filter_map(
                                 ::std::iter::IntoIterator::into_iter(e.to_ids()),
                                 |id| #root::Database::get(
-                                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                                    ::std::convert::AsRef::<dyn #root::Database>::as_ref(
                                         ::std::convert::AsRef::<
                                             ::std::boxed::Box<dyn #root::Database>
                                         >::as_ref(&database),
@@ -219,7 +219,7 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
                 let id = self.#ident_id;
 
                 match #root::Database::get(
-                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                    ::std::convert::AsRef::<dyn #root::Database>::as_ref(
                         ::std::convert::AsRef::<
                             ::std::boxed::Box<dyn #root::Database>
                         >::as_ref(&database),
@@ -250,7 +250,7 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
                 match #root::Database::insert(
-                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                    ::std::convert::AsRef::<dyn #root::Database>::as_ref(
                         ::std::convert::AsRef::<
                             ::std::boxed::Box<dyn #root::Database>
                         >::as_ref(&database),
@@ -274,7 +274,7 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
                     &self.#ident_database
                 ).ok_or(#root::DatabaseError::Disconnected)?;
                 #root::Database::remove(
-                    ::std::convert::AsRef::<#root::Database>::as_ref(
+                    ::std::convert::AsRef::<dyn #root::Database>::as_ref(
                         ::std::convert::AsRef::<
                             ::std::boxed::Box<dyn #root::Database>
                         >::as_ref(&database),

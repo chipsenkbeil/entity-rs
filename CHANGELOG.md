@@ -19,6 +19,9 @@
       async-graphql wrappers for ents
     - `entity_inmemory`: contains a database implementation for inmemory usage
     - `entity_sled`: contains a database implementation using `sled`
+- `EntQuery` trait now has `execute` method use the global database and
+  exposes `execute_with_db` to take in a `WeakDatabaseRc` rather than a
+  generic database in order to be more consistent with other APIs
 
 ### Added
 

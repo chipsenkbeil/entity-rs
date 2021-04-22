@@ -18,7 +18,7 @@ fn produces_method_to_filter_by_id() {
         last_updated: u64,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt {
@@ -40,7 +40,7 @@ fn produces_method_to_filter_by_id() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_id(P::equals(2))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -66,7 +66,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
         last_updated: u64,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt {
@@ -97,7 +97,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_created(P::less_than(200))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -123,7 +123,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
         last_updated: u64,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt {
@@ -166,7 +166,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_last_updated(P::less_than(ent2_last_updated))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -195,7 +195,7 @@ fn produces_method_to_filter_by_field() {
         value: u32,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt {
@@ -219,7 +219,7 @@ fn produces_method_to_filter_by_field() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_value(P::equals(100))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -251,7 +251,7 @@ fn supports_generic_fields() {
         value: T,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt {
@@ -275,7 +275,7 @@ fn supports_generic_fields() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_value(P::equals(200))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -304,7 +304,7 @@ fn produces_method_to_filter_by_ents_connected_by_edge() {
         other: Id,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt {
@@ -330,7 +330,7 @@ fn produces_method_to_filter_by_ents_connected_by_edge() {
     let ent2: TestEnt = database.get_typed(2).unwrap().unwrap();
 
     let results: Vec<Id> = TestEntQuery::query_from_other(&ent2)
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -377,7 +377,7 @@ fn produces_method_to_yield_edge_ents() {
         other: Id,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt1 {
@@ -401,7 +401,7 @@ fn produces_method_to_yield_edge_ents() {
 
     let results: Vec<Id> = TestEnt1Query::default()
         .query_other()
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -431,7 +431,7 @@ fn supports_providing_an_explicit_query_type_on_edges() {
         other: Id,
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt {
@@ -456,7 +456,7 @@ fn supports_providing_an_explicit_query_type_on_edges() {
     let results: Vec<Id> = TestEntQuery::default()
         .where_id(P::equals(1))
         .query_other()
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(|boxed_ent| boxed_ent.id())
@@ -517,7 +517,7 @@ mod type_path {
 
     #[test]
     fn supports_providing_an_explicit_query_type_path_on_edges() {
-        let database = InmemoryDatabase::default();
+        let database = db_to_rc(InmemoryDatabase::default());
 
         database
             .insert(Box::from(TestEnt1 {
@@ -541,7 +541,7 @@ mod type_path {
 
         let results: Vec<Id> = QueryForTestEnt1::default()
             .query_other()
-            .execute(&database)
+            .execute_with_db(DatabaseRc::downgrade(&database))
             .expect("Failed to query for ents")
             .iter()
             .map(Ent::id)

@@ -69,7 +69,7 @@ fn produces_query_method_on_ent() {
 
 #[test]
 fn produces_method_to_filter_by_id() {
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt1 {
@@ -97,7 +97,7 @@ fn produces_method_to_filter_by_id() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_id(P::equals(2))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -108,7 +108,7 @@ fn produces_method_to_filter_by_id() {
 
 #[test]
 fn produces_methods_to_filter_by_created_timestamp() {
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt1 {
@@ -136,7 +136,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_created(P::less_than(200))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -147,7 +147,7 @@ fn produces_methods_to_filter_by_created_timestamp() {
 
 #[test]
 fn produces_methods_to_filter_by_last_updated_timestamp() {
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt1 {
@@ -183,7 +183,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_last_updated(P::less_than(ent2_last_updated))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -194,7 +194,7 @@ fn produces_methods_to_filter_by_last_updated_timestamp() {
 
 #[test]
 fn produces_method_to_filter_by_field() {
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt1 {
@@ -222,7 +222,7 @@ fn produces_method_to_filter_by_field() {
 
     let results: Vec<Id> = TestEntQuery::default()
         .where_field("field1", P::equals(1000).into())
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -262,7 +262,7 @@ fn supports_generic_fields() {
         Choice(GenericTestEnt<T>),
     }
 
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(GenericTestEnt {
@@ -286,7 +286,7 @@ fn supports_generic_fields() {
 
     let results: Vec<Id> = GenericTestEntEnumQuery::<usize>::default()
         .where_field("value", P::equals(200).into())
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -297,7 +297,7 @@ fn supports_generic_fields() {
 
 #[test]
 fn supports_nested_enum_queries() {
-    let database = InmemoryDatabase::default();
+    let database = db_to_rc(InmemoryDatabase::default());
 
     database
         .insert(Box::from(TestEnt1 {
@@ -332,7 +332,7 @@ fn supports_nested_enum_queries() {
 
     let results: Vec<Id> = NestedTestEntQuery::default()
         .where_id(P::equals(1))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)
@@ -342,7 +342,7 @@ fn supports_nested_enum_queries() {
 
     let results: Vec<Id> = NestedTestEntQuery::default()
         .where_id(P::equals(2))
-        .execute(&database)
+        .execute_with_db(DatabaseRc::downgrade(&database))
         .expect("Failed to query for ents")
         .iter()
         .map(Ent::id)

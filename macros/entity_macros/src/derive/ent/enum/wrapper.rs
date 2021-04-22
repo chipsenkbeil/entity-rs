@@ -21,7 +21,7 @@ pub fn do_derive_ent_wrapper(root: Path, ent: EnumEnt) -> TokenStream {
             if v.wrap.is_some() {
                 quote! {
                     if <#type_t as #root::EntWrapper>::can_wrap_ent(
-                        ::std::convert::AsRef::<#root::Ent>::as_ref(
+                        ::std::convert::AsRef::<dyn #root::Ent>::as_ref(
                             &ent
                         )
                     ) {

@@ -1,4 +1,4 @@
-use crate::{Database, DatabaseResult, Ent, Id};
+use crate::{DatabaseError, DatabaseResult, Ent, Id, WeakDatabaseRc};
 use derive_more::{Constructor, IntoIterator};
 use std::{fmt::Debug, iter::Extend};
 
@@ -9,12 +9,18 @@ mod predicate;
 pub use predicate::*;
 
 /// Represents a query interface for some ent
-pub trait EntQuery {
+pub trait EntQuery: Sized {
     type Output;
 
     /// Executes the query against the provided database, returning the query's
     /// output as the result
-    fn execute<D: Database>(self, database: &D) -> DatabaseResult<Self::Output>;
+    fn execute_with_db(self, db: WeakDatabaseRc) -> DatabaseResult<Self::Output>;
+
+    /// Executes the query against the global database, returning the query's
+    /// output as the result
+    fn execute(self) -> DatabaseResult<Self::Output> {
+        Self::execute_with_db(self, crate::global::db())
+    }
 }
 
 /// Represents a generic query to find ents within some database
@@ -25,7 +31,8 @@ impl EntQuery for Query {
     type Output = Vec<Box<dyn Ent>>;
 
     #[inline]
-    fn execute<D: Database>(self, database: &D) -> DatabaseResult<Self::Output> {
+    fn execute_with_db(self, db: WeakDatabaseRc) -> DatabaseResult<Self::Output> {
+        let database = WeakDatabaseRc::upgrade(&db).ok_or(DatabaseError::Disconnected)?;
         database.find_all(self)
     }
 }

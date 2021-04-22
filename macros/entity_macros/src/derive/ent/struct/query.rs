@@ -212,12 +212,19 @@ pub fn do_derive_ent_query(root: Path, ent: StructEnt) -> darling::Result<TokenS
         impl #impl_generics #root::EntQuery for #query_name #ty_generics #where_clause {
             type Output = ::std::vec::Vec<#name #ty_generics>;
 
-            fn execute<D: #root::Database>(
+            fn execute_with_db(
                 self,
-                database: &D,
+                db: #root::WeakDatabaseRc,
             ) -> #root::DatabaseResult<Self::Output> {
+                let database = #root::WeakDatabaseRc::upgrade(&db)
+                    .ok_or(#root::DatabaseError::Disconnected)?;
+
                 #root::DatabaseExt::find_all_typed::<#name #ty_generics>(
-                    database,
+                    ::std::convert::AsRef::<dyn #root::Database>::as_ref(
+                        ::std::convert::AsRef::<
+                            ::std::boxed::Box<dyn #root::Database>
+                        >::as_ref(&database),
+                    ),
                     self.0,
                 )
             }
