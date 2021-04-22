@@ -1,6 +1,6 @@
 [package]
 name = "entity-async-graphql"
-version = "0.2.5"
+version = "0.3.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
 
@@ -12,16 +12,16 @@ name = "user"
 required-features = ["derive", "entity/global", "entity/macros"]
 
 [dependencies]
-entity = { version = "=0.2.5", path = "../.." }
-entity-async-graphql-derive = { version = "=0.2.5", path = "../entity-async-graphql-derive", optional = true }
+entity = { version = "=0.3.0", path = "../.." }
+entity-async-graphql-derive = { version = "=0.3.0", path = "../entity-async-graphql-derive", optional = true }
 
 async-graphql = { version = "2.7.4" }
 derive_more = { version = "0.99.11", default-features = false, features = ["from", "into"] }
 paste = "1.0.4"
 
 [dev-dependencies]
-entity-inmemory = { version = "=0.2.5", path = "../entity-inmemory" }
-entity-sled = { version = "=0.2.5", path = "../entity-sled" }
+entity-inmemory = { version = "=0.3.0", path = "../entity-inmemory" }
+entity-sled = { version = "=0.3.0", path = "../entity-sled" }
 
 futures = "0.3.9"
 serde = { version = "1.0.117", features = ["derive"] }
