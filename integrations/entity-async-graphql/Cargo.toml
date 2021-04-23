@@ -1,8 +1,13 @@
 [package]
 name = "entity-async-graphql"
+descriptions = "Support to integration async-graphql into entity crate."
 version = "0.3.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
+homepage = "https://github.com/chipsenkbeil/entity-rs"
+repository = "https://github.com/chipsenkbeil/entity-rs"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
 
 [features]
 macros = ["entity-async-graphql-macros"]

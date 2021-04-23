@@ -26,8 +26,9 @@
 ### Added
 
 - This `CHANGELOG.md` file to keep track of future changes
-- A `release.toml` using `cargo-release` to keep track of all version changes
-  and update multiple `Cargo.toml` as well as other files like this changelog
+- `scripts/release.sh` to keep track of all version changes and update multiple
+  `Cargo.toml` as well as other files like this changelog
+- Dedicated `README.md` files for each of the different crates
 
 ### Fixed
 
