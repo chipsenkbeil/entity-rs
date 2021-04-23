@@ -1,5 +1,5 @@
 use entity::{Database, DatabaseExt, DatabaseRc, Ent, EntTypedEdges, Id, WeakDatabaseRc};
-use entity_async_graphql_derive::{EntFilter, EntObject};
+use entity_async_graphql_macros::{EntFilter, EntObject};
 use entity_inmemory::InmemoryDatabase;
 
 const TEST_ENT_TYPE: &str = concat!(module_path!(), "::TestEnt");

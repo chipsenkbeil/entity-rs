@@ -14,7 +14,7 @@ use ::async_graphql;
 use ::std::boxed::Box;
 
 #[::entity::simple_ent]
-#[derive(::entity_async_graphql_derive::EntObject, ::entity_async_graphql_derive::EntFilter)]
+#[derive(::entity_async_graphql_macros::EntObject, ::entity_async_graphql_macros::EntFilter)]
 struct Person {
     name: ::std::string::String,
     age: ::std::primitive::u8,
@@ -24,7 +24,7 @@ struct Person {
 }
 
 #[::entity::simple_ent]
-#[derive(::entity_async_graphql_derive::EntObject, ::entity_async_graphql_derive::EntFilter)]
+#[derive(::entity_async_graphql_macros::EntObject, ::entity_async_graphql_macros::EntFilter)]
 struct Address {
     street: ::std::string::String,
     city: ::std::string::String,

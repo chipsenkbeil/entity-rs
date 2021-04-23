@@ -1,4 +1,4 @@
-use entity_async_graphql_derive::EntFilter;
+use entity_async_graphql_macros::EntFilter;
 
 #[derive(EntFilter)]
 enum TestEnt {

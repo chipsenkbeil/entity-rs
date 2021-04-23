@@ -15,7 +15,7 @@
       excluded
     - `entity_async_graphql`: contains the core traits and data structures to
       interface with `async-graphql`
-    - `entity_async_graphql_derive`: contains the macros used to generate the
+    - `entity_async_graphql_macros`: contains the macros used to generate the
       async-graphql wrappers for ents
     - `entity_inmemory`: contains a database implementation for inmemory usage
     - `entity_sled`: contains a database implementation using `sled`

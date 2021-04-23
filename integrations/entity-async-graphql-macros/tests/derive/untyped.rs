@@ -1,5 +1,5 @@
 use entity::{Database, DatabaseExt, DatabaseRc, Ent, EntTypedEdges, Id, WeakDatabaseRc};
-use entity_async_graphql_derive::{EntFilter, EntObject};
+use entity_async_graphql_macros::{EntFilter, EntObject};
 use entity_inmemory::InmemoryDatabase;
 
 // NOTE: We need EntTypedEdges for now, but if the macro is updated to not

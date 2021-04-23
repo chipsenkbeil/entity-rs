@@ -5,7 +5,7 @@ pub use ent::*;
 pub use filter::*;
 
 #[cfg(feature = "derive")]
-pub use entity_async_graphql_derive::*;
+pub use entity_async_graphql_macros::*;
 
 #[cfg(test)]
 mod tests {

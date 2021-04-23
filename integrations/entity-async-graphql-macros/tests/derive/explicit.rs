@@ -4,7 +4,7 @@ use entity_inmemory::InmemoryDatabase;
 mod ent1 {
     use entity::{Ent, EntTypedEdges, Id, WeakDatabaseRc};
     use entity_async_graphql::GqlPredicate_Value;
-    use entity_async_graphql_derive::{EntFilter, EntObject};
+    use entity_async_graphql_macros::{EntFilter, EntObject};
 
     // NOTE: We need EntTypedEdges for now, but if the macro is updated to not
     //       require it then we can remove that constraint
@@ -48,7 +48,7 @@ mod ent1 {
 mod ent2 {
     use entity::{Ent, EntTypedEdges, Id, WeakDatabaseRc};
     use entity_async_graphql::GqlPredicate_Value;
-    use entity_async_graphql_derive::{EntFilter, EntObject};
+    use entity_async_graphql_macros::{EntFilter, EntObject};
 
     // NOTE: We need EntTypedEdges for now, but if the macro is updated to not
     //       require it then we can remove that constraint

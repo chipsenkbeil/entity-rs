@@ -1,4 +1,4 @@
-use entity_async_graphql_derive::EntObject;
+use entity_async_graphql_macros::EntObject;
 
 #[derive(EntObject)]
 union TestEnt {
