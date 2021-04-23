@@ -38,12 +38,13 @@ sedi () {
     rm ".file.tmp.out"
   fi
 
-  if [ "$DRY_RUN" -eq 0 ]; then
-    sed --version >/dev/null 2>&1 && sed -i -- "$@" || sed -i "" "$@"
-
   # Special situation to use sed to return some value rather than modify a file
-  elif [ "$1" = "{GET}" ]; then
+  if [ "$1" = "{GET}" ]; then
     sed "${@:2}"
+
+  # Otherwise, if not using a dry run, we want to perform the operation
+  elif [ "$DRY_RUN" -eq 0 ]; then
+    sed --version >/dev/null 2>&1 && sed -i -- "$@" || sed -i "" "$@"
   fi
 }
 
