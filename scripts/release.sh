@@ -27,6 +27,7 @@ SKIP_GIT_TAG=0
 SKIP_CARGO_TOML_UPDATE=0
 SKIP_CARGO_PUBLISH=0
 SKIP_GIT_PUSH=0
+SKIP_SAFETY_PROMPT=0
 
 # Supports OSX, Ubuntu, Freebsd, Cygwin, CentOS, Red Hat Enterprise, & Msys
 # https://izziswift.com/sed-i-command-for-in-place-editing-to-work-with-both-gnu-sed-and-bsd-osx/
@@ -46,6 +47,16 @@ sedi () {
   fi
 }
 
+prompt_to_continue () {
+  while true; do
+    read -p "$* [y/n]: " yn
+    case $yn in
+      [Yy]*) return 0;;
+      [Nn]*) echo "Aborted" ; exit 1;;
+    esac
+  done
+}
+
 print_msg () {
   if [ "$QUIET" -eq 0 ]; then
     echo "$@"
@@ -63,7 +74,7 @@ function usage {
   echo "   -t VERSION  Specify target version to use (default = $TARGET_VERSION)"
   echo '   -n VERSION  Specify next version to update all Cargo.toml (does nothing if not provided)'
   echo '   -s STEP     Skips the specified step and can be supplied multiple times'
-  echo '               Choices are changelog, git-tag, git-push, cargo-toml-update, cargo-publish'
+  echo '               Choices are changelog, git-tag, git-push, cargo-toml-update, cargo-publish, safety-prompt'
   echo "   -b BRANCH   Specify git branch to push to (default = $GIT_BRANCH)"
   echo '   -f          Force release, rather than performing dry run'
   echo '   -h          Print this help information'
@@ -87,6 +98,7 @@ while getopts ':vfhqt:n:s:b:' arg; do
         git-push) SKIP_GIT_PUSH=1;;
         cargo-toml-update) SKIP_CARGO_TOML_UPDATE=1;;
         cargo-publish) SKIP_CARGO_PUBLISH=1;;
+        safety-prompt) SKIP_SAFETY_PROMPT=1;;
         *)
           echo "Unknown step to skip: ${OPTARG}"
           echo
@@ -111,6 +123,29 @@ while getopts ':vfhqt:n:s:b:' arg; do
 done
 
 shift "$OPTIND"
+
+if [ "$SKIP_SAFETY_PROMPT" -eq 0 ]; then
+  echo '!!! SAFETY PROMPT !!!'
+  echo
+  [ "$DRY_RUN" -eq 0 ] \
+    && echo "This is NOT a dry run!" \
+    || echo "This is a dry run..."
+  echo ""
+  echo "Target Version: $TARGET_VERSION"
+  echo "Next Version: $NEXT_VERSION"
+  echo "Git Branch: $GIT_BRANCH"
+  echo
+  echo "Skip Changelog: $SKIP_CHANGELOG"
+  echo "Skip Cargo Toml Update: $SKIP_CARGO_TOML_UPDATE"
+  echo "Skip Cargo Publish: $SKIP_CARGO_PUBLISH"
+  echo "Skip Git Tag: $SKIP_GIT_TAG"
+  echo "Skip Git Push: $SKIP_GIT_PUSH"
+  echo
+  echo "Dry Run: $DRY_RUN"
+  echo "Verbose: $VERBOSE"
+  echo "Quiet: $QUIET"
+  prompt_to_continue "Really continue?"
+fi
 
 # Update the changelog with our new version information
 # 1. Replace unreleased with version being published
