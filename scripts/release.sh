@@ -18,6 +18,7 @@ CRATES=(
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 CHANGELOG="$DIR/../CHANGELOG.md"
 ROOT_CARGO_TOML="$DIR/../Cargo.toml"
+PREFIX=entity
 DRY_RUN=1
 VERBOSE=0
 QUIET=0
@@ -71,8 +72,8 @@ NEXT_VERSION=
 
 function usage {
   echo "Usage: $(basename $0) [-vfhq] [-s STEP] [-w SECONDS] [-b BRANCH] [-t TARGET_VERSION] [-n NEXT_VERSION]" 2>&1
-  echo 'Release the current version of entity crates.'
-  echo ''
+  echo "Release the current version of $PREFIX crates."
+  echo
   echo "   -t VERSION  Specify target version to use (default = $TARGET_VERSION)"
   echo '   -n VERSION  Specify next version to update all Cargo.toml (does nothing if not provided)'
   echo '   -s STEP     Skips the specified step and can be supplied multiple times'
@@ -134,7 +135,7 @@ if [ "$SKIP_SAFETY_PROMPT" -eq 0 ]; then
   [ "$DRY_RUN" -eq 0 ] \
     && echo "This is NOT a dry run!" \
     || echo "This is a dry run..."
-  echo ""
+  echo
   echo "Target Version: $TARGET_VERSION"
   echo "Next Version: $NEXT_VERSION"
   echo "Git Branch: $GIT_BRANCH"
@@ -203,7 +204,7 @@ else
   print_msg 'Skipping Cargo crate publishing!'
 fi
 
-# Update all Cargo.toml with version change for entity-related crates
+# Update all Cargo.toml with version change for crates
 # 1. Replace crate's version with new version
 # 2. Replace dependency crates' versions with new version
 if [ "$SKIP_CARGO_TOML_UPDATE" -eq 1 ]; then
@@ -213,7 +214,7 @@ elif [ -n "$NEXT_VERSION" ]; then
   for cargo_toml in "${CARGO_TOML_FILES[@]}"; do
     print_msg "[$TARGET_VERSION -> $NEXT_VERSION]: $cargo_toml"
     sedi "1,/^version/ s/^version = \".*\"/version = \"$NEXT_VERSION\"/g" "$cargo_toml"
-    sedi "s/^\(entity.*version = \"\)[^\"]*\(\".*\)$/\1=$NEXT_VERSION\2/g" "$cargo_toml"
+    sedi "s/^\($PREFIX.*version = \"\)[^\"]*\(\".*\)$/\1=$NEXT_VERSION\2/g" "$cargo_toml"
   done
 
   # If not dry-run, we will add the Cargo.toml updates as a new commit
