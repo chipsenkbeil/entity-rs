@@ -51,7 +51,7 @@ NEXT_VERSION=
 
 function usage {
   echo "Usage: $(basename $0) [-vfh] [-s STEP] [-b BRANCH] [-t TARGET_VERSION] [-n NEXT_VERSION]" 2>&1
-  echo 'Release the current version of crates.'
+  echo 'Release the current version of entity crates.'
   echo ''
   echo "   -t VERSION  Specify target version to use (default = $TARGET_VERSION)"
   echo '   -n VERSION  Specify next version to update all Cargo.toml (does nothing if not provided)'
