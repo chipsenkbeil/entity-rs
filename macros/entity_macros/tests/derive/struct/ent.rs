@@ -171,6 +171,9 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
 
         #[ent(field)]
         e: CustomValue,
+
+        #[ent(field(computed = "123"))]
+        f: Option<u32>,
     }
 
     let ent = TestEnt {
@@ -183,6 +186,7 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
         c: 'z',
         d: true,
         e: CustomValue,
+        f: None,
     };
 
     assert_eq!(
@@ -208,6 +212,13 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
                 "e",
                 ValueType::Custom,
                 vec![FieldAttribute::Immutable]
+            ),
+            FieldDefinition::new_with_attributes(
+                "f",
+                ValueType::Optional(Box::new(ValueType::Primitive(PrimitiveType::Number(
+                    NumberType::U32
+                )))),
+                vec![FieldAttribute::Computed, FieldAttribute::Immutable],
             ),
         ]
     );
@@ -269,6 +280,37 @@ fn field_should_return_abstract_value_if_exists() {
 }
 
 #[test]
+fn field_should_return_computed_value_if_field_marked_as_such() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field(computed = "123"))]
+        computed_field: Option<u32>,
+    }
+
+    let ent = TestEnt {
+        id: EPHEMERAL_ID,
+        database: WeakDatabaseRc::new(),
+        created: 0,
+        last_updated: 0,
+        computed_field: None,
+    };
+
+    assert_eq!(ent.field("computed_field"), Some(Value::from(123u32)));
+}
+
+#[test]
 fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() {
     #[derive(Clone, Debug, PartialEq, Eq, ValueLike, IntoValue)]
     struct CustomValue(usize);
@@ -287,20 +329,32 @@ fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() 
         #[ent(last_updated)]
         last_updated: u64,
 
-        #[ent(field)]
+        #[ent(field(mutable))]
         a: u32,
 
-        #[ent(field(indexed))]
+        #[ent(field(mutable))]
         b: String,
 
         #[ent(field(mutable))]
         c: char,
 
-        #[ent(field(indexed, mutable))]
+        #[ent(field(mutable))]
         d: bool,
 
-        #[ent(field)]
+        #[ent(field(mutable))]
         e: CustomValue,
+
+        // Will fail with immutable error
+        #[ent(field)]
+        f: Option<u32>,
+
+        // Will fail with immutable error
+        #[ent(field(indexed))]
+        g: Option<String>,
+
+        // Will fail with computed error
+        #[ent(field(computed = "'c'"))]
+        h: Option<char>,
     }
 
     let mut ent = TestEnt {
@@ -313,6 +367,9 @@ fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() 
         c: 'z',
         d: true,
         e: CustomValue(123),
+        f: None,
+        g: None,
+        h: None,
     };
 
     assert_eq!(
@@ -355,6 +412,95 @@ fn update_field_should_change_the_field_with_given_name_if_it_exists_to_value() 
         ent.update_field("a", Value::from("test")).unwrap_err(),
         EntMutationError::WrongValueType { .. }
     ));
+
+    assert!(matches!(
+        ent.update_field("f", Value::from(Some(123u32)))
+            .unwrap_err(),
+        EntMutationError::FieldImmutable { .. }
+    ));
+
+    assert!(matches!(
+        ent.update_field("g", Value::from(Some(String::from("test"))))
+            .unwrap_err(),
+        EntMutationError::FieldImmutable { .. }
+    ));
+
+    assert!(matches!(
+        ent.update_field("h", Value::from(Some('c'))).unwrap_err(),
+        EntMutationError::FieldComputed { .. }
+    ));
+}
+
+#[test]
+fn update_field_should_fail_if_field_not_marked_mutable() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        immutable_field: u32,
+    }
+
+    let mut ent = TestEnt {
+        id: EPHEMERAL_ID,
+        database: WeakDatabaseRc::new(),
+        created: 0,
+        last_updated: 0,
+        immutable_field: 123,
+    };
+
+    let result = ent.update_field("immutable_field", Value::from(456u32));
+    assert!(
+        result.is_err(),
+        "Update of immutable field unexpectedly succeeded"
+    );
+    assert_eq!(ent.field("immutable_field"), Some(Value::from(123u32)));
+}
+
+#[test]
+fn update_field_should_fail_if_field_marked_computed() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field(computed = "123"))]
+        computed_field: Option<u32>,
+    }
+
+    let mut ent = TestEnt {
+        id: EPHEMERAL_ID,
+        database: WeakDatabaseRc::new(),
+        created: 0,
+        last_updated: 0,
+        computed_field: None,
+    };
+
+    let result = ent.update_field("computed_field", Value::from(456u32));
+    assert!(
+        result.is_err(),
+        "Update of computed field unexpectedly succeeded"
+    );
+    assert_eq!(ent.field("computed_field"), Some(Value::from(123u32)));
 }
 
 #[test]
@@ -842,6 +988,52 @@ fn load_edge_should_return_new_copy_of_ents_pointed_to_by_ids() {
         ent1.load_edge("something"),
         Err(DatabaseError::MissingEdge { .. })
     ));
+}
+
+#[test]
+fn clear_cache_should_clear_all_computed_field_caches() {
+    #[derive(Clone, Ent)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        not_cache_field: Option<u32>,
+
+        #[ent(field(computed = "123"))]
+        cached_field1: Option<u32>,
+
+        #[ent(field(computed = "456"))]
+        cached_field2: Option<u32>,
+    }
+
+    let mut ent = TestEnt {
+        id: 999,
+        database: WeakDatabaseRc::new(),
+        created: 0,
+        last_updated: 0,
+        not_cache_field: None,
+        cached_field1: None,
+        cached_field2: None,
+    };
+
+    ent.not_cache_field = Some(999);
+    ent.cached_field1 = Some(123);
+
+    ent.clear_cache();
+
+    assert_eq!(ent.not_cache_field, Some(999));
+    assert_eq!(ent.cached_field1, None);
+    assert_eq!(ent.cached_field2, None);
 }
 
 #[test]

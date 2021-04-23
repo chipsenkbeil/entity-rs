@@ -39,6 +39,9 @@ pub enum EntMutationError {
     #[display(fmt = "Field cannot be updated as it is immutable: {}", name)]
     FieldImmutable { name: String },
 
+    #[display(fmt = "Field cannot be updated as it is computed: {}", name)]
+    FieldComputed { name: String },
+
     #[display(fmt = "Failed to mark ent as updated: {}", source)]
     MarkUpdatedFailed { source: SystemTimeError },
 }
@@ -207,6 +210,13 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
     /// Returns a list of definitions for fields contained by the ent
     fn field_definitions(&self) -> Vec<FieldDefinition>;
 
+    /// Returns definition for the field with specified name
+    fn field_definition(&self, name: &str) -> Option<FieldDefinition> {
+        self.field_definitions()
+            .into_iter()
+            .find(|f| f.name() == name)
+    }
+
     /// Returns a list of names of fields contained by the ent
     fn field_names(&self) -> Vec<String> {
         self.field_definitions()
@@ -220,13 +230,7 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
 
     /// Returns a copy of the type of the field with the specified name
     fn field_type(&self, name: &str) -> Option<ValueType> {
-        self.field_definitions().into_iter().find_map(|f| {
-            if f.name() == name {
-                Some(f.r#type().clone())
-            } else {
-                None
-            }
-        })
+        self.field_definition(name).map(|f| f.r#type().clone())
     }
 
     /// Returns a copy of all fields contained by the ent and their associated values
@@ -247,6 +251,13 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
 
     /// Returns a list of definitions for edges contained by the ent
     fn edge_definitions(&self) -> Vec<EdgeDefinition>;
+
+    /// Returns definition for the edge with specified name
+    fn edge_definition(&self, name: &str) -> Option<EdgeDefinition> {
+        self.edge_definitions()
+            .into_iter()
+            .find(|f| f.name() == name)
+    }
 
     /// Returns a list of names of edges contained by the ent
     fn edge_names(&self) -> Vec<String> {
@@ -301,6 +312,9 @@ pub trait Ent: AsAny + DynClone + Send + Sync {
     ///
     /// Requires ent to be connected to a database
     fn load_edge(&self, name: &str) -> DatabaseResult<Vec<Box<dyn Ent>>>;
+
+    /// Clears out any locally-cached data for the ent
+    fn clear_cache(&mut self);
 
     /// Refreshes ent by checking database for latest version and returning it
     ///
@@ -770,6 +784,21 @@ impl Ent for UntypedEnt {
             None => Err(DatabaseError::MissingEdge {
                 name: name.to_string(),
             }),
+        }
+    }
+
+    /// Clears the locally-cached, computed fields of the ent
+    fn clear_cache(&mut self) {
+        for fd in self.field_definitions() {
+            if fd.is_computed() {
+                if let Some(value) = self.fields.get_mut(&fd.name) {
+                    *value = Field::new_with_attributes(
+                        fd.name.to_string(),
+                        Value::Optional(None),
+                        fd.attributes().to_vec(),
+                    );
+                }
+            }
         }
     }
 

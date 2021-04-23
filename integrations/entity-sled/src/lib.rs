@@ -353,6 +353,9 @@ impl Database for SledDatabase {
         // Update the ent's id to match what is actually to be used
         ent.set_id(id);
 
+        // Clear any cache before saving the ent
+        ent.clear_cache();
+
         // Update the ent's last_updated to be the current time
         ent.mark_updated().map_err(|e| DatabaseError::Other {
             source: Box::from(e),
@@ -667,6 +670,32 @@ mod tests {
             .expect("Failed to get ent")
             .expect("Ent missing");
         assert_eq!(ent.field("field1").expect("Field missing"), Value::from(3));
+    }
+
+    #[test]
+    fn insert_should_reset_all_computed_field_caches_to_none() {
+        let db = new_db();
+
+        // Verify that a computed field is reset to None
+        let ent = UntypedEnt::from_collections(
+            999,
+            vec![Field::new_with_attributes(
+                "field1",
+                Some(3),
+                vec![FieldAttribute::Computed],
+            )],
+            vec![],
+        );
+        let _ = db.insert(Box::from(ent)).expect("Failed to insert ent");
+
+        let ent = db
+            .get(999)
+            .expect("Failed to get ent")
+            .expect("Ent missing");
+        assert_eq!(
+            ent.field("field1").expect("Field missing"),
+            Value::Optional(None)
+        );
     }
 
     #[test]
@@ -1014,6 +1043,8 @@ mod tests {
         fn load_edge(&self, _name: &str) -> DatabaseResult<Vec<Box<dyn Ent>>> {
             Err(DatabaseError::Disconnected)
         }
+
+        fn clear_cache(&mut self) {}
 
         fn refresh(&mut self) -> DatabaseResult<()> {
             Err(DatabaseError::Disconnected)

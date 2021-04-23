@@ -1,0 +1,5 @@
+error: Cannot have field be mutable and computed
+  --> $DIR/field-marked-mutable-and-computed.rs:18:5
+   |
+18 |     computed_field: Option<u32>,
+   |     ^^^^^^^^^^^^^^

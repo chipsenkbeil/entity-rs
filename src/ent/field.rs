@@ -70,6 +70,12 @@ impl FieldDefinition {
     pub fn is_immutable(&self) -> bool {
         self.attributes().contains(&FieldAttribute::Immutable)
     }
+
+    /// Returns true if this field marked as computed
+    #[inline]
+    pub fn is_computed(&self) -> bool {
+        self.attributes().contains(&FieldAttribute::Computed)
+    }
 }
 
 impl From<Field> for FieldDefinition {
@@ -167,6 +173,12 @@ impl Field {
     pub fn is_immutable(&self) -> bool {
         self.attributes().contains(&FieldAttribute::Immutable)
     }
+
+    /// Returns true if this field marked as computed
+    #[inline]
+    pub fn is_computed(&self) -> bool {
+        self.attributes().contains(&FieldAttribute::Computed)
+    }
 }
 
 /// Represents an attribute associated with a field for an ent
@@ -180,4 +192,8 @@ pub enum FieldAttribute {
     /// Indicates that this field is immutable, meaning that it cannot be
     /// changed after being initialized
     Immutable,
+
+    /// Indicates that this field is computed and does not have a standard
+    /// data representation within the ent (although it may have a cached value)
+    Computed,
 }

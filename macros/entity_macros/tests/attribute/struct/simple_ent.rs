@@ -273,6 +273,39 @@ fn supports_renaming_ent_fields() {
 }
 
 #[test]
+fn supports_transforming_computed_field_into_option_type() {
+    #[simple_ent]
+    struct SimpleEnt {
+        #[ent(field(computed = "123"))]
+        field1: u32,
+
+        #[ent(field(computed = "Some(123)"))]
+        field2: Option<u32>,
+    }
+
+    let mut ent = SimpleEnt {
+        id: 0,
+        database: WeakDatabaseRc::new(),
+        created: 0,
+        last_updated: 0,
+        field1: None,
+        field2: None,
+    };
+
+    assert_eq!(ent.field1, None);
+    assert_eq!(ent.field1(), 123);
+    assert_eq!(ent.field1, None);
+    assert_eq!(ent.get_or_compute_field1(), 123);
+    assert_eq!(ent.field1, Some(123));
+
+    assert_eq!(ent.field2, None);
+    assert_eq!(ent.field2(), Some(123));
+    assert_eq!(ent.field2, None);
+    assert_eq!(ent.get_or_compute_field2(), Some(123));
+    assert_eq!(ent.field2, Some(Some(123)));
+}
+
+#[test]
 fn supports_using_struct_field_type_for_ent_type() {
     #[simple_ent]
     struct SimpleEnt {

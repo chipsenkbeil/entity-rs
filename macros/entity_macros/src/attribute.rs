@@ -230,6 +230,7 @@ pub fn do_simple_ent(
                 syn::Data::Struct(x) => match &mut x.fields {
                     syn::Fields::Named(x) => {
                         for f in x.named.iter_mut() {
+                            modify_field_if_computed_field(&root, f);
                             modify_field_if_edge(&root, f);
                         }
 
@@ -294,6 +295,44 @@ fn make_field(name: Ident, ty: Type, attrs: TokenStream) -> Field {
     };
 
     named_field.field
+}
+
+/// Modify any field marked as a field that is computed to transform it
+/// from
+///
+/// #[ent(field(computed = "..."))]
+/// field1: u32
+///
+/// into
+///
+/// #[ent(field(computed = "..."))]
+/// field1: Option<u32>
+fn modify_field_if_computed_field(_root: &Path, field: &mut Field) {
+    if let Some(ent_attr) = field.attrs.iter_mut().find(|a| a.path.is_ident("ent")) {
+        if let Ok(Meta::List(x)) = ent_attr.parse_meta() {
+            let (mut ent_field, _): (Vec<&NestedMeta>, Vec<&NestedMeta>) =
+                x.nested.iter().partition(|&nm| match nm {
+                    NestedMeta::Meta(x) => x.path().is_ident("field"),
+                    _ => false,
+                });
+
+            if ent_field.len() == 1 {
+                if let NestedMeta::Meta(Meta::List(x)) = ent_field.pop().unwrap() {
+                    let has_computed_attr = x.nested.iter().any(|nm| match nm {
+                        NestedMeta::Meta(Meta::NameValue(x)) => x.path.is_ident("computed"),
+                        _ => false,
+                    });
+
+                    // We have ent(field(computed = "...", ...)), so we
+                    // can transform the type from ty -> Option<ty>
+                    if has_computed_attr {
+                        let ty = &field.ty;
+                        field.ty = parse_quote!(::std::option::Option<#ty>);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Modify any field marked as an edge without a type

@@ -57,14 +57,30 @@ pub fn do_derive_ent_object(root: Path, ent: StructEnt) -> darling::Result<Token
         for f in &ent.fields {
             let gql_name = f.name.to_string();
             let method_name = format_ident!("gql_{}", f.name);
-            let ret_ty = &f.ty;
-            let struct_field_name = &f.name;
-            fns.push(quote! {
-                #[graphql(name = #gql_name)]
-                async fn #method_name(&self) -> &#ret_ty {
-                    &self.#struct_field_name
-                }
-            });
+
+            // If field is computed, we call its method to calculate the result
+            // and return it using its return type
+            if let Some(computed) = f.computed.as_ref() {
+                let ret_ty = &computed.return_ty;
+                let struct_method_name = &f.name;
+                fns.push(quote! {
+                    #[graphql(name = #gql_name)]
+                    async fn #method_name(&self) -> #ret_ty {
+                        self.#struct_method_name()
+                    }
+                });
+
+            // Otherwise, we get a reference to the field and return that reference
+            } else {
+                let ret_ty = &f.ty;
+                let struct_field_name = &f.name;
+                fns.push(quote! {
+                    #[graphql(name = #gql_name)]
+                    async fn #method_name(&self) -> &#ret_ty {
+                        &self.#struct_field_name
+                    }
+                });
+            }
         }
 
         fns

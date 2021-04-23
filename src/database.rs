@@ -1,5 +1,5 @@
 use crate::{
-    ent::{Ent, Query, ValueType},
+    ent::{Ent, EntMutationError, Query, ValueType},
     AsAny, Id,
 };
 use derive_more::Display;
@@ -37,6 +37,9 @@ pub enum DatabaseError {
 
     #[display(fmt = "Missing Ent: {}", id)]
     MissingEnt { id: Id },
+
+    #[display(fmt = "Mutation Failed (Ent = {}): {}", id, source)]
+    EntMutationFailed { id: Id, source: EntMutationError },
 
     #[display(fmt = "Expected type {}, but got type {}", expected, actual)]
     WrongType {

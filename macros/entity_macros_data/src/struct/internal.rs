@@ -105,10 +105,18 @@ impl EntField {
 #[derive(Debug, Clone, Default, FromMeta)]
 #[darling(allow_unknown_fields, default)]
 pub struct FieldAttr {
+    /// If provided, indicates that field should be indexed in databases
     #[darling(default)]
     pub indexed: Flag,
+
+    /// If provided, indicates that field can be edited
     #[darling(default)]
     pub mutable: Flag,
+
+    /// If provided, cannot be mutable -- will be expression to invoke as a
+    /// method instead of a data field
+    #[darling(default)]
+    pub computed: Option<String>,
 }
 
 /// Information for an edge attribute on a field of a struct deriving ent

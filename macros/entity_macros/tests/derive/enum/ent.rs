@@ -20,7 +20,7 @@ struct TestEnt1 {
     #[ent(last_updated)]
     last_updated: u64,
 
-    #[ent(field)]
+    #[ent(field(mutable))]
     field1: usize,
 
     #[ent(edge(type = "TestEnt2"))]
@@ -197,7 +197,7 @@ fn field_definitions_should_return_list_of_definitions_for_ent_fields() {
         vec![FieldDefinition::new_with_attributes(
             "field1",
             NumberType::Usize,
-            vec![FieldAttribute::Immutable]
+            vec![]
         ),]
     );
 }

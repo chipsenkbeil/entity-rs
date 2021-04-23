@@ -1,7 +1,7 @@
 mod internal;
 
 use darling::{FromDeriveInput, FromMeta};
-use syn::{DeriveInput, Generics, Ident, Type, Visibility};
+use syn::{parse_str, DeriveInput, Expr, Generics, Ident, Type, Visibility};
 
 /// Information about attributes on a struct that will represent an ent
 #[derive(Debug)]
@@ -40,6 +40,22 @@ pub struct EntField {
     /// able to be mutated and that a typed method for mutation should
     /// be included when generating typed methods
     pub mutable: bool,
+
+    /// If field(computed(...)) provided, signifies that this field should
+    /// be computed based on provided expression instead of treated as data
+    /// stored in the struct (and database)
+    ///
+    /// Cannot be used with mutable
+    pub computed: Option<EntFieldComputed>,
+}
+
+#[derive(Debug)]
+pub struct EntFieldComputed {
+    /// The expression to execute to compute the field value
+    pub expr: Expr,
+
+    /// The type returned by the computed expression
+    pub return_ty: Type,
 }
 
 /// Information about a specific edge for an ent
@@ -175,11 +191,50 @@ impl FromDeriveInput for Ent {
             if let Some(attr) = f.field_attr.clone().map(|a| a.unwrap_or_default()) {
                 acted_on_field = true;
 
+                // It doesn't make sense to have a field be computed and mutable,
+                // so surface an error indicating such
+                if attr.mutable.is_some() && attr.computed.is_some() {
+                    errors.push(
+                        darling::Error::custom("Cannot have field be mutable and computed")
+                            .with_span(&name),
+                    );
+                }
+
+                let computed = if let Some(expr) = attr.computed {
+                    let res_expr: darling::Result<Expr> = parse_str(&expr)
+                        .map_err(|x| darling::Error::custom(x.to_string()).with_span(&name));
+                    let res_return_ty = strip_for_type_str(&f.ty, "Option")
+                        .map_err(|x| darling::Error::custom(x.to_string()).with_span(&name));
+
+                    match (res_expr, res_return_ty) {
+                        (Ok(expr), Ok(return_ty)) => Some(EntFieldComputed {
+                            expr,
+                            return_ty: return_ty.clone(),
+                        }),
+                        (Ok(_), Err(x)) => {
+                            errors.push(x);
+                            None
+                        }
+                        (Err(x), Ok(_)) => {
+                            errors.push(x);
+                            None
+                        }
+                        (Err(x1), Err(x2)) => {
+                            errors.push(x1);
+                            errors.push(x2);
+                            None
+                        }
+                    }
+                } else {
+                    None
+                };
+
                 fields.push(EntField {
                     name: name.clone(),
                     ty: f.ty.clone(),
                     indexed: attr.indexed.is_some(),
                     mutable: attr.mutable.is_some(),
+                    computed,
                 });
             }
 
@@ -216,6 +271,7 @@ impl FromDeriveInput for Ent {
                     ty: f.ty.clone(),
                     indexed: false,
                     mutable: false,
+                    computed: None,
                 });
             }
         }
@@ -278,5 +334,47 @@ fn infer_edge_kind_from_ty(ty: &Type) -> darling::Result<EntEdgeKind> {
             })
         }
         x => Err(darling::Error::custom("Unexpected edge id type").with_span(x)),
+    }
+}
+
+fn strip_for_type_str<'a, 'b>(input: &'a Type, ty_str: &'b str) -> darling::Result<&'a Type> {
+    use syn::{GenericArgument, PathArguments};
+    match input {
+        Type::Path(x) => match x.path.segments.last() {
+            Some(x) if x.ident.to_string().to_lowercase() == ty_str.to_lowercase() => {
+                match &x.arguments {
+                    PathArguments::AngleBracketed(x) if x.args.len() == 1 => {
+                        match x.args.last().unwrap() {
+                            GenericArgument::Type(x) => Ok(x),
+                            _ => Err(darling::Error::custom(format!(
+                                "Unexpected type argument for {}",
+                                ty_str
+                            ))
+                            .with_span(x)),
+                        }
+                    }
+                    PathArguments::AngleBracketed(_) => Err(darling::Error::custom(format!(
+                        "Unexpected number of type parameters for {}",
+                        ty_str
+                    ))
+                    .with_span(x)),
+                    PathArguments::Parenthesized(_) => Err(darling::Error::custom(format!(
+                        "Unexpected {}(...) instead of {}<...>",
+                        ty_str, ty_str
+                    ))
+                    .with_span(x)),
+                    PathArguments::None => Err(darling::Error::custom(format!(
+                        "{} missing generic parameter",
+                        ty_str
+                    ))
+                    .with_span(x)),
+                }
+            }
+            Some(x) => {
+                Err(darling::Error::custom(format!("Type is not {}<...>", ty_str)).with_span(x))
+            }
+            None => Err(darling::Error::custom("Expected type to have a path").with_span(x)),
+        },
+        x => Err(darling::Error::custom("Expected type to be a path").with_span(x)),
     }
 }

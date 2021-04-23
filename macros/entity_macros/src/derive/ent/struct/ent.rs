@@ -4,7 +4,7 @@ use entity_macros_data::{
 };
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Ident, Path, Type};
+use syn::{parse_quote, Expr, Ident, Path, Type};
 
 pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream> {
     let name = &ent.ident;
@@ -19,7 +19,17 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
     let (impl_generics, ty_generics, where_clause) = ent.generics.split_for_impl();
 
     let field_names: Vec<Ident> = fields.iter().map(|f| f.name.clone()).collect();
-    let field_types: Vec<Type> = fields.iter().map(|f| f.ty.clone()).collect();
+    let field_values: Vec<Expr> = fields
+        .iter()
+        .map(|f| {
+            let field_name = &f.name;
+            if let Some(computed) = f.computed.as_ref() {
+                computed.expr.clone()
+            } else {
+                parse_quote!(::std::clone::Clone::clone(&self.#field_name))
+            }
+        })
+        .collect();
     let value_to_typed_field: Vec<TokenStream> = fields
         .iter()
         .map(|f| {
@@ -28,6 +38,71 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
             quote! { #assign_value }
         })
         .collect();
+    let update_fields: Vec<TokenStream> = fields
+        .iter()
+        .zip(value_to_typed_field.iter())
+        .map(|(f, v_to_tf)| {
+            let field_name = &f.name;
+            let field_ty = &f.ty;
+
+            let body = if f.computed.is_some() {
+                quote!(::std::result::Result::Err(
+                    #root::EntMutationError::FieldComputed {
+                        name: ::std::string::ToString::to_string(
+                            ::std::stringify!(#field_name)
+                        )
+                    }
+                ))
+            } else if !f.mutable {
+                quote!(::std::result::Result::Err(
+                    #root::EntMutationError::FieldImmutable {
+                        name: ::std::string::ToString::to_string(
+                            ::std::stringify!(#field_name)
+                        )
+                    }
+                ))
+            } else {
+                quote!({
+                    let old_value = ::std::clone::Clone::clone(&self.#field_name);
+                    let converted: ::std::result::Result<
+                        #field_ty,
+                        #root::Value,
+                    > = #v_to_tf;
+                    self.#field_name = converted.map_err(
+                        |_| #root::EntMutationError::WrongValueType {
+                            description: ::std::string::ToString::to_string(
+                                ::std::concat!(
+                                    "Value is not ",
+                                    ::std::stringify!(#field_ty),
+                                )
+                            )
+                        }
+                    )?;
+                    ::std::result::Result::Ok(#root::ValueLike::into_value(old_value))
+                })
+            };
+
+            quote!(::std::stringify!(#field_name) => {#body})
+        })
+        .collect();
+    let clear_cache_expr: TokenStream = {
+        let clearings: Vec<TokenStream> = fields
+            .iter()
+            .filter_map(|f| {
+                if f.computed.is_some() {
+                    let field_name = &f.name;
+                    Some(quote!(self.#field_name = ::std::option::Option::None;))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        quote!({
+            #(#clearings)*
+        })
+    };
+
     let edge_names: Vec<Ident> = edges.iter().map(|e| e.name.clone()).collect();
     let edge_types: Vec<Type> = edges.iter().map(|e| e.ty.clone()).collect();
 
@@ -83,9 +158,7 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
                 match name {
                     #(
                         ::std::stringify!(#field_names) => ::std::option::Option::Some(
-                            #root::ValueLike::into_value(
-                                ::std::clone::Clone::clone(&self.#field_names)
-                            )
+                            #root::ValueLike::into_value(#field_values)
                         ),
                     )*
                     _ => ::std::option::Option::None,
@@ -98,26 +171,7 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
                 value: #root::Value,
             ) -> ::std::result::Result<#root::Value, #root::EntMutationError> {
                 match name {
-                    #(
-                        ::std::stringify!(#field_names) => {
-                            let old_value = ::std::clone::Clone::clone(&self.#field_names);
-                            let converted: ::std::result::Result<
-                                #field_types,
-                                #root::Value,
-                            > = #value_to_typed_field;
-                            self.#field_names = converted.map_err(
-                                |_| #root::EntMutationError::WrongValueType {
-                                    description: ::std::string::ToString::to_string(
-                                        ::std::concat!(
-                                            "Value is not ",
-                                            ::std::stringify!(#field_types),
-                                        )
-                                    )
-                                }
-                            )?;
-                            ::std::result::Result::Ok(#root::ValueLike::into_value(old_value))
-                        },
-                    )*
+                    #(#update_fields),*
                     _ => ::std::result::Result::Err(#root::EntMutationError::NoField {
                         name: ::std::string::ToString::to_string(name),
                     }),
@@ -210,6 +264,10 @@ pub fn do_derive_ent(root: Path, ent: StructEnt) -> darling::Result<TokenStream>
                         name: ::std::string::ToString::to_string(name),
                     }),
                 }
+            }
+
+            fn clear_cache(&mut self) {
+                #clear_cache_expr
             }
 
             fn refresh(&mut self) -> #root::DatabaseResult<()> {
@@ -311,6 +369,10 @@ fn make_field_definitions(
 
         if !f.mutable {
             attrs.push(quote! { #root::FieldAttribute::Immutable });
+        }
+
+        if f.computed.is_some() {
+            attrs.push(quote! { #root::FieldAttribute::Computed });
         }
 
         token_streams.push(quote! {

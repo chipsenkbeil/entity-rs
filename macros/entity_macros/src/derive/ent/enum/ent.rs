@@ -127,6 +127,12 @@ pub fn do_derive_ent(root: Path, ent: EnumEnt) -> darling::Result<TokenStream> {
                 }
             }
 
+            fn clear_cache(&mut self) {
+                match self {
+                    #(Self::#variant_names(x) => #root::Ent::clear_cache(x)),*
+                }
+            }
+
             fn refresh(&mut self) -> #root::DatabaseResult<()> {
                 match self {
                     #(Self::#variant_names(x) => #root::Ent::refresh(x)),*
