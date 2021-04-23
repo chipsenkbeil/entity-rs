@@ -8,10 +8,10 @@ CRATES=(
   entity_macros_data
   entity_macros
   entity
-  entity_inmemory
-  entity_sled
-  entity_async_graphql_macros
-  entity_async_graphql
+  entity-inmemory
+  entity-sled
+  entity-async-graphql-macros
+  entity-async-graphql
 )
 
 # https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
@@ -28,6 +28,7 @@ SKIP_CARGO_TOML_UPDATE=0
 SKIP_CARGO_PUBLISH=0
 SKIP_GIT_PUSH=0
 SKIP_SAFETY_PROMPT=0
+WAIT_BETWEEN_PUBLISH=10
 
 # Supports OSX, Ubuntu, Freebsd, Cygwin, CentOS, Red Hat Enterprise, & Msys
 # https://izziswift.com/sed-i-command-for-in-place-editing-to-work-with-both-gnu-sed-and-bsd-osx/
@@ -69,13 +70,14 @@ TARGET_VERSION="$(sedi {GET} -n "s/^version = \"\([^\"]*\)\"/\1/p" "$ROOT_CARGO_
 NEXT_VERSION=
 
 function usage {
-  echo "Usage: $(basename $0) [-vfhq] [-s STEP] [-b BRANCH] [-t TARGET_VERSION] [-n NEXT_VERSION]" 2>&1
+  echo "Usage: $(basename $0) [-vfhq] [-s STEP] [-w SECONDS] [-b BRANCH] [-t TARGET_VERSION] [-n NEXT_VERSION]" 2>&1
   echo 'Release the current version of entity crates.'
   echo ''
   echo "   -t VERSION  Specify target version to use (default = $TARGET_VERSION)"
   echo '   -n VERSION  Specify next version to update all Cargo.toml (does nothing if not provided)'
   echo '   -s STEP     Skips the specified step and can be supplied multiple times'
   echo '               Choices are changelog, git-tag, git-push, cargo-toml-update, cargo-publish, safety-prompt'
+  echo "   -w SECONDS  Time to wait between publishing of crates in seconds (default = $WAIT_BETWEEN_PUBLISH)"
   echo "   -b BRANCH   Specify git branch to push to (default = $GIT_BRANCH)"
   echo '   -f          Force release, rather than performing dry run'
   echo '   -h          Print this help information'
@@ -84,7 +86,7 @@ function usage {
   exit 1
 }
 
-while getopts ':vfhqt:n:s:b:' arg; do
+while getopts ':vfhqt:n:s:b:w:' arg; do
   case "${arg}" in
     t) TARGET_VERSION=${OPTARG};;
     n) NEXT_VERSION=${OPTARG};;
@@ -92,6 +94,7 @@ while getopts ':vfhqt:n:s:b:' arg; do
     v) VERBOSE=1;;
     f) DRY_RUN=0;;
     b) GIT_BRANCH=${OPTARG};;
+    w) WAIT_BETWEEN_PUBLISH=${OPTARG};;
     s)
       case "${OPTARG}" in
         changelog) SKIP_CHANGELOG=1;;
@@ -135,6 +138,7 @@ if [ "$SKIP_SAFETY_PROMPT" -eq 0 ]; then
   echo "Target Version: $TARGET_VERSION"
   echo "Next Version: $NEXT_VERSION"
   echo "Git Branch: $GIT_BRANCH"
+  echo "Wait Between Publish: $WAIT_BETWEEN_PUBLISH"
   echo
   echo "Skip Changelog: $SKIP_CHANGELOG"
   echo "Skip Cargo Toml Update: $SKIP_CARGO_TOML_UPDATE"
@@ -176,6 +180,8 @@ fi
 # Publish each crate with current version
 if [ "$SKIP_CARGO_PUBLISH" -eq 0 ]; then
   for crate in "${CRATES[@]}"; do
+    print_msg "Publishing $crate"
+
     dry_run_arg=
     if [ "$DRY_RUN" -eq 1 ]; then
       dry_run_arg=--dry-run
@@ -187,6 +193,11 @@ if [ "$SKIP_CARGO_PUBLISH" -eq 0 ]; then
     fi
 
     cargo hack publish -p "$crate" --no-dev-deps --allow-dirty $dry_run_arg $quiet_arg
+
+    # Wait N seconds to give crates.io a chance to process
+    if [ "$WAIT_BETWEEN_PUBLISH" -gt 0 ]; then
+      sleep $WAIT_BETWEEN_PUBLISH
+    fi
   done
 else
   print_msg 'Skipping Cargo crate publishing!'
