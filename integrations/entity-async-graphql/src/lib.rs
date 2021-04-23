@@ -4,7 +4,7 @@ mod filter;
 pub use ent::*;
 pub use filter::*;
 
-#[cfg(feature = "derive")]
+#[cfg(feature = "macros")]
 pub use entity_async_graphql_macros::*;
 
 #[cfg(test)]
