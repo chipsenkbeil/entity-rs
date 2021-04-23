@@ -64,7 +64,7 @@ jobs:
           cargo build \
             --manifest-path integrations/entity-async-graphql/Cargo.toml \
             --example user \
-            --features="derive entity/global entity/macros"
+            --features="macros entity/global entity/macros"
 
 # See https://github.com/chipsenkbeil/entity-rs/issues/38
 #   minimal-versions:

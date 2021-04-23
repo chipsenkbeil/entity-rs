@@ -1,7 +1,8 @@
+# entity_noop_macros
+
 Used only as no-op for macros in feature-dependent deps.
 
-Can be removed once https://github.com/rust-lang/rust/issues/64797 is available
-on stable.
+Can be removed once https://github.com/rust-lang/rust/issues/64797 is available on stable.
 
 ```rust
 #[cfg(feature = "typetag")]
