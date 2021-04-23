@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.3.0] - 2021-04-22
+
 ### Changed
 
 - Refactored `entity` and `entity_macros` into the following crates:
