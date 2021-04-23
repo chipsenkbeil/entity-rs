@@ -20,10 +20,12 @@ CHANGELOG="$DIR/../CHANGELOG.md"
 ROOT_CARGO_TOML="$DIR/../Cargo.toml"
 DRY_RUN=1
 VERBOSE=0
+GIT_BRANCH=main
 SKIP_CHANGELOG=0
 SKIP_GIT_TAG=0
 SKIP_CARGO_TOML_UPDATE=0
 SKIP_CARGO_PUBLISH=0
+SKIP_GIT_PUSH=0
 
 # Supports OSX, Ubuntu, Freebsd, Cygwin, CentOS, Red Hat Enterprise, & Msys
 # https://izziswift.com/sed-i-command-for-in-place-editing-to-work-with-both-gnu-sed-and-bsd-osx/
@@ -48,29 +50,32 @@ TARGET_VERSION="$(sedi {GET} -n "s/^version = \"\([^\"]*\)\"/\1/p" "$ROOT_CARGO_
 NEXT_VERSION=
 
 function usage {
-  echo "Usage: $(basename $0) [-vfh] [-s STEP] [-t TARGET_VERSION] [-n NEXT_VERSION]" 2>&1
+  echo "Usage: $(basename $0) [-vfh] [-s STEP] [-b BRANCH] [-t TARGET_VERSION] [-n NEXT_VERSION]" 2>&1
   echo 'Release the current version of crates.'
   echo ''
   echo "   -t VERSION  Specify target version to use (default = $TARGET_VERSION)"
   echo '   -n VERSION  Specify next version to update all Cargo.toml (does nothing if not provided)'
   echo '   -s STEP     Skips the specified step and can be supplied multiple times'
-  echo '               Choices are changelog, git-tag, cargo-toml-update, cargo-publish'
+  echo '               Choices are changelog, git-tag, git-push, cargo-toml-update, cargo-publish'
+  echo "   -b BRANCH   Specify git branch to push to (default = $GIT_BRANCH)"
   echo '   -f          Force release, rather than performing dry run'
   echo '   -h          Print this help information'
   echo '   -v          Increase verbosity'
   exit 1
 }
 
-while getopts ':vfht:n:s:' arg; do
+while getopts ':vfht:n:s:b:' arg; do
   case "${arg}" in
     t) TARGET_VERSION=${OPTARG};;
     n) NEXT_VERSION=${OPTARG};;
     v) VERBOSE=1;;
     f) DRY_RUN=0;;
+    b) GIT_BRANCH=${OPTARG};;
     s)
       case "${OPTARG}" in
         changelog) SKIP_CHANGELOG=1;;
         git-tag) SKIP_GIT_TAG=1;;
+        git-push) SKIP_GIT_PUSH=1;;
         cargo-toml-update) SKIP_CARGO_TOML_UPDATE=1;;
         cargo-publish) SKIP_CARGO_PUBLISH=1;;
         *)
@@ -173,13 +178,17 @@ else
 fi
 
 if [ "$DRY_RUN" -eq 0 ]; then
-  git push origin main
-  if [ "$SKIP_GIT_TAG" -eq 0 ]; then
-    git push origin "v$TARGET_VERSION"
+  if [ "$SKIP_GIT_PUSH" -eq 0 ]; then
+    git push origin "$GIT_BRANCH"
+    if [ "$SKIP_GIT_TAG" -eq 0 ]; then
+      git push origin "v$TARGET_VERSION"
+    fi
   fi
 else
-  echo 'git push origin main'
-  if [ "$SKIP_GIT_TAG" -eq 0 ]; then
-    echo "git push origin \"v$TARGET_VERSION\""
+  if [ "$SKIP_GIT_PUSH" -eq 0 ]; then
+    echo "git push origin \"$GIT_BRANCH\""
+    if [ "$SKIP_GIT_TAG" -eq 0 ]; then
+      echo "git push origin \"v$TARGET_VERSION\""
+    fi
   fi
 fi
