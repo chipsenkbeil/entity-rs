@@ -67,7 +67,7 @@ print_msg () {
 }
 
 # NOTE: We want to detect the current version without diff
-TARGET_VERSION="$(sedi {GET} -n "s/^version = \"\([^\"]*\)\"/\1/p" "$ROOT_CARGO_TOML")"
+TARGET_VERSION="$(sedi {GET} -n "1,/^version/ s/^version = \"\([^\"]*\)\"/\1/p" "$ROOT_CARGO_TOML")"
 NEXT_VERSION=
 
 function usage {
