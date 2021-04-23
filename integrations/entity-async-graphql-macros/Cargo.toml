@@ -1,6 +1,6 @@
 [package]
 name = "entity-async-graphql-macros"
-descriptions = "Macros related to entity-async-graphql."
+description = "Macros related to entity-async-graphql."
 version = "0.3.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"

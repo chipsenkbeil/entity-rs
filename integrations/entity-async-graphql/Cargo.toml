@@ -1,6 +1,6 @@
 [package]
 name = "entity-async-graphql"
-descriptions = "Support to integration async-graphql into entity crate."
+description = "Support to integration async-graphql into entity crate."
 version = "0.3.0"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
