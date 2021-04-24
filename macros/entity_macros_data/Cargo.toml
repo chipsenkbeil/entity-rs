@@ -2,7 +2,7 @@
 name = "entity_macros_data"
 description = "Companion library for entity_macros that provides data structures that describe ents"
 categories = ["data-structures"]
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 edition = "2018"
 homepage = "https://github.com/chipsenkbeil/entity-rs"
