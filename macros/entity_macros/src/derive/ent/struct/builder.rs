@@ -64,30 +64,36 @@ pub fn do_derive_ent_builder(root: Path, ent: StructEnt) -> TokenStream {
         &mut struct_setters,
     );
 
-    for (name, ty) in ent
+    for (name, ty, is_computed) in ent
         .fields
         .iter()
-        .map(|f| (&f.name, &f.ty))
-        .chain(ent.edges.iter().map(|e| (&e.name, &e.ty)))
+        .map(|f| (&f.name, &f.ty, f.computed.is_some()))
+        .chain(ent.edges.iter().map(|e| (&e.name, &e.ty, false)))
     {
-        has_normal_struct_field = true;
-        struct_field_names.push(name);
-        struct_fields.push(quote!(#name: ::std::option::Option<#ty>));
-        struct_field_defaults.push(quote!(::std::option::Option::None));
+        if !is_computed {
+            has_normal_struct_field = true;
+            struct_field_names.push(name);
+            struct_fields.push(quote!(#name: ::std::option::Option<#ty>));
+            struct_field_defaults.push(quote!(::std::option::Option::None));
 
-        let error_variant = format_ident!("Missing{}", name.to_string().to_camel_case());
-        build_assignments.push(quote! {
-            #name: self.#name.ok_or(#builder_error_name::#error_variant)?
-        });
-        error_variants.push(error_variant);
-        error_variant_field_names.push(name);
+            let error_variant = format_ident!("Missing{}", name.to_string().to_camel_case());
+            build_assignments.push(quote! {
+                #name: self.#name.ok_or(#builder_error_name::#error_variant)?
+            });
+            error_variants.push(error_variant);
+            error_variant_field_names.push(name);
 
-        struct_setters.push(quote! {
-            pub fn #name(mut self, value: #ty) -> Self {
-                self.#name = ::std::option::Option::Some(value);
-                self
-            }
-        });
+            struct_setters.push(quote! {
+                pub fn #name(mut self, value: #ty) -> Self {
+                    self.#name = ::std::option::Option::Some(value);
+                    self
+                }
+            });
+        } else {
+            build_assignments.push(quote! {
+                #name: ::std::option::Option::None
+            });
+        }
     }
 
     let display_fmt_inner = if has_normal_struct_field {

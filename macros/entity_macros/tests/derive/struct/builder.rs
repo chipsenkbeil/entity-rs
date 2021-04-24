@@ -314,6 +314,46 @@ fn build_succeeds_when_all_struct_fields_are_set() {
 }
 
 #[test]
+fn builder_sets_computed_field_caches_to_none() {
+    #[derive(Clone, Derivative, Ent, EntBuilder)]
+    #[derivative(Debug)]
+    struct TestEnt {
+        #[ent(id)]
+        id: Id,
+
+        #[derivative(Debug = "ignore")]
+        #[ent(database)]
+        database: WeakDatabaseRc,
+
+        #[ent(created)]
+        created: u64,
+
+        #[ent(last_updated)]
+        last_updated: u64,
+
+        #[ent(field)]
+        real_field: u32,
+
+        #[ent(field(computed = "123"))]
+        computed_field: Option<u32>,
+    }
+
+    let ent = TestEntBuilder::default()
+        .id(1)
+        .database(WeakDatabaseRc::new())
+        .created(2)
+        .last_updated(3)
+        .real_field(4)
+        .finish()
+        .expect("Failed to build ent!");
+    assert_eq!(ent.id, 1);
+    assert_eq!(ent.created, 2);
+    assert_eq!(ent.last_updated, 3);
+    assert_eq!(ent.real_field, 4);
+    assert_eq!(ent.computed_field, None);
+}
+
+#[test]
 fn supports_generic_fields() {
     #[derive(Clone, Ent, EntBuilder)]
     struct TestEnt<T>

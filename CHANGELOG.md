@@ -4,6 +4,12 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+
+- `entity_macros` generated builder no longer treats computed fields as
+  regular fields, meaning that it no longer expects computed fields to
+  be provided as part of the builder
+
 ## [0.3.1] - 2021-04-24
 
 ### Added
