@@ -10,6 +10,8 @@
 - `field_definition` and `edge_definition` methods with default
   implementations added to `Ent` trait
 - `ent(field(computed = "..."))` added to `entity_macros` crate
+- `#[gql_ent]` attribute macro for `entity-async-graphql-macros` to support
+  adding basic `async-graphql` derives alongside `#[simple_ent]`
 
 ### Changed
 

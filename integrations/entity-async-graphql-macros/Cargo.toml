@@ -25,7 +25,7 @@ syn = { version = "1.0.53", features = ["full"] }
 [dev-dependencies]
 entity = { version = "=0.3.1", path = "../..", features = ["global", "macros"] }
 entity-inmemory = { version = "=0.3.1", path = "../entity-inmemory" }
-entity-async-graphql = { version = "=0.3.1", path = "../entity-async-graphql" }
+entity-async-graphql = { version = "=0.3.1", path = "../entity-async-graphql", features = ["macros"] }
 
 async-graphql = "2.7.4"
 derivative = "2.1.1"

@@ -1,6 +1,9 @@
 use async_graphql::InputObject;
 use entity::{Filter, Predicate, Query};
 
+mod float;
+pub use float::*;
+
 mod primitive;
 pub use primitive::*;
 
