@@ -4,6 +4,24 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- `clear_cache` method added to `Ent` trait
+- `field_definition` and `edge_definition` methods with default
+  implementations added to `Ent` trait
+- `ent(field(computed = "..."))` added to `entity_macros` crate
+
+### Changed
+
+- `entity-inmemory` and `entity-sled` will now call `clear_cache` on ents that
+  are inserted prior to saving them
+- `Ent::field(...)` will now return `EntMutationError::ImmutableField` for
+  immutable fields on generated ents via `entity_macros`
+- `Ent::field(...)` will now return `EntMutationError::ComputedField` for
+  computed fields on generated ents via `entity_macros`
+- `EntMutationError` now includes `ComputedField` variant
+- `DatabaseError` now includes `EntMutationFailed` variant
+
 ## [0.3.0] - 2021-04-22
 
 ### Changed
