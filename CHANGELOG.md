@@ -4,6 +4,8 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.3.1] - 2021-04-24
+
 ### Added
 
 - `clear_cache` method added to `Ent` trait
@@ -23,6 +25,11 @@
   computed fields on generated ents via `entity_macros`
 - `EntMutationError` now includes `ComputedField` variant
 - `DatabaseError` now includes `EntMutationFailed` variant
+
+### Fixed
+
+- `f32` and `f64` types were missing from `entity-async-graphql` filter
+  types and have now been added and are supported
 
 ## [0.3.0] - 2021-04-22
 
