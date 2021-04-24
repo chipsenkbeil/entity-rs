@@ -204,6 +204,17 @@ else
   print_msg 'Skipping Cargo crate publishing!'
 fi
 
+# Tag the commit that served as our point of publish
+if [ "$SKIP_GIT_TAG" -eq 0 ]; then
+  if [ "$DRY_RUN" -eq 0 ]; then
+    git tag "v$TARGET_VERSION"
+  else
+    print_msg "git tag \"v$TARGET_VERSION\""
+  fi
+else
+  print_msg 'Skipping git tagging!'
+fi
+
 # Update all Cargo.toml with version change for crates
 # 1. Replace crate's version with new version
 # 2. Replace dependency crates' versions with new version
@@ -229,16 +240,7 @@ else
   print_msg 'Next version not provided! Skipping Cargo.toml updates!'
 fi
 
-if [ "$SKIP_GIT_TAG" -eq 0 ]; then
-  if [ "$DRY_RUN" -eq 0 ]; then
-    git tag "v$TARGET_VERSION"
-  else
-    print_msg "git tag \"v$TARGET_VERSION\""
-  fi
-else
-  print_msg 'Skipping git tagging!'
-fi
-
+# Push changes and tags to origin
 if [ "$DRY_RUN" -eq 0 ]; then
   if [ "$SKIP_GIT_PUSH" -eq 0 ]; then
     git push origin "$GIT_BRANCH"
