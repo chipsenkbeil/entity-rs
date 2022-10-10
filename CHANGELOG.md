@@ -4,6 +4,14 @@
 
 ## [Unreleased] - ReleaseDate
 
+## [0.4.0] - 2022-10-11
+### Fixed
+  #80 pattern `Binary(_)` not covered
+### Added
+  crate bytes
+### Changed
+  use async-graphql 4.0.0
+
 ## [0.3.2] - 2021-04-24
 
 ### Fixed

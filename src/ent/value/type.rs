@@ -11,6 +11,7 @@ pub enum ValueType {
     Optional(Box<ValueType>),
     Primitive(PrimitiveType),
     Text,
+    Bytes,
     Custom,
 }
 
@@ -194,6 +195,7 @@ impl std::fmt::Display for ValueType {
             Self::Primitive(t) => write!(f, "{}", t),
             Self::Text => write!(f, "text"),
             Self::Custom => write!(f, "custom"),
+            Self::Bytes => write!(f, "bytes"),
         }
     }
 }
@@ -225,6 +227,7 @@ impl<'a> From<&'a Value> for ValueType {
             )),
             Value::Primitive(x) => Self::Primitive(PrimitiveType::from(x)),
             Value::Text(_) => Self::Text,
+            Value::Bytes(_) => Self::Bytes,
         }
     }
 }

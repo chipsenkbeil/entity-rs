@@ -46,6 +46,7 @@ impl ScalarType for GqlValue {
                     .collect::<Result<HashMap<String, GqlValue>, InputValueError<Self>>>()?,
             )),
             AsyncGraphqlValue::Enum(_) => Err(InputValueError::expected_type(value)),
+            AsyncGraphqlValue::Binary(x) => Ok(Value::Bytes(x)),
         }
         .map(GqlValue::from)
     }
@@ -88,6 +89,7 @@ impl ScalarType for GqlValue {
                 Number::Usize(x) => AsyncGraphqlValue::Number(AsyncGraphqlNumber::from(*x)),
             },
             Value::Text(x) => AsyncGraphqlValue::String(x.to_string()),
+            Value::Bytes(x) => AsyncGraphqlValue::Binary(x.clone()),
         }
     }
 }
