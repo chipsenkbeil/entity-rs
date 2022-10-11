@@ -2,10 +2,10 @@ mod number;
 mod primitive;
 mod r#type;
 
+use bytes::Bytes;
 pub use number::{Number, NumberLike, NumberSign, NumberType};
 pub use primitive::{Primitive, PrimitiveLike, PrimitiveType};
 pub use r#type::ValueType;
-
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
@@ -24,6 +24,7 @@ pub enum Value {
     Optional(Option<Box<Value>>),
     Primitive(Primitive),
     Text(String),
+    Bytes(Bytes),
 }
 
 impl Value {
@@ -94,6 +95,7 @@ impl Hash for Value {
             Self::Optional(x) => x.hash(state),
             Self::Primitive(x) => x.hash(state),
             Self::Text(x) => x.hash(state),
+            Self::Bytes(x) => x.hash(state),
         }
     }
 }
@@ -112,6 +114,7 @@ impl PartialEq for Value {
             (a, Self::Optional(Some(b))) => a == b.as_ref(),
             (Self::Primitive(a), Self::Primitive(b)) => a == b,
             (Self::Text(a), Self::Text(b)) => a == b,
+            (Self::Bytes(a), Self::Bytes(b)) => a == b,
             _ => false,
         }
     }
@@ -141,6 +144,7 @@ impl PartialOrd for Value {
             (Self::Text(a), Self::Text(b)) => a.partial_cmp(b),
             (Self::Text(a), Self::Primitive(Primitive::Char(b))) => a.partial_cmp(&b.to_string()),
             (Self::Primitive(Primitive::Char(a)), Self::Text(b)) => a.to_string().partial_cmp(b),
+            (Self::Bytes(a), Self::Bytes(b)) => a.partial_cmp(b),
 
             // All other types do nothing
             _ => None,
@@ -258,6 +262,18 @@ impl ValueLike for String {
         }
     }
 }
+impl ValueLike for Bytes {
+    fn into_value(self) -> Value {
+        Value::Bytes(self)
+    }
+
+    fn try_from_value(value: Value) -> Result<Self, Value> {
+        match value {
+            Value::Bytes(x) => Ok(x),
+            x => Err(x),
+        }
+    }
+}
 
 impl<'a> From<&'a Path> for Value {
     fn from(p: &'a Path) -> Self {
@@ -298,6 +314,7 @@ macro_rules! impl_conv {
 impl_conv!(
     String OsString PathBuf
     bool char f32 f64 i128 i16 i32 i64 i8 isize u128 u16 u32 u64 u8 usize
+    Bytes
 );
 
 macro_rules! impl_list {
@@ -1103,5 +1120,21 @@ mod tests {
             BTreeMap::<String, u8>::try_from_value(Value::Primitive(Primitive::Bool(true))),
             Err(Value::Primitive(Primitive::Bool(true))),
         ));
+    }
+
+    #[test]
+    fn bytes_can_convert_to_value() {
+        assert_eq!(
+            Bytes::from_static(b"123456").into_value(),
+            Value::Bytes(Bytes::from_static(b"123456"))
+        );
+    }
+
+    #[test]
+    fn value_can_convert_to_bytes() {
+        assert_eq!(
+            Bytes::try_from_value(Value::Bytes(Bytes::from_static(b"123456"))).unwrap(),
+            Bytes::from_static(b"123456")
+        );
     }
 }

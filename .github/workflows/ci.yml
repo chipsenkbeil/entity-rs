@@ -25,9 +25,9 @@ jobs:
           - { rust: stable, os: ubuntu-latest }
           - { rust: stable, os: macos-latest }
           - { rust: stable, os: windows-latest }
-          - { rust: 1.49.0, os: ubuntu-latest }
-          - { rust: 1.49.0, os: macos-latest }
-          - { rust: 1.49.0, os: windows-latest }
+          - { rust: 1.59.0, os: ubuntu-latest }
+          - { rust: 1.59.0, os: macos-latest }
+          - { rust: 1.59.0, os: windows-latest }
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -40,8 +40,20 @@ jobs:
       - name: Check Cargo availability
         run: cargo --version
       - name: Run tests with default features
+        if: matrix.rust != nightly
+        run: cargo hack test --verbose --workspace 
+      - name: Run tests with all features
+        if: matrix.rust != nightly
+        run: cargo hack test --verbose --workspace --all-features
+      - name: Run tests with default features
+        if: matrix.rust == nightly
+        env:
+          TRYBUILD: overwrite 
         run: cargo hack test --verbose --workspace
       - name: Run tests with all features
+        if: matrix.rust == nightly
+        env:
+          TRYBUILD: overwrite 
         run: cargo hack test --verbose --workspace --all-features
 
   examples:
